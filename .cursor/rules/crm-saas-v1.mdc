@@ -1,0 +1,101 @@
+## Cursor Rules — CRM SaaS (V1 / MVP Vendável)
+
+### Objetivo do projeto
+- **Produto**: CRM SaaS B2B.
+- **V1**: usável e vendável, mas intencionalmente incompleto.
+- **Multi-tenant (não-negociável)**: cada tenant é uma empresa/conta.
+- **Regra de ouro**: dados **NUNCA** podem vazar entre tenants.
+
+### Fonte única da verdade (não rediscutir decisões)
+- **Roadmap**: `v1/Roadmap-V1.md`
+- **Stack**: `v1/Decisao-Stack-V1.md`
+- **Decisões de arquitetura**: `v1/Decisoes-Arquiteturais-Consolidadas.md`
+- **Modelo conceitual**: `v1/Modelo-de-Dados-Conceitual.md`
+
+> Se já existe decisão nos docs, **siga**. Se estiver ambíguo se algo é V1, **pergunte antes** e aponte a seção do roadmap.
+
+---
+
+### Linguagem e padrão de escrita (obrigatório)
+- **Chat/explicações**: Português (pt-BR), direto e sem enrolação.
+- **Código (identificadores, arquivos, APIs, schema, tabelas, colunas)**: **Inglês**.
+- **Comentários no código**: **Português**, explicando intenção e trade-offs de forma prática.
+
+---
+
+### Escopo V1 (não sair do roadmap)
+- **Implemente somente V1** (fases 1–12 do `v1/Roadmap-V1.md`).
+- **Não** implementar V2/V3.
+- **Não** criar “infra para o futuro” sem pedido explícito.
+
+---
+
+### Stack e execução local (V1)
+- **Frontend**: React + TypeScript.
+- **Backend**: Node.js + TypeScript (API HTTP REST).
+- **Banco**: PostgreSQL.
+- **Execução local**: Docker (e `docker-compose` se necessário).
+- **Cloud**: somente perto do fim da V1 (local-first até lá).
+
+---
+
+### Arquitetura (V1 monólito)
+- **Monólito** na V1. **Sem microserviços**.
+- Separe camadas com clareza:
+  - **Domain**: entidades, value objects, regras de domínio (sem framework).
+  - **Application**: casos de uso/serviços orquestrando domínio e repositórios.
+  - **Infrastructure**: HTTP server, DB, integrações, adapters.
+- Prefira soluções **explícitas, simples e “chatas”** (manuteníveis).
+- Evite “god services”. Mantenha módulos pequenos (ideal < 200 linhas por arquivo).
+
+---
+
+### Multi-tenancy (hard requirements)
+- **Toda entidade de negócio** deve ter `tenant_id`.
+- **Tenant context é obrigatório** em:
+  - **Reads** (queries)
+  - **Writes** (create/update/delete)
+  - **Autorização**
+
+#### Regras duras (não violar)
+- **Nunca** fazer query sem filtrar por `tenant_id`.
+- **Nunca** confiar em `tenant_id` vindo do cliente.
+  - O tenant deve ser derivado de um **contexto verificado** (conforme decisão do projeto: subdomínio/header/path).
+- **Unicidade por tenant** quando fizer sentido (constraints/índices devem ser tenant-scoped).
+- **Logs estruturados** devem incluir `tenant_id` (e idealmente `user_id` + `request_id`).
+
+#### Testes obrigatórios (isolamento)
+- Adicione testes que provem: **tenant A não acessa dados do tenant B**.
+- Prefira **testes de integração** na borda DB/HTTP para validar isolamento.
+
+---
+
+### Segurança, auth e autorização (V1)
+- Autenticação e autorização **sempre** respeitam tenant boundaries.
+- **Nunca** confiar em IDs do cliente sem checagens de autorização.
+- Implementar **rate limiting/throttling** quando requerido pelo roadmap.
+- Fluxos de senha devem ser seguros (hash, tokens, expiração, etc.).
+
+---
+
+### Banco (PostgreSQL) e migrações
+- Modelagem relacional clara: **FKs, constraints, integridade**.
+- **Migrações são obrigatórias** quando o DB existir. Não “editar schema na mão”.
+- Evite otimização prematura. Crie índices apenas quando existir query real na V1 que justifique.
+
+---
+
+### Estilo de implementação (prático)
+- Faça mudanças mínimas e incrementais.
+- Não duplicar lógica: extraia helpers quando reduzir complexidade.
+- Nomes consistentes e orientados ao domínio (em inglês).
+- Depois de mudanças relevantes: **rodar o menor conjunto de testes localmente** e explicar “como testar”.
+
+---
+
+### Regras de comportamento do assistente (Cursor)
+- Se houver ambiguidade: **perguntar antes de assumir**.
+- Se violar V1 ou multi-tenant: **alertar** e propor alternativa compatível.
+- Evitar refactors grandes sem necessidade.
+- Ser conciso quando o pedido for apenas código.
+
