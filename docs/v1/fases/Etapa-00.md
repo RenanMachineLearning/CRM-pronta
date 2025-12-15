@@ -1,4 +1,4 @@
-# Fase 1 – Preparação de ambiente e infraestrutura base
+# Fase 0 – Preparação de ambiente e infraestrutura base
 
 ## Objetivo da Fase
 Estabelecer o ambiente de desenvolvimento e entrega (CI/CD e ambientes), definindo a base técnica mínima para suportar um CRM SaaS multi-tenant vendável na V1.

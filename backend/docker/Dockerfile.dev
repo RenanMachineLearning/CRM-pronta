@@ -1,0 +1,26 @@
+# Dockerfile para desenvolvimento do backend
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependências globais (se necessário)
+RUN npm install -g tsx
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm install
+
+# Copiar código fonte
+COPY . .
+
+# Gerar Prisma Client (se schema existir)
+RUN npx prisma generate || true
+
+# Expor porta
+EXPOSE 4000
+
+# Comando padrão (pode ser sobrescrito no docker-compose)
+CMD ["npm", "run", "dev"]
+
