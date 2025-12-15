@@ -63,9 +63,9 @@ CRM_pronta/
    ```
 
 4. **Acesse a aplicação**:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:4000
-   - Health Check: http://localhost:4000/health
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:5000
+   - Health Check: http://localhost:5000/health
 
 Para instruções detalhadas, consulte [docs/SETUP.md](docs/SETUP.md).
 

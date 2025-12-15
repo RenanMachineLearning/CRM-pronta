@@ -81,9 +81,9 @@ docker compose -f docker-compose.dev.yml up
 ```
 
 Isso irá iniciar:
-- PostgreSQL na porta `5432`
-- Backend na porta `4000`
-- Frontend na porta `3000`
+- PostgreSQL na porta `5434` (mapeado do container)
+- Backend na porta `5000`
+- Frontend na porta `5173` (porta padrão do Vite)
 
 ### Executar Localmente (sem Docker)
 
@@ -94,7 +94,7 @@ cd backend
 npm run dev
 ```
 
-O backend estará disponível em `http://localhost:4000`
+O backend estará disponível em `http://localhost:5000`
 
 #### Frontend
 
@@ -103,7 +103,7 @@ cd frontend
 npm run dev
 ```
 
-O frontend estará disponível em `http://localhost:3000`
+O frontend estará disponível em `http://localhost:5173`
 
 #### PostgreSQL
 
@@ -144,15 +144,15 @@ docker compose -f docker-compose.dev.yml build --no-cache
 
 ## Verificar se Está Funcionando
 
-1. **Backend Health Check**: Acesse `http://localhost:4000/health`
+1. **Backend Health Check**: Acesse `http://localhost:5000/health`
    - Deve retornar: `{"status":"ok","timestamp":"...","environment":"development"}`
 
-2. **Frontend**: Acesse `http://localhost:3000`
+2. **Frontend**: Acesse `http://localhost:5173`
    - Deve exibir a página inicial do CRM
 
 3. **PostgreSQL**: Conecte usando:
    ```bash
-   psql -h localhost -U crm_user -d crm_db
+   psql -h localhost -p 5434 -U crm_user -d crm_db
    # Senha: crm_password
    ```
 
@@ -166,7 +166,7 @@ docker compose -f docker-compose.dev.yml build --no-cache
 
 ### Erro de porta já em uso
 
-- Verifique se outra aplicação está usando as portas 3000, 4000 ou 5432
+- Verifique se outra aplicação está usando as portas 5173, 5000 ou 5434
 - Pare os containers: `docker compose -f docker-compose.dev.yml down`
 - Ou altere as portas no `docker-compose.dev.yml`
 
