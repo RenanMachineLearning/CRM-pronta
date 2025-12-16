@@ -1,0 +1,31 @@
+// Schema inicial do Prisma para CRM SaaS Multi-tenant
+// Este schema será expandido conforme as etapas do roadmap
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Tenant (base do multi-tenant)
+// Será implementado na Etapa 1 (Multi-tenant)
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos serão adicionados conforme as etapas
+  // users       User[]
+  // contacts    Contact[]
+  // companies   Company[]
+  // leads       Lead[]
+  // opportunities Opportunity[]
+
+  @@map("tenants")
+}
+
