@@ -5,6 +5,7 @@
 
 import express from 'express';
 import dotenv from 'dotenv';
+import { tenantContextMiddleware } from './middleware/tenantContext';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -16,12 +17,24 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rota de health check
-app.get('/health', (req, res) => {
+// Rota pública (sem tenant)
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Aplicar middleware de tenant em todas as outras rotas
+app.use(tenantContextMiddleware);
+
+// Exemplo de rota protegida
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'Rota protegida',
+    tenantId: req.tenantId,
+    tenant: req.tenant?.name,
   });
 });
 

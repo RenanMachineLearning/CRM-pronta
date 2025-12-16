@@ -1,0 +1,25 @@
+# Pasta de ajuda/auxiliar (comandos pessoais)
+.help/
+
+# Planos temporários do Cursor (podem ser recriados)
+.cursor/plans/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+
