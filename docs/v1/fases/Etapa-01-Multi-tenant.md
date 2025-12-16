@@ -59,24 +59,58 @@ Implementar a arquitetura multi-tenant que garante isolamento de dados, contexto
 
 ---
 
-### 3. Isolamento de Dados — Tenant ID em Todas as Tabelas
+### 3. Isolamento de Dados — Fundação Multi-Tenant
+
+#### Objetivo
+Definir as **regras estruturais obrigatórias** para garantir isolamento de dados entre tenants no nível de banco de dados e schema.  
+Esta etapa estabelece **convenções e constraints**, mas **não implementa ainda mecanismos automáticos de enforcement em runtime**.
+
+---
 
 #### Backend (Prisma Schema)
-- [ ] Adicionar `tenantId` em todas as tabelas futuras
-  - [ ] Criar convenção: todas as tabelas de dados têm `tenantId`
-  - [ ] Definir tipo: `tenantId String @db.Uuid` (ou `Int` se usar auto-increment)
-  - [ ] Adicionar foreign key: `tenantId` referencia `Tenant.id`
-  - [ ] Adicionar índice composto: `(tenantId, id)` para performance
 
-- [ ] Criar helper/utilitário para queries
-  - [ ] Função `whereTenant(tenantId: string)` para Prisma queries
-  - [ ] Middleware que injeta `tenantId` automaticamente em queries
-  - [ ] Validar que nenhuma query pode ser executada sem `tenantId`
+- [ ] Definir convenção obrigatória de multi-tenancy
+  - [ ] Todas as tabelas de dados (exceto `Tenant`) DEVEM conter o campo `tenantId`
+  - [ ] O campo `tenantId` é obrigatório (NOT NULL)
+  - [ ] Nenhuma tabela de domínio pode existir sem `tenantId`
 
-#### Validação
-- [ ] Teste: tentar criar registro sem `tenantId` → deve falhar
-- [ ] Teste: query sem filtro de tenant → deve retornar vazio ou erro
-- [ ] Teste: query com `tenantId` incorreto → deve retornar vazio
+- [ ] Definir tipo e relacionamento do campo `tenantId`
+  - [ ] Tipo: `tenantId String @db.Uuid`
+  - [ ] Foreign key: `tenantId` referencia `Tenant.id`
+  - [ ] Relação explícita via `@relation(fields: [tenantId], references: [id])`
+
+- [ ] Definir padrão de índices para performance
+  - [ ] Criar índice composto `@@index([tenantId, id])` em todas as tabelas futuras
+  - [ ] Garantir que queries tenant-scoped sejam eficientes desde o início
+
+- [ ] Documentar a convenção diretamente no `schema.prisma`
+  - [ ] Comentário no topo do schema descrevendo o padrão multi-tenant
+  - [ ] Exemplo ilustrativo de um modelo futuro seguindo a convenção
+  - [ ] Aviso explícito: tabelas sem `tenantId` NÃO são permitidas
+
+---
+
+#### Escopo Deliberadamente Fora Desta Etapa
+
+> Os itens abaixo são **importantes**, mas **não fazem parte desta fase** e serão tratados quando houver tabelas de domínio reais e autenticação implementada.
+
+- ⏭️ Helpers automáticos para queries (`whereTenant`, wrappers Prisma)
+- ⏭️ Injeção automática de `tenantId` em queries
+- ⏭️ Bloqueio de execução de queries sem `tenantId` em runtime
+- ⏭️ Testes de isolamento cruzado entre tenants
+
+Esses mecanismos serão introduzidos **após a criação das primeiras entidades de domínio** (ex: User, Contact, Lead).
+
+---
+
+#### Validação (Nível Estrutural)
+
+- [ ] Revisar manualmente o schema para garantir que:
+  - [ ] Toda nova tabela criada contém `tenantId`
+  - [ ] O relacionamento com `Tenant` está corretamente definido
+  - [ ] O índice composto `(tenantId, id)` está presente
+
+> A validação nesta etapa é **estrutural e de design**, não comp
 
 ---
 
