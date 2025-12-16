@@ -38,9 +38,14 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-});
+// Exportar app para testes
+export { app };
+
+// Iniciar servidor apenas se não estiver em modo de teste
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 

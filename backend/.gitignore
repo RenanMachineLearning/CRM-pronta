@@ -33,7 +33,13 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Testing
+# Testing - arquivos gerados (os arquivos de teste DEVEM estar no repositório)
 coverage/
 .nyc_output/
+*.test.js
+*.spec.js
+*.test.js.map
+*.spec.js.map
+test-results/
+junit.xml
 
