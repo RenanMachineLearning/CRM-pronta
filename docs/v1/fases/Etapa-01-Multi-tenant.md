@@ -135,51 +135,250 @@ Esses mecanismos serão introduzidos **após a criação das primeiras entidades
 
 ### 5. Testes de Isolamento
 
-#### Backend (Testes)
-- [ ] Criar testes de isolamento
-  - [ ] Teste: criar dados no Tenant A
-  - [ ] Teste: consultar dados do Tenant B → deve retornar vazio
-  - [ ] Teste: tentar atualizar dados do Tenant A usando contexto do Tenant B → deve falhar
-  - [ ] Teste: tentar deletar dados do Tenant A usando contexto do Tenant B → deve falhar
+Perfeito. Vou **refazer a Etapa 05 do zero**, **alinhada exatamente ao estado atual do projeto**, sem adiantar enforcement que ainda não existe — e mantendo o rigor arquitetural que você já está aplicando.
 
-- [ ] Criar testes de integração
-  - [ ] Teste E2E: fluxo completo com múltiplos tenants
-  - [ ] Validar que dados não vazam entre tenants
+A ideia aqui é:
+👉 **fundação + segurança conceitual**, não “isolamento mágico” antes da hora.
 
-#### Validação
-- [ ] Todos os testes de isolamento passando
-- [ ] Cobertura de testes > 80% para lógica de tenant
+---
+
+# ✅ Etapa 05 — Testes de Fundação Multi-Tenant (Pré-Isolamento)
+
+## Objetivo
+
+Validar que a **fundação multi-tenant** do sistema está correta antes da criação das entidades de domínio, garantindo que:
+
+* A identificação de tenant funciona corretamente
+* Tenants inativos ou inválidos são bloqueados
+* As regras estruturais documentadas estão sendo respeitadas
+* O projeto está preparado para isolamento real nas próximas etapas
+
+> ⚠️ Esta etapa **não valida isolamento completo de dados**, pois ainda não existem tabelas de domínio nem enforcement automático de tenantId.
+
+---
+
+## Escopo da Etapa
+
+### O que esta etapa FAZ
+
+* Testa **comportamento do sistema em relação a tenants**
+* Testa **contratos e garantias existentes**
+* Previne regressões na base multi-tenant
+
+### O que esta etapa NÃO FAZ
+
+* Não testa CRUD isolado entre tenants
+* Não cria tabelas artificiais apenas para teste
+* Não implementa middleware/extension de Prisma
+* Não valida vazamento de dados entre entidades de domínio (ainda inexistentes)
+
+---
+
+## Backend — Testes
+
+### 1️⃣ Testes de Integração do Contexto de Tenant
+
+📁 `backend/tests/integration/tenantContext.foundation.test.ts`
+
+Criar testes que validem:
+
+* [ ] **Rota pública**
+
+  * `/health` retorna 200 sem header de tenant
+
+* [ ] **Requisição sem tenant**
+
+  * Rotas protegidas retornam `400 Tenant não identificado`
+
+* [ ] **Tenant inexistente**
+
+  * Header com ID ou slug inválido → `403 Acesso negado`
+
+* [ ] **Tenant inativo**
+
+  * Tenant com status `SUSPENDED` ou `CANCELLED` → `403`
+
+* [ ] **Tenant válido**
+
+  * Header `X-Tenant-Id` válido → `200`
+  * Header `X-Tenant-Slug` válido → `200`
+
+> Esses testes garantem que **nenhuma requisição entra no sistema sem tenant válido**.
+
+---
+
+### 2️⃣ Testes de Contrato do Modelo Tenant
+
+📁 `backend/tests/integration/tenantModel.contract.test.ts`
+
+Testar garantias estruturais do Tenant:
+
+* [ ] Slug é único
+* [ ] Subdomain (quando presente) é único
+* [ ] Status default é `ACTIVE`
+* [ ] Tenant inativo não passa pela validação do `TenantService`
+* [ ] `TenantService.validateById` e `validateBySlug` funcionam corretamente
+
+Esses testes protegem a **base lógica do isolamento**.
+
+---
+
+### 3️⃣ Testes de Regressão da Convenção Multi-Tenant
+
+📁 `backend/tests/architecture/multiTenantConvention.test.ts` (opcional, mas elegante)
+
+Testes simples (não CRUD) que garantem:
+
+* [ ] Convenção multi-tenant está documentada no schema
+* [ ] Não existem tabelas além de `Tenant` no schema (por enquanto)
+* [ ] Avisos de “tenantId obrigatório” estão presentes no schema
+
+> Esse tipo de teste evita que alguém “pule” o padrão no futuro.
+
+---
+
+### 4️⃣ Placeholders para Isolamento Real (Intencionalmente Skipped)
+
+📁 `backend/tests/integration/tenantIsolation.todo.test.ts`
+
+Criar testes **marcados como skipped** com descrição clara:
+
+* [ ] Criar dados no Tenant A
+* [ ] Tenant B não pode ler dados do Tenant A
+* [ ] Tenant B não pode atualizar dados do Tenant A
+* [ ] Tenant B não pode deletar dados do Tenant A
+
+```ts
+describe.skip('Tenant Isolation — Domain Entities', () => {
+  it('Tenant A data is not accessible by Tenant B', () => {
+    // Será implementado quando entidades de domínio existirem
+  });
+});
+```
+
+📌 Isso cria **compromisso arquitetural explícito**, sem falsear segurança.
+
+---
+
+## Validação da Etapa
+
+Após implementação:
+
+* [ ] Todos os testes da fundação multi-tenant passam
+* [ ] Nenhuma rota protegida é acessível sem tenant válido
+* [ ] Tenant inativo é bloqueado corretamente
+* [ ] Convenção multi-tenant está documentada e protegida
+* [ ] Testes de isolamento real estão explicitamente planejados (skipped)
+
+---
+
+## Métrica de Qualidade (ajustada)
+
+* ❌ Não exigir cobertura > 80% (ainda não existe domínio)
+* ✅ Garantir cobertura total da **lógica de tenant existente**
+* ✅ Nenhum teste “falso” que passe por coincidência
+
+---
+
+## Observações Arquiteturais
+
+* Isolamento real **depende de domínio + enforcement**
+* Esta etapa evita o erro clássico de “achar que é multi-tenant”
+* A segurança aqui é **estrutural e conceitual**
+* O isolamento real começa **na próxima etapa**, não aqui
+
+---
+
+## 🔚 Resumo Executivo
+
+| Item                  | Status          |
+| --------------------- | --------------- |
+| Fundação multi-tenant | ✅ Validada      |
+| Tenant Context        | ✅ Testado       |
+| Segurança básica      | ✅ Garantida     |
+| Isolamento real       | ⏭ Próxima etapa |
+| Dívida técnica        | ❌ Evitada       |
+
+---
+
+Se quiser, o **próximo passo ideal** é:
+
+👉 **Etapa 06 — Usuários + Autenticação (Tenant-aware)**
+onde finalmente o isolamento real começa a existir de verdade.
 
 ---
 
 ### 6. Documentação
 
-#### Documentação Técnica
-- [ ] Documentar estratégia de identificação de tenant
-  - [ ] Qual método será usado (header, subdomínio, path)
-  - [ ] Como configurar em cada ambiente
-
-- [ ] Documentar padrão de queries
-  - [ ] Exemplo de query com `tenantId`
-  - [ ] Exemplo de criação de registro com `tenantId`
-  - [ ] Aviso: nunca fazer query sem `tenantId`
-
-- [ ] Atualizar README com instruções de setup
-  - [ ] Como criar tenant de desenvolvimento
-  - [ ] Como testar isolamento manualmente
+## Objetivo
+Documentar as decisões essenciais do modelo multi-tenant para evitar vazamento de dados, padronizar desenvolvimento e facilitar onboarding.
 
 ---
 
-## Critérios de Prontidão
+## 6.1 Estratégia de Identificação de Tenant
 
-Antes de avançar para a **Etapa 2 (Autenticação)**, verifique:
+### Método adotado
+- **Headers HTTP**
+  - `X-Tenant-Id` (UUID)
+  - `X-Tenant-Slug` (string)
 
-- [ ] Sistema cria e gerencia múltiplos tenants
-- [ ] Isolamento de dados garantido (testes de isolamento passando)
-- [ ] Contexto de tenant disponível em todas as requisições
-- [ ] Nenhuma query pode ser executada sem `tenantId`
-- [ ] Testes de isolamento com 100% de sucesso
-- [ ] Documentação atualizada
+### Regras
+- Headers ausentes → **400**
+- Tenant inválido ou inexistente → **403**
+- Tenant inativo (SUSPENDED / CANCELLED) → **403**
+- Tenant válido → request prossegue com `req.tenantId` disponível
+
+📌 Nenhuma rota protegida executa sem tenant válido.
+
+---
+
+## 6.2 Padrão Obrigatório de Queries
+
+### Sempre usar `tenantId`
+```ts
+prisma.entity.findMany({
+  where: { tenantId: req.tenantId },
+});
+
+prisma.entity.create({
+  data: { tenantId: req.tenantId, ... },
+});
+
+Anti-padrões (proibidos)
+prisma.entity.findMany();        // ❌
+prisma.entity.findUnique({ id }); // ❌
+
+📌 Queries sem tenantId são consideradas falha de segurança.
+
+6.3 Setup de Desenvolvimento
+Criar tenant de desenvolvimento
+npm run seed
+
+Ou via Prisma Studio:
+npx prisma studio
+
+Tenant deve estar com status = ACTIVE.
+
+6.4 Checklist de Revisão (Multi-Tenant)
+
+Antes de aprovar um PR:
+
+Todas as queries filtram por tenantId
+
+Nenhuma query usa apenas id
+
+tenantId vem do contexto (req.tenantId)
+
+Nenhuma rota protegida ignora o middleware de tenant
+
+Observações
+
+Esta documentação faz parte da segurança do sistema
+
+Isolamento real será validado quando existirem entidades de domínio
+
+Qualquer vazamento entre tenants é BUG CRÍTICO
+
 
 ---
 
