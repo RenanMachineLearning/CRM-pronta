@@ -10,22 +10,94 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Tenant (base do multi-tenant)
-// Será implementado na Etapa 1 (Multi-tenant)
-model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============================================================================
+// CONVENÇÃO OBRIGATÓRIA: ISOLAMENTO MULTI-TENANT
+// ============================================================================
+//
+// REGRA FUNDAMENTAL: Todas as tabelas de dados (exceto `Tenant`) DEVEM conter
+// o campo `tenantId` para garantir isolamento de dados entre tenants.
+//
+// REQUISITOS OBRIGATÓRIOS para todas as tabelas futuras:
+//
+// 1. Campo obrigatório:
+//    - `tenantId String @db.Uuid` (NOT NULL, mesmo tipo de `Tenant.id`)
+//
+// 2. Relacionamento obrigatório:
+//    - Foreign key explícita: `tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)`
+//
+// 3. Índice composto obrigatório (para performance):
+//    - `@@index([tenantId, id])` em todas as tabelas futuras
+//
+// 4. AVISO EXPLÍCITO:
+//    - Tabelas sem `tenantId` NÃO são permitidas
+//    - Nenhuma tabela de domínio pode existir sem `tenantId`
+//
+// Esta convenção garante que:
+// - Queries sempre filtram por tenant (isolamento lógico)
+// - Performance otimizada com índices compostos
+// - Integridade referencial mantida via foreign keys
+// - Dados nunca vazam entre tenants
+//
+// ============================================================================
 
-  // Relacionamentos serão adicionados conforme as etapas
-  // users       User[]
-  // contacts    Contact[]
-  // companies   Company[]
-  // leads       Lead[]
-  // opportunities Opportunity[]
+// Enum para status do tenant
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// Modelo de Tenant (base do multi-tenant)
+// Implementado na Etapa 1 (Multi-tenant)
+model Tenant {
+  id        String       @id @default(uuid())
+  name      String
+  slug      String       @unique // Identificador único normalizado do tenant
+  subdomain String?      @unique // Opcional, único se presente (permite múltiplos NULLs)
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
+  // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
+  // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
+  // users       User[]       // Etapa 2 (Autenticação)
+  // contacts    Contact[]    // Etapa 5 (Contatos/Empresas)
+  // companies   Company[]    // Etapa 5 (Contatos/Empresas)
+  // leads       Lead[]       // Etapa 6 (Leads/Oportunidades)
+  // opportunities Opportunity[] // Etapa 6 (Leads/Oportunidades)
 
   @@map("tenants")
 }
+
+// ============================================================================
+// EXEMPLO ILUSTRATIVO - Modelo futuro seguindo a convenção multi-tenant
+// ============================================================================
+// Este modelo NÃO será criado no banco, serve apenas como referência para
+// desenvolvedores ao criar novas tabelas nas próximas etapas.
+//
+// IMPORTANTE: Ao criar qualquer nova tabela de dados, siga este padrão:
+//
+// model ExampleEntity {
+//   id        String   @id @default(uuid())
+//   tenantId  String   @db.Uuid  // OBRIGATÓRIO: todas as tabelas de dados
+//   // ... outros campos específicos da entidade ...
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @updatedAt @map("updated_at")
+//
+//   // Relacionamento obrigatório com Tenant
+//   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+//
+//   // Índice composto obrigatório para performance em queries tenant-scoped
+//   @@index([tenantId, id])
+//   @@map("example_entities")
+// }
+//
+// ELEMENTOS OBRIGATÓRIOS (verificar em cada nova tabela):
+// ✓ Campo `tenantId String @db.Uuid` presente e obrigatório
+// ✓ Relacionamento `tenant Tenant @relation(...)` definido
+// ✓ Índice composto `@@index([tenantId, id])` presente
+// ✓ Foreign key com `onDelete: Cascade` para manter integridade
+//
+// ============================================================================
 
