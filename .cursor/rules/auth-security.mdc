@@ -108,6 +108,25 @@ O sistema **NÃO DEVE**:
 - Função `comparePassword(password: string, hash: string): Promise<boolean>`
 - Sempre usar funções assíncronas (bcrypt é assíncrono)
 
+### Funções de Segurança de Senha
+
+**Regras obrigatórias para funções de hash e comparação de senhas:**
+
+- **hashPassword**: 
+  - Sempre lança erro para input inválido (senha vazia ou apenas espaços)
+  - Nunca retorna hash vazio ou undefined
+  - Mensagem de erro deve ser clara: "Password must not be empty"
+  
+- **comparePassword**:
+  - Nunca lança erro, apenas retorna false
+  - Retorna false para senha vazia, hash vazio, ou comparação inválida
+  - Tratamento silencioso de erros (segurança por obscuridade)
+  
+- **Logs e Debugging**:
+  - Nunca retornar senha ou hash em logs
+  - Nunca logar senhas em texto plano
+  - Nunca logar hashes completos (apenas primeiros caracteres se necessário para debug)
+
 ---
 
 ## 🚦 Rate Limiting
