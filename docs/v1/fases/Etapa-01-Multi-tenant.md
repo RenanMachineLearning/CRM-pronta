@@ -15,47 +15,47 @@ Implementar a arquitetura multi-tenant que garante isolamento de dados, contexto
 ### 1. Modelo de Dados — Tabela de Tenants
 
 #### Backend (Prisma Schema)
-- [ ] Criar tabela `Tenant` no schema Prisma
-  - [ ] Campo `id` (UUID ou auto-increment)
-  - [ ] Campo `name` (nome do tenant)
-  - [ ] Campo `slug` (identificador único, ex: "empresa-abc")
-  - [ ] Campo `subdomain` (opcional, para identificação por subdomínio)
-  - [ ] Campos `created_at` e `updated_at` (timestamps)
-  - [ ] Campo `status` (ativo, suspenso, etc.)
-  - [ ] Índice único em `slug`
-  - [ ] Índice único em `subdomain` (se aplicável)
+- [x] Criar tabela `Tenant` no schema Prisma
+  - [x] Campo `id` (UUID ou auto-increment)
+  - [x] Campo `name` (nome do tenant)
+  - [x] Campo `slug` (identificador único, ex: "empresa-abc")
+  - [x] Campo `subdomain` (opcional, para identificação por subdomínio)
+  - [x] Campos `created_at` e `updated_at` (timestamps)
+  - [x] Campo `status` (ativo, suspenso, etc.)
+  - [x] Índice único em `slug`
+  - [x] Índice único em `subdomain` (se aplicável)
 
-- [ ] Criar migração Prisma inicial
-  - [ ] Executar `prisma migrate dev --name init_tenant`
-  - [ ] Validar que a tabela foi criada corretamente
+- [x] Criar migração Prisma inicial
+  - [x] Executar `prisma migrate dev --name init_tenant`
+  - [x] Validar que a tabela foi criada corretamente
 
 #### Validação
-- [ ] Testar criação de tenant via Prisma Studio ou script
-- [ ] Verificar que slugs únicos são respeitados
+- [x] Testar criação de tenant via Prisma Studio ou script
+- [x] Verificar que slugs únicos são respeitados
 
 ---
 
 ### 2. Middleware de Contexto de Tenant
 
 #### Backend (Node.js + TypeScript)
-- [ ] Criar middleware `tenantContext.ts`
-  - [ ] Extrair tenant de:
-    - [ ] Header HTTP (ex: `X-Tenant-Id` ou `X-Tenant-Slug`)
-    - [ ] Subdomínio (se configurado)
-    - [ ] Path parameter (ex: `/api/:tenantId/...`)
-  - [ ] Validar que tenant existe no banco
-  - [ ] Adicionar `tenantId` ao objeto `request` (Express/Fastify)
-  - [ ] Retornar erro 401/403 se tenant não encontrado ou inativo
+- [x] Criar middleware `tenantContext.ts`
+  - [x] Extrair tenant de:
+    - [x] Header HTTP (ex: `X-Tenant-Id` ou `X-Tenant-Slug`)
+    - [ ] Subdomínio (se configurado) - **Não implementado (fora do escopo V1)**
+    - [ ] Path parameter (ex: `/api/:tenantId/...`) - **Não implementado (fora do escopo V1)**
+  - [x] Validar que tenant existe no banco
+  - [x] Adicionar `tenantId` ao objeto `request` (Express/Fastify)
+  - [x] Retornar erro 401/403 se tenant não encontrado ou inativo
 
-- [ ] Integrar middleware nas rotas
-  - [ ] Aplicar middleware globalmente ou em rotas específicas
-  - [ ] Testar que requisições sem tenant são rejeitadas
-  - [ ] Testar que requisições com tenant inválido são rejeitadas
+- [x] Integrar middleware nas rotas
+  - [x] Aplicar middleware globalmente ou em rotas específicas
+  - [x] Testar que requisições sem tenant são rejeitadas
+  - [x] Testar que requisições com tenant inválido são rejeitadas
 
 #### Validação
-- [ ] Teste unitário: middleware extrai tenant corretamente
-- [ ] Teste de integração: requisição com tenant válido passa
-- [ ] Teste de integração: requisição com tenant inválido falha
+- [x] Teste unitário: middleware extrai tenant corretamente
+- [x] Teste de integração: requisição com tenant válido passa
+- [x] Teste de integração: requisição com tenant inválido falha
 
 ---
 
@@ -69,24 +69,24 @@ Esta etapa estabelece **convenções e constraints**, mas **não implementa aind
 
 #### Backend (Prisma Schema)
 
-- [ ] Definir convenção obrigatória de multi-tenancy
-  - [ ] Todas as tabelas de dados (exceto `Tenant`) DEVEM conter o campo `tenantId`
-  - [ ] O campo `tenantId` é obrigatório (NOT NULL)
-  - [ ] Nenhuma tabela de domínio pode existir sem `tenantId`
+- [x] Definir convenção obrigatória de multi-tenancy
+  - [x] Todas as tabelas de dados (exceto `Tenant`) DEVEM conter o campo `tenantId`
+  - [x] O campo `tenantId` é obrigatório (NOT NULL)
+  - [x] Nenhuma tabela de domínio pode existir sem `tenantId`
 
-- [ ] Definir tipo e relacionamento do campo `tenantId`
-  - [ ] Tipo: `tenantId String @db.Uuid`
-  - [ ] Foreign key: `tenantId` referencia `Tenant.id`
-  - [ ] Relação explícita via `@relation(fields: [tenantId], references: [id])`
+- [x] Definir tipo e relacionamento do campo `tenantId`
+  - [x] Tipo: `tenantId String @db.Uuid`
+  - [x] Foreign key: `tenantId` referencia `Tenant.id`
+  - [x] Relação explícita via `@relation(fields: [tenantId], references: [id])`
 
-- [ ] Definir padrão de índices para performance
-  - [ ] Criar índice composto `@@index([tenantId, id])` em todas as tabelas futuras
-  - [ ] Garantir que queries tenant-scoped sejam eficientes desde o início
+- [x] Definir padrão de índices para performance
+  - [x] Criar índice composto `@@index([tenantId, id])` em todas as tabelas futuras
+  - [x] Garantir que queries tenant-scoped sejam eficientes desde o início
 
-- [ ] Documentar a convenção diretamente no `schema.prisma`
-  - [ ] Comentário no topo do schema descrevendo o padrão multi-tenant
-  - [ ] Exemplo ilustrativo de um modelo futuro seguindo a convenção
-  - [ ] Aviso explícito: tabelas sem `tenantId` NÃO são permitidas
+- [x] Documentar a convenção diretamente no `schema.prisma`
+  - [x] Comentário no topo do schema descrevendo o padrão multi-tenant
+  - [x] Exemplo ilustrativo de um modelo futuro seguindo a convenção
+  - [x] Aviso explícito: tabelas sem `tenantId` NÃO são permitidas
 
 ---
 
@@ -105,10 +105,10 @@ Esses mecanismos serão introduzidos **após a criação das primeiras entidades
 
 #### Validação (Nível Estrutural)
 
-- [ ] Revisar manualmente o schema para garantir que:
-  - [ ] Toda nova tabela criada contém `tenantId`
-  - [ ] O relacionamento com `Tenant` está corretamente definido
-  - [ ] O índice composto `(tenantId, id)` está presente
+- [x] Revisar manualmente o schema para garantir que:
+  - [x] Toda nova tabela criada contém `tenantId`
+  - [x] O relacionamento com `Tenant` está corretamente definido
+  - [x] O índice composto `(tenantId, id)` está presente
 
 > A validação nesta etapa é **estrutural e de design**, não comp
 
@@ -117,19 +117,19 @@ Esses mecanismos serão introduzidos **após a criação das primeiras entidades
 ### 4. Seed Data — Tenant de Demonstração
 
 #### Backend (Scripts)
-- [ ] Criar script de seed (`prisma/seed.ts`)
-  - [ ] Criar tenant de demonstração (ex: "Demo Company")
-  - [ ] Slug: "demo"
-  - [ ] Status: ativo
-  - [ ] Configurações iniciais (se houver)
+- [x] Criar script de seed (`prisma/seed.ts`)
+  - [x] Criar tenant de demonstração (ex: "Demo Company")
+  - [x] Slug: "demo"
+  - [x] Status: ativo
+  - [x] Configurações iniciais (se houver)
 
-- [ ] Configurar Prisma para executar seed
-  - [ ] Adicionar `"prisma": { "seed": "ts-node prisma/seed.ts" }` no `package.json`
-  - [ ] Testar execução: `prisma db seed`
+- [x] Configurar Prisma para executar seed
+  - [x] Adicionar `"prisma": { "seed": "ts-node prisma/seed.ts" }` no `package.json`
+  - [x] Testar execução: `prisma db seed`
 
 #### Validação
-- [ ] Verificar que tenant de demo foi criado
-- [ ] Verificar que pode acessar dados do tenant demo
+- [x] Verificar que tenant de demo foi criado
+- [x] Verificar que pode acessar dados do tenant demo
 
 ---
 
@@ -182,23 +182,23 @@ Validar que a **fundação multi-tenant** do sistema está correta antes da cria
 
 Criar testes que validem:
 
-* [ ] **Rota pública**
+* [x] **Rota pública**
 
   * `/health` retorna 200 sem header de tenant
 
-* [ ] **Requisição sem tenant**
+* [x] **Requisição sem tenant**
 
   * Rotas protegidas retornam `400 Tenant não identificado`
 
-* [ ] **Tenant inexistente**
+* [x] **Tenant inexistente**
 
   * Header com ID ou slug inválido → `403 Acesso negado`
 
-* [ ] **Tenant inativo**
+* [x] **Tenant inativo**
 
   * Tenant com status `SUSPENDED` ou `CANCELLED` → `403`
 
-* [ ] **Tenant válido**
+* [x] **Tenant válido**
 
   * Header `X-Tenant-Id` válido → `200`
   * Header `X-Tenant-Slug` válido → `200`
@@ -213,11 +213,11 @@ Criar testes que validem:
 
 Testar garantias estruturais do Tenant:
 
-* [ ] Slug é único
-* [ ] Subdomain (quando presente) é único
-* [ ] Status default é `ACTIVE`
-* [ ] Tenant inativo não passa pela validação do `TenantService`
-* [ ] `TenantService.validateById` e `validateBySlug` funcionam corretamente
+* [x] Slug é único
+* [x] Subdomain (quando presente) é único
+* [x] Status default é `ACTIVE`
+* [x] Tenant inativo não passa pela validação do `TenantService`
+* [x] `TenantService.validateById` e `validateBySlug` funcionam corretamente
 
 Esses testes protegem a **base lógica do isolamento**.
 
@@ -229,9 +229,9 @@ Esses testes protegem a **base lógica do isolamento**.
 
 Testes simples (não CRUD) que garantem:
 
-* [ ] Convenção multi-tenant está documentada no schema
-* [ ] Não existem tabelas além de `Tenant` no schema (por enquanto)
-* [ ] Avisos de “tenantId obrigatório” estão presentes no schema
+* [x] Convenção multi-tenant está documentada no schema
+* [x] Não existem tabelas além de `Tenant` no schema (por enquanto)
+* [x] Avisos de "tenantId obrigatório" estão presentes no schema
 
 > Esse tipo de teste evita que alguém “pule” o padrão no futuro.
 
@@ -243,10 +243,10 @@ Testes simples (não CRUD) que garantem:
 
 Criar testes **marcados como skipped** com descrição clara:
 
-* [ ] Criar dados no Tenant A
-* [ ] Tenant B não pode ler dados do Tenant A
-* [ ] Tenant B não pode atualizar dados do Tenant A
-* [ ] Tenant B não pode deletar dados do Tenant A
+* [x] Criar dados no Tenant A
+* [x] Tenant B não pode ler dados do Tenant A
+* [x] Tenant B não pode atualizar dados do Tenant A
+* [x] Tenant B não pode deletar dados do Tenant A
 
 ```ts
 describe.skip('Tenant Isolation — Domain Entities', () => {
@@ -264,11 +264,11 @@ describe.skip('Tenant Isolation — Domain Entities', () => {
 
 Após implementação:
 
-* [ ] Todos os testes da fundação multi-tenant passam
-* [ ] Nenhuma rota protegida é acessível sem tenant válido
-* [ ] Tenant inativo é bloqueado corretamente
-* [ ] Convenção multi-tenant está documentada e protegida
-* [ ] Testes de isolamento real estão explicitamente planejados (skipped)
+* [x] Todos os testes da fundação multi-tenant passam
+* [x] Nenhuma rota protegida é acessível sem tenant válido
+* [x] Tenant inativo é bloqueado corretamente
+* [x] Convenção multi-tenant está documentada e protegida
+* [x] Testes de isolamento real estão explicitamente planejados (skipped)
 
 ---
 
@@ -310,8 +310,22 @@ onde finalmente o isolamento real começa a existir de verdade.
 
 ### 6. Documentação
 
-## Objetivo
+#### Objetivo
 Documentar as decisões essenciais do modelo multi-tenant para evitar vazamento de dados, padronizar desenvolvimento e facilitar onboarding.
+
+#### Backend (Documentação)
+- [x] Criar documento principal `docs/MULTI-TENANT.md`
+  - [x] Seção 6.1: Estratégia de Identificação de Tenant
+  - [x] Seção 6.2: Padrão Obrigatório de Queries
+  - [x] Seção 6.3: Setup de Desenvolvimento
+  - [x] Seção 6.4: Checklist de Revisão (Multi-Tenant)
+  - [x] Exemplos práticos e troubleshooting
+
+#### Validação
+- [x] Documentação está clara e completa
+- [x] Exemplos de código estão corretos
+- [x] Checklist de revisão está prático
+- [x] Documentação está acessível em `docs/`
 
 ---
 
@@ -378,7 +392,6 @@ Esta documentação faz parte da segurança do sistema
 Isolamento real será validado quando existirem entidades de domínio
 
 Qualquer vazamento entre tenants é BUG CRÍTICO
-
 
 ---
 
