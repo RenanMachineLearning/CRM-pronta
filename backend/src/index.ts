@@ -6,6 +6,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { tenantContextMiddleware } from './middleware/tenantContext';
+import authRoutes from './routes/authRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -25,6 +26,10 @@ app.get('/health', (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
   });
 });
+
+// Rotas de autenticação (antes do middleware de tenant)
+// Login precisa extrair tenant manualmente do header
+app.use('/api/auth', authRoutes);
 
 // Aplicar middleware de tenant em todas as outras rotas
 app.use(tenantContextMiddleware);
