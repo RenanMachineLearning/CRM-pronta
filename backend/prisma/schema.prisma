@@ -47,6 +47,13 @@ enum TenantStatus {
   CANCELLED
 }
 
+// Enum para status do usuário
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
 // Modelo de Tenant (base do multi-tenant)
 // Implementado na Etapa 1 (Multi-tenant)
 model Tenant {
@@ -58,16 +65,41 @@ model Tenant {
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
 
+  // Relacionamentos
+  users       User[]       // Etapa 2 (Autenticação)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
-  // users       User[]       // Etapa 2 (Autenticação)
   // contacts    Contact[]    // Etapa 5 (Contatos/Empresas)
   // companies   Company[]    // Etapa 5 (Contatos/Empresas)
   // leads       Lead[]       // Etapa 6 (Leads/Oportunidades)
   // opportunities Opportunity[] // Etapa 6 (Leads/Oportunidades)
 
   @@map("tenants")
+}
+
+// Modelo de User (usuários do sistema)
+// Implementado na Etapa 2 (Autenticação)
+model User {
+  id           String     @id @default(uuid())
+  email        String
+  passwordHash String     @map("password_hash")
+  name         String
+  tenantId     String
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Relacionamento obrigatório com Tenant
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índice único composto: email único por tenant
+  @@unique([tenantId, email])
+  
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  
+  @@map("users")
 }
 
 // ============================================================================

@@ -64,7 +64,7 @@ Implementar autenticação segura, gestão de sessão e tokens, garantindo que u
 
 - [ ] Configurar variáveis de ambiente
   - [ ] `JWT_SECRET`: chave secreta para assinatura
-  - [ ] `JWT_EXPIRES_IN`: tempo de expiração (ex: "7d", "24h")
+  - [ ] `JWT_EXPIRES_IN`: tempo de expiração ("12h")
   - [ ] Adicionar ao `.env.example`
 
 - [ ] Criar utilitário de JWT

@@ -1,0 +1,267 @@
+## Cursor Rules — Autenticação e Segurança (V1)
+
+### Objetivo
+
+Regras obrigatórias para implementação de autenticação e segurança no CRM SaaS V1, garantindo que o sistema seja seguro desde o início e respeite os limites multi-tenant.
+
+---
+
+## 🔐 Autenticação e Segurança (Regras Obrigatórias)
+
+### Multi-Tenant First
+
+**Toda autenticação DEVE ser multi-tenant.**
+
+#### tenantId é obrigatório
+
+- **No modelo User**: Campo `tenantId` obrigatório (foreign key para `Tenant`)
+- **No payload do JWT**: `tenantId` deve estar presente no token
+- **Em todas as queries protegidas**: Sempre filtrar por `tenantId`
+- **Nunca permitir query de usuário sem tenantId**
+
+#### Validação de Tenant no JWT
+
+- Token de tenant A **NÃO funciona** em contexto de tenant B
+- Middleware de autenticação deve validar que `tenantId` do token corresponde ao `tenantId` do contexto da requisição
+- Se houver divergência: rejeitar com `403 Forbidden`
+
+### JWT — Estrutura Obrigatória
+
+O JWT **DEVE conter no mínimo**:
+
+```typescript
+{
+  sub: string,        // userId (subject)
+  tenantId: string,   // ID do tenant (obrigatório)
+  iat: number,        // Issued at (timestamp)
+  exp: number         // Expiration (timestamp)
+}
+```
+
+#### Regras de Payload
+
+- `sub`: ID do usuário (obrigatório)
+- `tenantId`: ID do tenant (obrigatório, não negociável)
+- `iat`: Timestamp de emissão (obrigatório)
+- `exp`: Timestamp de expiração (obrigatório)
+- Campos opcionais podem ser adicionados conforme necessidade, mas os acima são mínimos
+
+### Segurança de Informações
+
+O sistema **NÃO DEVE**:
+
+- ❌ **Revelar se um email existe ou não** em login ou reset de senha
+  - Mensagens de erro devem ser genéricas: "Credenciais inválidas"
+  - Não diferenciar entre "email não existe" e "senha incorreta"
+  
+- ❌ **Aceitar tokens de um tenant em outro contexto de tenant**
+  - Validar que `tenantId` do token corresponde ao contexto da requisição
+  - Rejeitar tokens com `tenantId` diferente do esperado
+
+- ❌ **Armazenar senhas em texto plano**
+  - Sempre usar hash (bcrypt ou argon2)
+  - Nunca logar senhas ou hashes em produção
+
+---
+
+## 🔑 Tokens e Sessão
+
+### JWT Stateless (V1)
+
+- **JWT é stateless na V1**: Não armazenar estado de sessão no servidor
+- **Logout = responsabilidade do cliente**: Cliente remove token do storage
+- **Não implementar blacklist de tokens na V1**: Simplificação para MVP
+- **Refresh token NÃO é usado na V1**: Apenas access token
+
+### Access Token
+
+- **Implementar apenas access token** com expiração configurável
+- **Tempo de expiração**: Configurável via `JWT_EXPIRES_IN` (ex: "7d", "12h")
+- **Arquitetura deve permitir refresh token futuramente (V2)**: Estrutura de código deve facilitar adição futura sem refactor grande
+
+### Validação de Token
+
+- Validar assinatura do token
+- Validar expiração (`exp`)
+- Validar `tenantId` corresponde ao contexto
+- Rejeitar tokens inválidos, expirados ou de tenant diferente
+
+---
+
+## 🔒 Senhas
+
+### Armazenamento
+
+- **Senhas NUNCA devem ser armazenadas em texto plano**
+- **Usar bcrypt ou argon2** para hash
+- **Salt rounds adequado**: 10-12 para bcrypt (balance entre segurança e performance)
+
+### Política de Senha (Mínima)
+
+- **≥ 8 caracteres** (mínimo obrigatório)
+- **Letras maiúsculas, minúsculas e números** (recomendado)
+- Validação no backend (não confiar apenas no frontend)
+
+### Hash e Comparação
+
+- Função `hashPassword(password: string): Promise<string>`
+- Função `comparePassword(password: string, hash: string): Promise<boolean>`
+- Sempre usar funções assíncronas (bcrypt é assíncrono)
+
+---
+
+## 🚦 Rate Limiting
+
+### Obrigatório desde o Início
+
+**Rate limiting é obrigatório desde o início** para proteger o sistema contra abuso.
+
+### Regras Padrão
+
+- **Login**: limite mais restritivo
+  - Exemplo: 5 tentativas por IP por 15 minutos
+  - Bloquear após múltiplas tentativas falhas
+  
+- **Rotas gerais**: limite global
+  - Exemplo: 100 requisições por IP por minuto
+  - Ajustar conforme necessidade
+
+### Implementação
+
+- Usar biblioteca de rate limiting (ex: `express-rate-limit`)
+- Configurar limites por rota/endpoint
+- Retornar `429 Too Many Requests` quando limite excedido
+- Headers informativos: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+
+---
+
+## 🌱 Ambientes (DEV vs PROD)
+
+### Separação de Configurações
+
+**Configurações DEV e PROD devem ser separadas** para segurança e desenvolvimento.
+
+### JWT_SECRET
+
+- **JWT_SECRET DEVE ser diferente por ambiente**
+- **DEV**: Pode usar chave simples (mas não commitada)
+- **PROD**: Deve usar chave forte e única
+  - Gerar com: `openssl rand -base64 32`
+  - Nunca compartilhar entre ambientes
+
+### Rate Limiting por Ambiente
+
+- **Rate limit em DEV PODE ser mais permissivo**
+  - Facilitar desenvolvimento e testes
+  - Ainda manter proteção básica
+  
+- **PROD**: Limites mais restritivos
+  - Proteção real contra abuso
+
+### Reset de Senha
+
+- **DEV → logar link/token no console**
+  - Facilitar desenvolvimento
+  - Não enviar emails reais em desenvolvimento
+  
+- **PROD → enviar via provider de email real**
+  - Usar serviço de email (ex: SendGrid, AWS SES)
+  - Tokens devem expirar (ex: 1 hora)
+
+### Variáveis de Ambiente
+
+- **Nunca hardcode secrets no código**
+- **Sempre usar variáveis de ambiente**
+- **Manter `.env.example` atualizado**
+  - Documentar todas as variáveis necessárias
+  - Não incluir valores reais (apenas exemplos)
+
+---
+
+## 🧪 Testes e Garantias
+
+### Código Gerado DEVE Considerar
+
+#### Tokens
+
+- ✅ **Tokens expirados**: Validar que tokens expirados são rejeitados
+- ✅ **Tokens inválidos**: Validar que tokens com assinatura inválida são rejeitados
+- ✅ **Token de tenant A não funcionando em tenant B**: Validar isolamento de tenant no token
+
+#### Autenticação
+
+- ✅ **Login com credenciais inválidas**: Não revelar se email existe
+- ✅ **Login com senha incorreta**: Mensagem genérica
+- ✅ **Login com tenant diferente**: Rejeitar acesso
+
+#### Segurança
+
+- ✅ **Senhas não são armazenadas em texto plano**: Validar hash
+- ✅ **Rate limiting funciona**: Validar bloqueio após limite
+- ✅ **JWT contém tenantId**: Validar presença no payload
+
+### Prioridade
+
+**Segurança tem prioridade sobre conveniência.**
+
+- Prefira rejeitar acesso duvidoso do que permitir acesso inseguro
+- Mensagens de erro genéricas são preferíveis a mensagens específicas que vazam informação
+- Validação rigorosa é melhor que validação permissiva
+
+---
+
+## 📋 Checklist de Implementação
+
+### Antes de Considerar Autenticação Completa
+
+- [ ] Modelo `User` tem `tenantId` obrigatório
+- [ ] JWT contém `tenantId` no payload
+- [ ] Todas as queries de usuário filtram por `tenantId`
+- [ ] Senhas são armazenadas com hash (bcrypt/argon2)
+- [ ] Política de senha mínima implementada
+- [ ] Rate limiting configurado (login e rotas gerais)
+- [ ] JWT_SECRET diferente por ambiente
+- [ ] Reset de senha funciona (DEV: console, PROD: email)
+- [ ] Testes cobrem tokens expirados/inválidos
+- [ ] Testes validam isolamento de tenant no token
+- [ ] Mensagens de erro não vazam informação
+
+---
+
+## 🔗 Integração com Multi-Tenant
+
+### Ordem de Execução
+
+1. **Tenant Context Middleware** (Etapa 1)
+   - Extrai `tenantId` do header
+   - Valida tenant existe e está ativo
+   - Adiciona `req.tenantId` ao request
+
+2. **Auth Middleware** (Etapa 2)
+   - Valida token JWT
+   - Extrai `userId` e `tenantId` do token
+   - **Valida que `tenantId` do token corresponde a `req.tenantId`**
+   - Adiciona `req.userId` ao request
+
+### Validação Cruzada
+
+- Token sem `tenantId` → Rejeitar
+- Token com `tenantId` diferente de `req.tenantId` → Rejeitar
+- Token válido mas tenant inativo → Rejeitar
+
+---
+
+## 📚 Referências
+
+- **Etapa 2 (Autenticação)**: `docs/v1/fases/Etapa-02-Autenticacao.md`
+- **Documentação Multi-Tenant**: `docs/MULTI-TENANT.md`
+- **Regras Gerais**: `.cursor/rules/crm-saas-v1.mdc`
+
+---
+
+## ⚠️ Avisos Críticos
+
+- **Qualquer falha de autenticação pode resultar em vazamento de dados entre tenants**
+- **Tokens sem validação de tenant são vulnerabilidade crítica**
+- **Senhas em texto plano são inaceitáveis**
+- **Rate limiting é obrigatório, não opcional**
