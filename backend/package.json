@@ -12,6 +12,9 @@
     "prisma:studio": "prisma studio",
     "seed": "prisma db seed",
     "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:auth": "jest --testPathPattern=auth|password|jwt",
+    "test:security": "jest --testPathPattern=authSecurity|rateLimiter",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
