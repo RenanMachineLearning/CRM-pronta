@@ -66,8 +66,10 @@ model Tenant {
   updatedAt DateTime     @updatedAt @map("updated_at")
 
   // Relacionamentos
-  users                User[]                // Etapa 2 (Autenticação)
-  passwordResetTokens  PasswordResetToken[]  // Etapa 2 (Recuperação de Senha)
+  users               User[] // Etapa 2 (Autenticação)
+  passwordResetTokens PasswordResetToken[] // Etapa 2 (Recuperação de Senha)
+  roles               Role[] // Etapa 3 (ACL)
+  permissions         Permission[] // Etapa 3 (ACL)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
@@ -92,29 +94,28 @@ model User {
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
   // Relacionamento obrigatório com Tenant
-  tenant              Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  passwordResetTokens PasswordResetToken[]  // Etapa 2 (Recuperação de Senha)
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  passwordResetTokens PasswordResetToken[] // Etapa 2 (Recuperação de Senha)
+  userRoles           UserRole[] // Etapa 3 (ACL)
 
   // Índice único composto: email único por tenant
   @@unique([tenantId, email])
-  
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
-  
   @@map("users")
 }
 
 // Modelo de PasswordResetToken (tokens de reset de senha)
 // Implementado na Etapa 2 (Recuperação de Senha)
 model PasswordResetToken {
-  id        String   @id @default(uuid())
-  token     String   @unique // UUID gerado
+  id        String    @id @default(uuid())
+  token     String    @unique // UUID gerado
   userId    String
   tenantId  String
   expiresAt DateTime
   usedAt    DateTime? // null se não usado, preenchido quando token é usado
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   // Relacionamentos obrigatórios
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -123,6 +124,91 @@ model PasswordResetToken {
   // Índices
   @@index([tenantId, id]) // Convenção multi-tenant
   @@map("password_reset_tokens")
+}
+
+// ============================================================================
+// ETAPA 3 - ACL (Access Control List)
+// ============================================================================
+// Modelos para gestão de usuários, roles e permissões
+// Implementado na Etapa 3 (ACL)
+
+// Modelo de Role (funções/roles do sistema)
+// Cada tenant pode ter suas próprias roles (Admin, Vendedor, Visualizador, etc.)
+model Role {
+  id          String   @id @default(uuid())
+  name        String // Nome da role (ex: "Admin", "Vendedor", "Visualizador")
+  tenantId    String // Foreign key para Tenant (isolamento multi-tenant)
+  description String? // Descrição opcional da role
+  isActive    Boolean  @default(true) // Soft delete - roles são entidades de governança
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[] // Relação N:N com User
+  rolePermissions RolePermission[] // Relação N:N com Permission
+
+  // Índice único composto: nome único por tenant
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+// Modelo de Permission (permissões do sistema)
+// Define o que pode ser feito (entity + action + field opcional)
+// Permissões são tenant-aware para isolamento, mas funcionam como catálogo
+model Permission {
+  id        String   @id @default(uuid())
+  entity    String // Entidade (ex: "Contact", "Company", "Lead", "Opportunity", "User", "Role")
+  action    String // Ação (ex: "create", "read", "update", "delete", "list")
+  field     String? // Campo opcional - null = permissão de entidade, preenchido = permissão de campo
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[] // Relação N:N com Role
+
+  // Índice único composto: previne permissões duplicadas por tenant
+  // PostgreSQL trata corretamente nulls em índices únicos compostos
+  @@unique([tenantId, entity, action, field])
+  // Índice para busca otimizada por entidade/ação
+  @@index([tenantId, entity, action])
+  @@map("permissions")
+}
+
+// Modelo de RolePermission (tabela de junção N:N entre Role e Permission)
+// Define quais permissões cada role possui
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  // Relacionamentos
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  // Primary key composta otimiza queries
+  @@id([roleId, permissionId])
+  // Índice único adicional para garantir integridade
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Modelo de UserRole (tabela de junção N:N entre User e Role)
+// Define quais roles cada usuário possui (um usuário pode ter múltiplas roles)
+model UserRole {
+  userId String
+  roleId String
+
+  // Relacionamentos
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  // Primary key composta otimiza queries
+  @@id([userId, roleId])
+  // Índice único adicional para garantir integridade
+  @@unique([userId, roleId])
+  @@map("user_roles")
 }
 
 // ============================================================================
@@ -155,4 +241,3 @@ model PasswordResetToken {
 // ✓ Foreign key com `onDelete: Cascade` para manter integridade
 //
 // ============================================================================
-

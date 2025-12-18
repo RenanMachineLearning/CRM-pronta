@@ -55,6 +55,10 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 2. Roles Padrão e Permissões Iniciais
 
 #### Backend (Seed Script)
+
+- Admin recebe todas as permissões existentes via seed.
+- O middleware de autorização não possui exceções por nome de role.
+
 - [ ] Criar roles padrão no seed
   - [ ] **Admin**: acesso total (todas as permissões)
   - [ ] **Vendedor**: pode criar/editar contatos, leads, oportunidades; pode visualizar relatórios
@@ -154,6 +158,10 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 
 ### 5. Middleware de Autorização
 
+- O JWT contém apenas userId e tenantId.
+- Roles e permissões são resolvidas em tempo de requisição.
+
+
 #### Backend (Node.js + TypeScript)
 - [ ] Criar middleware `authorizationMiddleware.ts`
   - [ ] Receber: `entity` (ex: "Contact"), `action` (ex: "create")
@@ -180,6 +188,12 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 6. Permissões por Campo
 
 #### Backend (Node.js + TypeScript)
+
+⚠️ Implementar permissões por campo apenas após:
+- ACL por entidade estabilizado
+- CRUD de usuários e roles finalizados
+- Testes de autorização básicos passando
+
 - [ ] Estender sistema de permissões
   - [ ] Suportar permissões por campo (ex: "Opportunity.value")
   - [ ] Verificar permissão de campo antes de retornar/atualizar dados
@@ -232,6 +246,10 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 8. Auditoria de Alterações
 
 #### Backend (Prisma Schema)
+
+- Falhas na auditoria não devem impedir a operação principal.
+- Auditoria não altera o comportamento funcional do sistema.
+
 - [ ] Criar tabela `AuditLog` no schema Prisma
   - [ ] Campo `id` (UUID)
   - [ ] Campo `entityType` (ex: "Contact", "Company")
@@ -287,6 +305,14 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 10. Testes de ACL
 
 #### Backend (Testes)
+
+Testes mínimos obrigatórios:
+- Visualizador recebe 403 em create/update/delete
+- Vendedor cria e atualiza, mas não deleta
+- Admin possui acesso total via permissões
+- Usuário não acessa recursos de outro tenant
+- Campo restrito não é retornado
+
 - [ ] Testes unitários
   - [ ] Verificação de permissões
   - [ ] Filtro de campos por permissão
