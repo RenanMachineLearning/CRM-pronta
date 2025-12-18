@@ -12,8 +12,7 @@ import { TenantService } from '../services/tenantService';
 import { PasswordResetService } from '../services/passwordResetService';
 import { EmailService } from '../services/emailService';
 import { generateToken } from '../utils/jwt';
-import { hashPassword, comparePassword } from '../utils/password';
-import { validatePasswordStrength } from '../utils/password';
+import { hashPassword, comparePassword, validatePasswordPolicy } from '../utils/password';
 
 const prisma = new PrismaClient();
 
@@ -314,11 +313,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Validar complexidade da senha
-    if (!validatePasswordStrength(newPassword)) {
+    // Validar complexidade da senha usando validatePasswordPolicy
+    // Caractere especial não é exigido na V1 (padrão: false)
+    const passwordValidation = validatePasswordPolicy(newPassword, false);
+    if (!passwordValidation.isValid) {
       res.status(400).json({
         error: 'Senha inválida',
-        message: 'A senha deve ter no mínimo 8 caracteres',
+        message: `A senha não atende aos requisitos: ${passwordValidation.errors.join(', ')}`,
+        errors: passwordValidation.errors, // Detalhes para frontend
       });
       return;
     }
@@ -447,11 +449,14 @@ export async function changePassword(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Validar complexidade da nova senha
-    if (!validatePasswordStrength(newPassword)) {
+    // Validar complexidade da nova senha usando validatePasswordPolicy
+    // Caractere especial não é exigido na V1 (padrão: false)
+    const passwordValidation = validatePasswordPolicy(newPassword, false);
+    if (!passwordValidation.isValid) {
       res.status(400).json({
         error: 'Senha inválida',
-        message: 'A senha deve ter no mínimo 8 caracteres',
+        message: `A senha não atende aos requisitos: ${passwordValidation.errors.join(', ')}`,
+        errors: passwordValidation.errors, // Detalhes para frontend
       });
       return;
     }

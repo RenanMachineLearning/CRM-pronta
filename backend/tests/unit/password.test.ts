@@ -1,9 +1,9 @@
 /**
  * Testes unitários para utilitário de hash e comparação de senhas
- * Testa as funções hashPassword e comparePassword isoladamente
+ * Testa as funções hashPassword, comparePassword e validatePasswordPolicy isoladamente
  */
 
-import { hashPassword, comparePassword } from '../../src/utils/password';
+import { hashPassword, comparePassword, validatePasswordPolicy, validatePasswordStrength } from '../../src/utils/password';
 
 describe('Password Utils', () => {
   describe('hashPassword', () => {
@@ -122,6 +122,132 @@ describe('Password Utils', () => {
       await expect(comparePassword('', '')).resolves.toBe(false);
       await expect(comparePassword('senha', 'hash-invalido')).resolves.toBe(false);
       await expect(comparePassword('', 'hash-valido')).resolves.toBe(false);
+    });
+  });
+
+  describe('validatePasswordPolicy', () => {
+    it('deve aceitar senha forte com todos os requisitos', () => {
+      const result = validatePasswordPolicy('StrongPass123');
+      expect(result.isValid).toBe(true);
+      expect(result.errors.length).toBe(0);
+      expect(result.requirements.minLength).toBe(true);
+      expect(result.requirements.hasUpperCase).toBe(true);
+      expect(result.requirements.hasLowerCase).toBe(true);
+      expect(result.requirements.hasNumber).toBe(true);
+    });
+
+    it('deve aceitar senha forte com caractere especial', () => {
+      const result = validatePasswordPolicy('StrongPass123!');
+      expect(result.isValid).toBe(true);
+      expect(result.errors.length).toBe(0);
+    });
+
+    it('deve rejeitar senha sem maiúscula', () => {
+      const result = validatePasswordPolicy('weakpass123');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha deve conter pelo menos uma letra maiúscula');
+      expect(result.requirements.hasUpperCase).toBe(false);
+    });
+
+    it('deve rejeitar senha sem minúscula', () => {
+      const result = validatePasswordPolicy('WEAKPASS123');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha deve conter pelo menos uma letra minúscula');
+      expect(result.requirements.hasLowerCase).toBe(false);
+    });
+
+    it('deve rejeitar senha sem número', () => {
+      const result = validatePasswordPolicy('WeakPass');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha deve conter pelo menos um número');
+      expect(result.requirements.hasNumber).toBe(false);
+    });
+
+    it('deve rejeitar senha muito curta (< 8 caracteres)', () => {
+      const result = validatePasswordPolicy('Weak1');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha deve ter no mínimo 8 caracteres');
+      expect(result.requirements.minLength).toBe(false);
+    });
+
+    it('deve rejeitar senha vazia', () => {
+      const result = validatePasswordPolicy('');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha é obrigatória');
+    });
+
+    it('deve rejeitar senha apenas com espaços', () => {
+      const result = validatePasswordPolicy('   ');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha é obrigatória');
+    });
+
+    it('deve detectar múltiplos erros simultâneos', () => {
+      const result = validatePasswordPolicy('weak');
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(1);
+      expect(result.errors).toContain('A senha deve ter no mínimo 8 caracteres');
+      expect(result.errors).toContain('A senha deve conter pelo menos uma letra maiúscula');
+      expect(result.errors).toContain('A senha deve conter pelo menos um número');
+    });
+
+    it('não deve exigir caractere especial por padrão (V1)', () => {
+      const result = validatePasswordPolicy('StrongPass123');
+      expect(result.isValid).toBe(true);
+      expect(result.errors).not.toContain('A senha deve conter pelo menos um caractere especial');
+    });
+
+    it('deve exigir caractere especial quando requireSpecialChar=true', () => {
+      const result = validatePasswordPolicy('StrongPass123', true);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('A senha deve conter pelo menos um caractere especial');
+    });
+
+    it('deve aceitar senha com caractere especial quando requireSpecialChar=true', () => {
+      const result = validatePasswordPolicy('StrongPass123!', true);
+      expect(result.isValid).toBe(true);
+      expect(result.errors.length).toBe(0);
+    });
+
+    it('deve retornar lista de erros específicos', () => {
+      const result = validatePasswordPolicy('weak');
+      expect(Array.isArray(result.errors)).toBe(true);
+      expect(result.errors.length).toBeGreaterThan(0);
+      result.errors.forEach(error => {
+        expect(typeof error).toBe('string');
+        expect(error.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('deve retornar objeto requirements com todos os campos booleanos', () => {
+      const result = validatePasswordPolicy('StrongPass123');
+      expect(result.requirements).toHaveProperty('minLength');
+      expect(result.requirements).toHaveProperty('hasUpperCase');
+      expect(result.requirements).toHaveProperty('hasLowerCase');
+      expect(result.requirements).toHaveProperty('hasNumber');
+      expect(result.requirements).toHaveProperty('hasSpecialChar');
+      expect(typeof result.requirements.minLength).toBe('boolean');
+      expect(typeof result.requirements.hasUpperCase).toBe('boolean');
+      expect(typeof result.requirements.hasLowerCase).toBe('boolean');
+      expect(typeof result.requirements.hasNumber).toBe('boolean');
+      expect(typeof result.requirements.hasSpecialChar).toBe('boolean');
+    });
+  });
+
+  describe('validatePasswordStrength (compatibilidade)', () => {
+    it('deve retornar true para senha válida', () => {
+      expect(validatePasswordStrength('StrongPass123')).toBe(true);
+    });
+
+    it('deve retornar false para senha inválida', () => {
+      expect(validatePasswordStrength('weak')).toBe(false);
+      expect(validatePasswordStrength('weakpass')).toBe(false);
+      expect(validatePasswordStrength('WEAKPASS')).toBe(false);
+      expect(validatePasswordStrength('WeakPass')).toBe(false);
+    });
+
+    it('deve retornar false para senha vazia', () => {
+      expect(validatePasswordStrength('')).toBe(false);
     });
   });
 });

@@ -86,14 +86,107 @@ export async function comparePassword(
 }
 
 /**
- * Valida a força/complexidade de uma senha
+ * Interface para resultado da validação de política de senha
+ * 
+ * Fornece detalhes sobre quais requisitos foram atendidos e quais falharam
+ */
+export interface PasswordValidationResult {
+  isValid: boolean;
+  errors: string[];
+  requirements: {
+    minLength: boolean;
+    hasUpperCase: boolean;
+    hasLowerCase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  };
+}
+
+/**
+ * Valida a política de senha com requisitos completos de complexidade
+ * 
+ * @param password - Senha a ser validada
+ * @param requireSpecialChar - Se true, exige caractere especial (padrão: false na V1)
+ * @returns PasswordValidationResult - Objeto com detalhes da validação
+ * 
+ * @remarks
+ * - Valida comprimento mínimo (8 caracteres)
+ * - Valida presença de letra maiúscula (A-Z)
+ * - Valida presença de letra minúscula (a-z)
+ * - Valida presença de número (0-9)
+ * - Valida presença de caractere especial (opcional na V1)
+ * - Retorna lista de erros específicos para mensagens claras
+ * 
+ * @example
+ * const result = validatePasswordPolicy('StrongPass123');
+ * if (!result.isValid) {
+ *   console.log('Erros:', result.errors);
+ * }
+ */
+export function validatePasswordPolicy(
+  password: string,
+  requireSpecialChar: boolean = false
+): PasswordValidationResult {
+  const errors: string[] = [];
+  
+  // Validar que a senha foi fornecida
+  if (!password || password.trim().length === 0) {
+    return {
+      isValid: false,
+      errors: ['A senha é obrigatória'],
+      requirements: {
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumber: false,
+        hasSpecialChar: false,
+      },
+    };
+  }
+
+  // Verificar cada requisito
+  const requirements = {
+    minLength: password.length >= 8,
+    hasUpperCase: /[A-Z]/.test(password),
+    hasLowerCase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  };
+
+  // Coletar erros específicos
+  if (!requirements.minLength) {
+    errors.push('A senha deve ter no mínimo 8 caracteres');
+  }
+  if (!requirements.hasUpperCase) {
+    errors.push('A senha deve conter pelo menos uma letra maiúscula');
+  }
+  if (!requirements.hasLowerCase) {
+    errors.push('A senha deve conter pelo menos uma letra minúscula');
+  }
+  if (!requirements.hasNumber) {
+    errors.push('A senha deve conter pelo menos um número');
+  }
+  if (requireSpecialChar && !requirements.hasSpecialChar) {
+    errors.push('A senha deve conter pelo menos um caractere especial');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    requirements,
+  };
+}
+
+/**
+ * Valida a força/complexidade de uma senha (função simples para compatibilidade)
  * 
  * @param password - Senha a ser validada
  * @returns boolean - true se a senha atende aos requisitos mínimos, false caso contrário
  * 
  * @remarks
- * - V1: Valida apenas comprimento mínimo (8 caracteres)
- * - V2: Pode ser expandido para incluir maiúsculas, números, símbolos
+ * - Usa validatePasswordPolicy internamente
+ * - Mantida para compatibilidade com código existente
+ * - Caractere especial não é exigido por padrão (V1)
  * 
  * @example
  * if (validatePasswordStrength('minhaSenha123')) {
@@ -101,22 +194,7 @@ export async function comparePassword(
  * }
  */
 export function validatePasswordStrength(password: string): boolean {
-  // Valida que a senha foi fornecida
-  if (!password || password.trim().length === 0) {
-    return false;
-  }
-
-  // V1: Valida apenas comprimento mínimo (8 caracteres)
-  if (password.length < 8) {
-    return false;
-  }
-
-  // V2: Adicionar validações de complexidade:
-  // - Pelo menos uma letra maiúscula
-  // - Pelo menos uma letra minúscula
-  // - Pelo menos um número
-  // - Pelo menos um símbolo especial
-
-  return true;
+  const result = validatePasswordPolicy(password, false);
+  return result.isValid;
 }
 
