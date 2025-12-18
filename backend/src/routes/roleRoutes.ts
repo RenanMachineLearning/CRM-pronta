@@ -15,8 +15,13 @@ import {
 } from '../controllers/roleController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
 
 const router = express.Router();
+
+// Aplicar middlewares globais no nível do router
+// Ordem: tenantContextMiddleware → authMiddleware
+router.use(tenantContextMiddleware, authMiddleware);
 
 /**
  * GET /api/roles
@@ -45,8 +50,7 @@ const router = express.Router();
  */
 router.get(
   '/',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('Role', 'list'),
   listRoles
 );
 
@@ -64,8 +68,7 @@ router.get(
  */
 router.get(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('Role', 'read'),
   getRole
 );
 
@@ -91,8 +94,7 @@ router.get(
  */
 router.post(
   '/',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('Role', 'create'),
   createRole
 );
 
@@ -122,8 +124,7 @@ router.post(
  */
 router.put(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('Role', 'update'),
   updateRole
 );
 
@@ -145,8 +146,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('Role', 'delete'),
   deleteRole
 );
 

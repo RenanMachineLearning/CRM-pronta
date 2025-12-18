@@ -2,12 +2,14 @@
  * Controller de usuários
  * 
  * Handlers para rotas de gestão de usuários (CRUD).
- * Orquestra chamadas ao UserService e verifica permissões.
+ * Orquestra chamadas ao UserService.
+ * 
+ * Nota: Verificações de autorização são feitas exclusivamente via middleware.
+ * Controllers não devem conter lógica de autorização.
  */
 
 import { Request, Response } from 'express';
 import { UserService } from '../services/userService';
-import { checkPermission } from '../utils/permissions';
 
 /**
  * Lista usuários com paginação e filtros
@@ -17,28 +19,8 @@ import { checkPermission } from '../utils/permissions';
  */
 export async function listUsers(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão User.list
-    const hasPermission = await checkPermission(userId, tenantId, 'User', 'list');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para listar usuários',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair query params
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
@@ -104,28 +86,8 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
  */
 export async function getUser(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão User.read
-    const hasPermission = await checkPermission(userId, tenantId, 'User', 'read');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para visualizar usuários',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const targetUserId = req.params.id;
@@ -166,28 +128,8 @@ export async function getUser(req: Request, res: Response): Promise<void> {
  */
 export async function createUser(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão User.create
-    const hasPermission = await checkPermission(userId, tenantId, 'User', 'create');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para criar usuários',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair dados do body
     const { email, name, password, roleIds } = req.body;
@@ -290,28 +232,8 @@ export async function createUser(req: Request, res: Response): Promise<void> {
  */
 export async function updateUser(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão User.update
-    const hasPermission = await checkPermission(userId, tenantId, 'User', 'update');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para atualizar usuários',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const targetUserId = req.params.id;
@@ -427,28 +349,8 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
  */
 export async function deleteUser(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão User.delete
-    const hasPermission = await checkPermission(userId, tenantId, 'User', 'delete');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para deletar usuários',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const targetUserId = req.params.id;

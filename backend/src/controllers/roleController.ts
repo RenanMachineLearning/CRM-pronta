@@ -2,12 +2,14 @@
  * Controller de roles
  * 
  * Handlers para rotas de gestão de roles (CRUD).
- * Orquestra chamadas ao RoleService e verifica permissões.
+ * Orquestra chamadas ao RoleService.
+ * 
+ * Nota: Verificações de autorização são feitas exclusivamente via middleware.
+ * Controllers não devem conter lógica de autorização.
  */
 
 import { Request, Response } from 'express';
 import { RoleService } from '../services/roleService';
-import { checkPermission } from '../utils/permissions';
 
 /**
  * Lista roles do tenant atual
@@ -17,28 +19,8 @@ import { checkPermission } from '../utils/permissions';
  */
 export async function listRoles(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão Role.list
-    const hasPermission = await checkPermission(userId, tenantId, 'Role', 'list');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para listar roles',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Buscar roles
     const roles = await RoleService.listRoles(tenantId);
@@ -63,28 +45,8 @@ export async function listRoles(req: Request, res: Response): Promise<void> {
  */
 export async function getRole(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão Role.read
-    const hasPermission = await checkPermission(userId, tenantId, 'Role', 'read');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para visualizar roles',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const roleId = req.params.id;
@@ -125,28 +87,8 @@ export async function getRole(req: Request, res: Response): Promise<void> {
  */
 export async function createRole(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão Role.create
-    const hasPermission = await checkPermission(userId, tenantId, 'Role', 'create');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para criar roles',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair dados do body
     const { name, description, permissionIds } = req.body;
@@ -232,28 +174,8 @@ export async function createRole(req: Request, res: Response): Promise<void> {
  */
 export async function updateRole(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão Role.update
-    const hasPermission = await checkPermission(userId, tenantId, 'Role', 'update');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para atualizar roles',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const roleId = req.params.id;
@@ -357,28 +279,8 @@ export async function updateRole(req: Request, res: Response): Promise<void> {
  */
 export async function deleteRole(req: Request, res: Response): Promise<void> {
   try {
-    // Obter userId e tenantId dos middlewares
-    const userId = req.userId;
-    const tenantId = req.tenantId;
-
-    // Validar que middlewares rodaram
-    if (!userId || !tenantId) {
-      res.status(401).json({
-        error: 'Não autenticado',
-        message: 'Token de autenticação necessário',
-      });
-      return;
-    }
-
-    // Verificar permissão Role.delete
-    const hasPermission = await checkPermission(userId, tenantId, 'Role', 'delete');
-    if (!hasPermission) {
-      res.status(403).json({
-        error: 'Acesso negado',
-        message: 'Você não tem permissão para deletar roles',
-      });
-      return;
-    }
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
 
     // Extrair ID dos params
     const roleId = req.params.id;

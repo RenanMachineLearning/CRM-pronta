@@ -15,8 +15,13 @@ import {
 } from '../controllers/userController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
 
 const router = express.Router();
+
+// Aplicar middlewares globais no nível do router
+// Ordem: tenantContextMiddleware → authMiddleware
+router.use(tenantContextMiddleware, authMiddleware);
 
 /**
  * GET /api/users
@@ -42,8 +47,7 @@ const router = express.Router();
  */
 router.get(
   '/',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('User', 'list'),
   listUsers
 );
 
@@ -61,8 +65,7 @@ router.get(
  */
 router.get(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('User', 'read'),
   getUser
 );
 
@@ -89,8 +92,7 @@ router.get(
  */
 router.post(
   '/',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('User', 'create'),
   createUser
 );
 
@@ -121,8 +123,7 @@ router.post(
  */
 router.put(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('User', 'update'),
   updateUser
 );
 
@@ -142,8 +143,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  tenantContextMiddleware,
-  authMiddleware,
+  authorizationMiddleware('User', 'delete'),
   deleteUser
 );
 
