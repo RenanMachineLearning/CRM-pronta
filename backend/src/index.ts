@@ -6,6 +6,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { tenantContextMiddleware } from './middleware/tenantContext';
+import { authMiddleware } from './middleware/authMiddleware';
+import { globalRateLimiter } from './middleware/rateLimiter';
+import authRoutes from './routes/authRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -17,7 +20,10 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rota pública (sem tenant)
+// Rate limiter global (100 req/min)
+app.use(globalRateLimiter);
+
+// Rota pública (sem tenant, pode ser skip pelo rate limiter)
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -26,15 +32,24 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// Rotas de autenticação (antes do middleware de tenant)
+// Login precisa extrair tenant manualmente do header
+app.use('/api/auth', authRoutes);
+
 // Aplicar middleware de tenant em todas as outras rotas
 app.use(tenantContextMiddleware);
 
-// Exemplo de rota protegida
+// Aplicar middleware de autenticação em rotas protegidas
+// Rotas públicas (/health, /api/auth/*) não precisam de autenticação
+app.use(authMiddleware);
+
+// Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {
   res.json({
     message: 'Rota protegida',
     tenantId: req.tenantId,
     tenant: req.tenant?.name,
+    userId: req.userId,
   });
 });
 
