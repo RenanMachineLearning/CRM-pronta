@@ -5,8 +5,10 @@
  */
 
 import express from 'express';
-import { login, logout, refresh, forgotPassword, resetPassword } from '../controllers/authController';
+import { login, logout, refresh, forgotPassword, resetPassword, changePassword } from '../controllers/authController';
 import { loginRateLimiter } from '../middleware/rateLimiter';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 
 const router = express.Router();
 
@@ -122,6 +124,45 @@ router.post('/forgot-password', forgotPassword);
  * - Token de tenant A não funciona em tenant B
  */
 router.post('/reset-password', resetPassword);
+
+/**
+ * POST /api/auth/change-password
+ * 
+ * Altera senha do usuário autenticado
+ * 
+ * Requer autenticação (token JWT no header Authorization: Bearer <token>)
+ * 
+ * Body:
+ * - currentPassword: string (obrigatório) - Senha atual do usuário
+ * - newPassword: string (obrigatório) - Nova senha (mínimo 8 caracteres, diferente da atual)
+ * 
+ * Headers:
+ * - Authorization: Bearer <token> (obrigatório)
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - message: string
+ * 
+ * Response 400:
+ * - Senha atual ou nova senha não fornecidas
+ * - Nova senha igual à atual
+ * - Senha não atende complexidade mínima (8 caracteres)
+ * - Tenant não identificado
+ * 
+ * Response 401:
+ * - Token não fornecido ou inválido
+ * - Credenciais inválidas (senha atual incorreta - mensagem genérica)
+ * 
+ * Response 403:
+ * - Tenant inválido ou inativo
+ * 
+ * Nota de Segurança:
+ * - Rota protegida por authMiddleware (requer token JWT válido)
+ * - Herda rate limiter global (100 req/min por IP)
+ * - Mensagens de erro genéricas (não revela qual validação falhou)
+ * - V2: Considerar invalidar tokens após troca de senha
+ */
+router.post('/change-password', tenantContextMiddleware, authMiddleware, changePassword);
 
 export default router;
 

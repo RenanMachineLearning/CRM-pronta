@@ -12,7 +12,7 @@ import { TenantService } from '../services/tenantService';
 import { PasswordResetService } from '../services/passwordResetService';
 import { EmailService } from '../services/emailService';
 import { generateToken } from '../utils/jwt';
-import { hashPassword } from '../utils/password';
+import { hashPassword, comparePassword } from '../utils/password';
 import { validatePasswordStrength } from '../utils/password';
 
 const prisma = new PrismaClient();
@@ -349,6 +349,137 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: 'Falha ao processar reset de senha',
+    });
+  }
+}
+
+/**
+ * Altera senha do usuário autenticado
+ * 
+ * Requer autenticação (token JWT).
+ * Valida senha atual, complexidade da nova senha e garante que nova senha seja diferente da atual.
+ * 
+ * @param req - Request com currentPassword e newPassword no body
+ * @param res - Response para retornar sucesso ou erro
+ */
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  try {
+    // Extrair currentPassword e newPassword do body
+    const { currentPassword, newPassword } = req.body;
+
+    // Validar que currentPassword foi fornecido
+    if (!currentPassword || typeof currentPassword !== 'string' || currentPassword.trim().length === 0) {
+      res.status(400).json({
+        error: 'Senha atual é obrigatória',
+        message: 'Forneça a senha atual',
+      });
+      return;
+    }
+
+    // Validar que newPassword foi fornecido
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length === 0) {
+      res.status(400).json({
+        error: 'Nova senha é obrigatória',
+        message: 'Forneça uma nova senha',
+      });
+      return;
+    }
+
+    // Obter userId e tenantId dos middlewares
+    const userId = req.userId;
+    const tenantId = req.tenantId;
+
+    // Validar que userId e tenantId estão disponíveis (middlewares rodaram)
+    if (!userId) {
+      res.status(401).json({
+        error: 'Não autenticado',
+        message: 'Token de autenticação necessário',
+      });
+      return;
+    }
+
+    if (!tenantId) {
+      res.status(400).json({
+        error: 'Contexto de tenant ausente',
+        message: 'Tenant context deve ser processado antes da autenticação',
+      });
+      return;
+    }
+
+    // Buscar usuário no banco (com tenantId para isolamento)
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    // Validar que usuário existe e pertence ao tenant correto
+    if (!user || user.tenantId !== tenantId) {
+      res.status(401).json({
+        error: 'Credenciais inválidas',
+        message: 'Usuário não encontrado',
+      });
+      return;
+    }
+
+    // Validar senha atual usando comparePassword
+    const isCurrentPasswordValid = await comparePassword(
+      currentPassword,
+      user.passwordHash
+    );
+
+    // Se senha atual incorreta, retornar erro genérico (não revelar qual validação falhou)
+    if (!isCurrentPasswordValid) {
+      res.status(401).json({
+        error: 'Credenciais inválidas',
+        message: 'Credenciais inválidas',
+      });
+      return;
+    }
+
+    // Validar que nova senha é diferente da atual
+    const isNewPasswordSame = await comparePassword(newPassword, user.passwordHash);
+    if (isNewPasswordSame) {
+      res.status(400).json({
+        error: 'Nova senha inválida',
+        message: 'Nova senha deve ser diferente da atual',
+      });
+      return;
+    }
+
+    // Validar complexidade da nova senha
+    if (!validatePasswordStrength(newPassword)) {
+      res.status(400).json({
+        error: 'Senha inválida',
+        message: 'A senha deve ter no mínimo 8 caracteres',
+      });
+      return;
+    }
+
+    // Hash da nova senha
+    const passwordHash = await hashPassword(newPassword);
+
+    // Atualizar senha do usuário no banco
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        passwordHash,
+      },
+    });
+
+    // Retornar sucesso
+    // Nota V2: Após troca de senha, considerar invalidar refresh tokens/sessões ativas
+    res.status(200).json({
+      message: 'Senha alterada com sucesso',
+    });
+  } catch (error) {
+    // Tratamento de erros inesperados
+    console.error('Erro no change-password:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao processar alteração de senha',
     });
   }
 }
