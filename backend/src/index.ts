@@ -7,6 +7,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { tenantContextMiddleware } from './middleware/tenantContext';
 import { authMiddleware } from './middleware/authMiddleware';
+import { globalRateLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/authRoutes';
 
 // Carregar variáveis de ambiente
@@ -19,7 +20,10 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rota pública (sem tenant)
+// Rate limiter global (100 req/min)
+app.use(globalRateLimiter);
+
+// Rota pública (sem tenant, pode ser skip pelo rate limiter)
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',

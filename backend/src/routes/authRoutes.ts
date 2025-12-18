@@ -6,6 +6,7 @@
 
 import express from 'express';
 import { login, logout, refresh } from '../controllers/authController';
+import { loginRateLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
@@ -34,7 +35,7 @@ const router = express.Router();
  * Response 403:
  * - Tenant inválido ou inativo
  */
-router.post('/login', login);
+router.post('/login', loginRateLimiter, login);
 
 /**
  * POST /api/auth/logout
