@@ -6,6 +6,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { tenantContextMiddleware } from './middleware/tenantContext';
+import { authMiddleware } from './middleware/authMiddleware';
 import authRoutes from './routes/authRoutes';
 
 // Carregar variáveis de ambiente
@@ -34,12 +35,17 @@ app.use('/api/auth', authRoutes);
 // Aplicar middleware de tenant em todas as outras rotas
 app.use(tenantContextMiddleware);
 
-// Exemplo de rota protegida
+// Aplicar middleware de autenticação em rotas protegidas
+// Rotas públicas (/health, /api/auth/*) não precisam de autenticação
+app.use(authMiddleware);
+
+// Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {
   res.json({
     message: 'Rota protegida',
     tenantId: req.tenantId,
     tenant: req.tenant?.name,
+    userId: req.userId,
   });
 });
 
