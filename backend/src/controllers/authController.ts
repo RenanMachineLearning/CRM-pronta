@@ -6,9 +6,16 @@
  */
 
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { AuthService } from '../services/authService';
 import { TenantService } from '../services/tenantService';
+import { PasswordResetService } from '../services/passwordResetService';
+import { EmailService } from '../services/emailService';
 import { generateToken } from '../utils/jwt';
+import { hashPassword } from '../utils/password';
+import { validatePasswordStrength } from '../utils/password';
+
+const prisma = new PrismaClient();
 
 /**
  * Realiza login de usuário
@@ -137,5 +144,212 @@ export async function refresh(_req: Request, res: Response): Promise<void> {
     error: 'Não implementado',
     message: 'Refresh token será implementado na V2',
   });
+}
+
+/**
+ * Solicita reset de senha
+ * 
+ * Gera token de reset e envia email (ou log em DEV).
+ * Sempre retorna sucesso para não revelar se email existe.
+ * 
+ * @param req - Request com email no body e tenant no header
+ * @param res - Response para retornar sucesso (sempre)
+ */
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  try {
+    // Extrair email do body
+    const { email } = req.body;
+
+    // Validar que email foi fornecido
+    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+      res.status(400).json({
+        error: 'Email é obrigatório',
+        message: 'Forneça um email válido',
+      });
+      return;
+    }
+
+    // Obter tenantId a partir do header (X-Tenant-Id ou X-Tenant-Slug)
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantSlug = req.headers['x-tenant-slug'] as string;
+
+    // Resolver tenant manualmente
+    let tenant;
+    if (tenantId) {
+      tenant = await TenantService.validateById(tenantId);
+    } else if (tenantSlug) {
+      tenant = await TenantService.validateBySlug(tenantSlug);
+    } else {
+      res.status(400).json({
+        error: 'Tenant não identificado',
+        message: 'Forneça X-Tenant-Id ou X-Tenant-Slug no header',
+      });
+      return;
+    }
+
+    // Se tenant inválido ou inativo
+    if (!tenant) {
+      res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Tenant inválido ou inativo',
+      });
+      return;
+    }
+
+    // Buscar usuário por email e tenantId
+    const user = await prisma.user.findUnique({
+      where: {
+        tenantId_email: {
+          tenantId: tenant.id,
+          email: email.trim(),
+        },
+      },
+    });
+
+    // Se usuário encontrado e ativo, gerar token e enviar email
+    if (user && user.status === 'ACTIVE') {
+      try {
+        // Gerar token de reset
+        const token = await PasswordResetService.generateResetToken(
+          user.id,
+          tenant.id
+        );
+
+        // Enviar email (ou log em DEV)
+        await EmailService.sendPasswordResetEmail(
+          user.email,
+          token,
+          tenant.id
+        );
+      } catch (error) {
+        // Tratamento silencioso - não revelar erro
+        console.error('Erro ao gerar token de reset:', error);
+      }
+    }
+
+    // Sempre retornar sucesso (não revelar se email existe)
+    res.status(200).json({
+      message: 'Se o email existir, você receberá instruções para resetar sua senha',
+    });
+  } catch (error) {
+    // Tratamento de erros inesperados
+    console.error('Erro no forgot-password:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao processar solicitação',
+    });
+  }
+}
+
+/**
+ * Reseta senha usando token
+ * 
+ * Valida token, atualiza senha e invalida token.
+ * 
+ * @param req - Request com token e newPassword no body e tenant no header
+ * @param res - Response para retornar sucesso ou erro
+ */
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    // Extrair token e newPassword do body
+    const { token, newPassword } = req.body;
+
+    // Validar que token foi fornecido
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      res.status(400).json({
+        error: 'Token é obrigatório',
+        message: 'Forneça um token válido',
+      });
+      return;
+    }
+
+    // Validar que newPassword foi fornecido
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length === 0) {
+      res.status(400).json({
+        error: 'Nova senha é obrigatória',
+        message: 'Forneça uma nova senha',
+      });
+      return;
+    }
+
+    // Obter tenantId a partir do header
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantSlug = req.headers['x-tenant-slug'] as string;
+
+    // Resolver tenant manualmente
+    let tenant;
+    if (tenantId) {
+      tenant = await TenantService.validateById(tenantId);
+    } else if (tenantSlug) {
+      tenant = await TenantService.validateBySlug(tenantSlug);
+    } else {
+      res.status(400).json({
+        error: 'Tenant não identificado',
+        message: 'Forneça X-Tenant-Id ou X-Tenant-Slug no header',
+      });
+      return;
+    }
+
+    // Se tenant inválido ou inativo
+    if (!tenant) {
+      res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Tenant inválido ou inativo',
+      });
+      return;
+    }
+
+    // Validar token
+    const tokenValidation = await PasswordResetService.validateResetToken(
+      token.trim(),
+      tenant.id
+    );
+
+    // Se token inválido, expirado ou já usado
+    if (!tokenValidation) {
+      res.status(400).json({
+        error: 'Token inválido',
+        message: 'Token expirado, inválido ou já utilizado',
+      });
+      return;
+    }
+
+    // Validar complexidade da senha
+    if (!validatePasswordStrength(newPassword)) {
+      res.status(400).json({
+        error: 'Senha inválida',
+        message: 'A senha deve ter no mínimo 8 caracteres',
+      });
+      return;
+    }
+
+    // Hash da nova senha
+    const passwordHash = await hashPassword(newPassword);
+
+    // Atualizar senha do usuário
+    await prisma.user.update({
+      where: {
+        id: tokenValidation.userId,
+      },
+      data: {
+        passwordHash,
+      },
+    });
+
+    // Marcar token como usado
+    await PasswordResetService.useResetToken(token.trim(), tenant.id);
+
+    // Retornar sucesso
+    res.status(200).json({
+      message: 'Senha redefinida com sucesso',
+    });
+  } catch (error) {
+    // Tratamento de erros inesperados
+    console.error('Erro no reset-password:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao processar reset de senha',
+    });
+  }
 }
 

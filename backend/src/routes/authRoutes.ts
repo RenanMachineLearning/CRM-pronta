@@ -5,7 +5,7 @@
  */
 
 import express from 'express';
-import { login, logout, refresh } from '../controllers/authController';
+import { login, logout, refresh, forgotPassword, resetPassword } from '../controllers/authController';
 import { loginRateLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
@@ -64,6 +64,64 @@ router.post('/logout', logout);
  * - Não implementado
  */
 router.post('/refresh', refresh);
+
+/**
+ * POST /api/auth/forgot-password
+ * 
+ * Solicita reset de senha
+ * 
+ * Body:
+ * - email: string (obrigatório)
+ * 
+ * Headers:
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - message: string (sempre sucesso, não revela se email existe)
+ * 
+ * Response 400:
+ * - Email não fornecido
+ * - Tenant não identificado
+ * 
+ * Response 403:
+ * - Tenant inválido ou inativo
+ * 
+ * Nota de Segurança:
+ * - Sempre retorna sucesso para não revelar se email existe
+ * - Se email existir, token é gerado e email é enviado (ou logado em DEV)
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * POST /api/auth/reset-password
+ * 
+ * Reseta senha usando token
+ * 
+ * Body:
+ * - token: string (obrigatório) - Token de reset recebido por email
+ * - newPassword: string (obrigatório) - Nova senha (mínimo 8 caracteres)
+ * 
+ * Headers:
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - message: string
+ * 
+ * Response 400:
+ * - Token ou senha não fornecidos
+ * - Token inválido, expirado ou já utilizado
+ * - Senha não atende complexidade mínima (8 caracteres)
+ * - Tenant não identificado
+ * 
+ * Response 403:
+ * - Tenant inválido ou inativo
+ * 
+ * Nota de Segurança:
+ * - Token é invalidado após uso (não pode ser reutilizado)
+ * - Token expira em 1 hora
+ * - Token de tenant A não funciona em tenant B
+ */
+router.post('/reset-password', resetPassword);
 
 export default router;
 

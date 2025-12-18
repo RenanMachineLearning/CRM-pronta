@@ -85,3 +85,38 @@ export async function comparePassword(
   }
 }
 
+/**
+ * Valida a força/complexidade de uma senha
+ * 
+ * @param password - Senha a ser validada
+ * @returns boolean - true se a senha atende aos requisitos mínimos, false caso contrário
+ * 
+ * @remarks
+ * - V1: Valida apenas comprimento mínimo (8 caracteres)
+ * - V2: Pode ser expandido para incluir maiúsculas, números, símbolos
+ * 
+ * @example
+ * if (validatePasswordStrength('minhaSenha123')) {
+ *   // Senha válida
+ * }
+ */
+export function validatePasswordStrength(password: string): boolean {
+  // Valida que a senha foi fornecida
+  if (!password || password.trim().length === 0) {
+    return false;
+  }
+
+  // V1: Valida apenas comprimento mínimo (8 caracteres)
+  if (password.length < 8) {
+    return false;
+  }
+
+  // V2: Adicionar validações de complexidade:
+  // - Pelo menos uma letra maiúscula
+  // - Pelo menos uma letra minúscula
+  // - Pelo menos um número
+  // - Pelo menos um símbolo especial
+
+  return true;
+}
+
