@@ -284,21 +284,21 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 9. Histórico de Alterações
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/audit-logs`
-  - [ ] Requer autenticação e permissão "AuditLog.read"
-  - [ ] Listar logs de auditoria do tenant atual
-  - [ ] Filtros: `entityType`, `entityId`, `userId`, `action`, `dateFrom`, `dateTo`
-  - [ ] Paginação
+- [x] Criar rota `GET /api/audit-logs`
+  - [x] Requer autenticação e permissão "AuditLog.read"
+  - [x] Listar logs de auditoria do tenant atual
+  - [x] Filtros: `entityType`, `entityId`, `userId`, `action`, `dateFrom`, `dateTo`
+  - [x] Paginação
 
-- [ ] Criar rota `GET /api/audit-logs/:entityType/:entityId`
-  - [ ] Requer autenticação e permissão "AuditLog.read"
-  - [ ] Retornar histórico de alterações de um registro específico
-  - [ ] Ordenado por timestamp (mais recente primeiro)
+- [x] Criar rota `GET /api/audit-logs/:entityType/:entityId`
+  - [x] Requer autenticação e permissão "AuditLog.read"
+  - [x] Retornar histórico de alterações de um registro específico
+  - [x] Ordenado por timestamp (mais recente primeiro)
 
 #### Validação
-- [ ] Teste: listar logs de auditoria funciona
-- [ ] Teste: filtrar logs por entidade funciona
-- [ ] Teste: histórico de registro específico funciona
+- [x] Teste: listar logs de auditoria funciona
+- [x] Teste: filtrar logs por entidade funciona
+- [x] Teste: histórico de registro específico funciona
 
 ---
 

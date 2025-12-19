@@ -11,6 +11,7 @@ import { globalRateLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
+import auditLogRoutes from './routes/auditLogRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -50,6 +51,9 @@ app.use('/api/users', userRoutes);
 
 // Rotas de roles (protegidas - requerem tenant context + autenticação)
 app.use('/api/roles', roleRoutes);
+
+// Rotas de audit logs (protegidas - requerem tenant context + autenticação)
+app.use('/api/audit-logs', auditLogRoutes);
 
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {
