@@ -6,6 +6,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 
 const prisma = new PrismaClient();
 
@@ -58,9 +59,10 @@ export class RoleService {
    * permissionsCount e usersCount
    * 
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param userId - ID do usuário que está fazendo a requisição (para filtrar campos por permissão)
    * @returns Array de roles com contadores
    */
-  static async listRoles(tenantId: string): Promise<RoleListItem[]> {
+  static async listRoles(tenantId: string, userId?: string): Promise<RoleListItem[]> {
     // Buscar roles com contadores via _count
     const roles = await prisma.role.findMany({
       where: {
@@ -81,27 +83,47 @@ export class RoleService {
     });
 
     // Formatar resposta com contadores
-    return roles.map((role) => ({
+    let data: RoleListItem[] = roles.map((role) => ({
       id: role.id,
       name: role.name,
-      description: role.description,
+      description: role.description ?? null,
       isActive: role.isActive,
       permissionsCount: role._count.rolePermissions,
       usersCount: role._count.userRoles,
       createdAt: role.createdAt,
     }));
+
+    // Filtrar campos baseado em permissões do usuário
+    if (userId) {
+      const filtered = await filterFieldsByPermission(
+        data,
+        userId,
+        tenantId,
+        'Role',
+        'read'
+      );
+      // Garantir que description seja null se não existir após filtro
+      data = (filtered as any[]).map((item) => ({
+        ...item,
+        description: item.description ?? null,
+      })) as RoleListItem[];
+    }
+
+    return data;
   }
 
   /**
    * Busca role por ID com permissões (com validação de tenant)
    * 
-   * @param roleId - ID da role
+   * @param roleId - ID da role a ser buscada
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (para filtrar campos por permissão)
    * @returns Role encontrada com permissões ou null
    */
   static async getRoleById(
     roleId: string,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<RoleDetail | null> {
     const role = await prisma.role.findFirst({
       where: {
@@ -129,7 +151,7 @@ export class RoleService {
     }
 
     // Formatar resposta com permissões
-    return {
+    let roleResponse: RoleDetail = {
       id: role.id,
       name: role.name,
       description: role.description,
@@ -143,6 +165,19 @@ export class RoleService {
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     };
+
+    // Filtrar campos baseado em permissões do usuário
+    if (requestingUserId) {
+      roleResponse = (await filterFieldsByPermission(
+        roleResponse,
+        requestingUserId,
+        tenantId,
+        'Role',
+        'read'
+      )) as RoleDetail;
+    }
+
+    return roleResponse;
   }
 
   /**
@@ -257,16 +292,18 @@ export class RoleService {
   /**
    * Atualiza role e permissões
    * 
-   * @param roleId - ID da role
+   * @param roleId - ID da role a ser atualizada
    * @param data - Dados para atualização (name, description, permissionIds)
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (para validar permissões de campo)
    * @returns Role atualizada
-   * @throws Error se role não encontrada ou nome já existe
+   * @throws Error se role não encontrada, nome já existe ou campos proibidos
    */
   static async updateRole(
     roleId: string,
     data: UpdateRoleData,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<RoleDetail> {
     // Verificar se role existe e pertence ao tenant
     const existingRole = await prisma.role.findFirst({
@@ -278,6 +315,27 @@ export class RoleService {
 
     if (!existingRole) {
       throw new Error('Role não encontrada');
+    }
+
+    // Validar permissões de campo antes de atualizar
+    if (requestingUserId) {
+      // Preparar objeto com apenas campos primitivos (excluir permissionIds que é relacionamento)
+      const primitiveFields: Record<string, any> = {};
+      if (data.name !== undefined) primitiveFields.name = data.name;
+      if (data.description !== undefined) primitiveFields.description = data.description;
+
+      const validation = await validateFieldPermissionsForUpdate(
+        primitiveFields,
+        requestingUserId,
+        tenantId,
+        'Role'
+      );
+
+      if (!validation.allowed) {
+        throw new Error(
+          `Você não tem permissão para atualizar os seguintes campos: ${validation.forbiddenFields.join(', ')}`
+        );
+      }
     }
 
     // Validar nome único se estiver sendo alterado

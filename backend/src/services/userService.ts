@@ -7,6 +7,7 @@
 
 import { PrismaClient, UserStatus } from '@prisma/client';
 import { hashPassword, validatePasswordPolicy } from '../utils/password';
+import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 
 const prisma = new PrismaClient();
 
@@ -60,12 +61,14 @@ export class UserService {
    * @param tenantId - ID do tenant (obrigatório para isolamento)
    * @param filters - Filtros opcionais (status, roleId)
    * @param pagination - Parâmetros de paginação (limit, offset)
+   * @param userId - ID do usuário que está fazendo a requisição (para filtrar campos por permissão)
    * @returns Objeto com lista de usuários e informações de paginação
    */
   static async listUsers(
     tenantId: string,
     filters?: UserFilters,
-    pagination?: PaginationParams
+    pagination?: PaginationParams,
+    userId?: string
   ): Promise<{
     data: UserResponse[];
     pagination: {
@@ -134,7 +137,7 @@ export class UserService {
     ]);
 
     // Formatar resposta (remover passwordHash e estruturar roles)
-    const data: UserResponse[] = users.map((user) => ({
+    let data: UserResponse[] = users.map((user) => ({
       id: user.id,
       email: user.email,
       name: user.name,
@@ -147,6 +150,17 @@ export class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }));
+
+    // Filtrar campos baseado em permissões do usuário
+    if (userId) {
+      data = (await filterFieldsByPermission(
+        data,
+        userId,
+        tenantId,
+        'User',
+        'read'
+      )) as UserResponse[];
+    }
 
     return {
       data,
@@ -161,13 +175,15 @@ export class UserService {
   /**
    * Busca usuário por ID (com validação de tenant)
    * 
-   * @param userId - ID do usuário
+   * @param userId - ID do usuário a ser buscado
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (para filtrar campos por permissão)
    * @returns Usuário encontrado ou null
    */
   static async getUserById(
     userId: string,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<UserResponse | null> {
     const user = await prisma.user.findFirst({
       where: {
@@ -200,7 +216,7 @@ export class UserService {
     }
 
     // Formatar resposta (remover passwordHash)
-    return {
+    let userResponse: UserResponse = {
       id: user.id,
       email: user.email,
       name: user.name,
@@ -213,6 +229,19 @@ export class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+
+    // Filtrar campos baseado em permissões do usuário
+    if (requestingUserId) {
+      userResponse = (await filterFieldsByPermission(
+        userResponse,
+        requestingUserId,
+        tenantId,
+        'User',
+        'read'
+      )) as UserResponse;
+    }
+
+    return userResponse;
   }
 
   /**
@@ -337,16 +366,18 @@ export class UserService {
   /**
    * Atualiza usuário e roles
    * 
-   * @param userId - ID do usuário
+   * @param userId - ID do usuário a ser atualizado
    * @param data - Dados para atualização (name, email, status, roleIds)
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (para validar permissões de campo)
    * @returns Usuário atualizado
-   * @throws Error se usuário não encontrado ou email já existe
+   * @throws Error se usuário não encontrado, email já existe ou campos proibidos
    */
   static async updateUser(
     userId: string,
     data: UpdateUserData,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<UserResponse> {
     // Verificar se usuário existe e pertence ao tenant
     const existingUser = await prisma.user.findFirst({
@@ -358,6 +389,28 @@ export class UserService {
 
     if (!existingUser) {
       throw new Error('Usuário não encontrado');
+    }
+
+    // Validar permissões de campo antes de atualizar
+    if (requestingUserId) {
+      // Preparar objeto com apenas campos primitivos (excluir roleIds que é relacionamento)
+      const primitiveFields: Record<string, any> = {};
+      if (data.name !== undefined) primitiveFields.name = data.name;
+      if (data.email !== undefined) primitiveFields.email = data.email;
+      if (data.status !== undefined) primitiveFields.status = data.status;
+
+      const validation = await validateFieldPermissionsForUpdate(
+        primitiveFields,
+        requestingUserId,
+        tenantId,
+        'User'
+      );
+
+      if (!validation.allowed) {
+        throw new Error(
+          `Você não tem permissão para atualizar os seguintes campos: ${validation.forbiddenFields.join(', ')}`
+        );
+      }
     }
 
     // Validar email único se estiver sendo alterado

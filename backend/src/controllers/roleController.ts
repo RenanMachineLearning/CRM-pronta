@@ -19,11 +19,12 @@ import { RoleService } from '../services/roleService';
  */
 export async function listRoles(req: Request, res: Response): Promise<void> {
   try {
-    // tenantId já validado pelo middleware
+    // tenantId e userId já validados pelo middleware
     const tenantId = req.tenantId!;
+    const userId = req.userId!;
 
     // Buscar roles
-    const roles = await RoleService.listRoles(tenantId);
+    const roles = await RoleService.listRoles(tenantId, userId);
 
     res.status(200).json({
       data: roles,
@@ -45,8 +46,9 @@ export async function listRoles(req: Request, res: Response): Promise<void> {
  */
 export async function getRole(req: Request, res: Response): Promise<void> {
   try {
-    // tenantId já validado pelo middleware
+    // tenantId e userId já validados pelo middleware
     const tenantId = req.tenantId!;
+    const userId = req.userId!;
 
     // Extrair ID dos params
     const roleId = req.params.id;
@@ -59,7 +61,7 @@ export async function getRole(req: Request, res: Response): Promise<void> {
     }
 
     // Buscar role
-    const role = await RoleService.getRoleById(roleId, tenantId);
+    const role = await RoleService.getRoleById(roleId, tenantId, userId);
 
     if (!role) {
       res.status(404).json({
@@ -174,8 +176,9 @@ export async function createRole(req: Request, res: Response): Promise<void> {
  */
 export async function updateRole(req: Request, res: Response): Promise<void> {
   try {
-    // tenantId já validado pelo middleware
+    // tenantId e userId já validados pelo middleware
     const tenantId = req.tenantId!;
+    const userId = req.userId!;
 
     // Extrair ID dos params
     const roleId = req.params.id;
@@ -233,7 +236,8 @@ export async function updateRole(req: Request, res: Response): Promise<void> {
         description,
         permissionIds,
       },
-      tenantId
+      tenantId,
+      userId
     );
 
     res.status(200).json(role);
@@ -258,6 +262,14 @@ export async function updateRole(req: Request, res: Response): Promise<void> {
     if (error.message.includes('permissões não foram encontradas')) {
       res.status(400).json({
         error: 'Permissões inválidas',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error.message.includes('não tem permissão para atualizar os seguintes campos')) {
+      res.status(403).json({
+        error: 'Acesso negado',
         message: error.message,
       });
       return;

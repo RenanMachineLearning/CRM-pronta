@@ -55,6 +55,9 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // userId já validado pelo middleware
+    const userId = req.userId!;
+
     // Buscar usuários
     const result = await UserService.listUsers(
       tenantId,
@@ -65,7 +68,8 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
       {
         limit,
         offset,
-      }
+      },
+      userId
     );
 
     res.status(200).json(result);
@@ -86,8 +90,9 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
  */
 export async function getUser(req: Request, res: Response): Promise<void> {
   try {
-    // tenantId já validado pelo middleware
+    // tenantId e userId já validados pelo middleware
     const tenantId = req.tenantId!;
+    const userId = req.userId!;
 
     // Extrair ID dos params
     const targetUserId = req.params.id;
@@ -100,7 +105,7 @@ export async function getUser(req: Request, res: Response): Promise<void> {
     }
 
     // Buscar usuário
-    const user = await UserService.getUserById(targetUserId, tenantId);
+    const user = await UserService.getUserById(targetUserId, tenantId, userId);
 
     if (!user) {
       res.status(404).json({
@@ -232,8 +237,9 @@ export async function createUser(req: Request, res: Response): Promise<void> {
  */
 export async function updateUser(req: Request, res: Response): Promise<void> {
   try {
-    // tenantId já validado pelo middleware
+    // tenantId e userId já validados pelo middleware
     const tenantId = req.tenantId!;
+    const userId = req.userId!;
 
     // Extrair ID dos params
     const targetUserId = req.params.id;
@@ -303,7 +309,8 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
         status,
         roleIds,
       },
-      tenantId
+      tenantId,
+      userId
     );
 
     res.status(200).json(user);
@@ -328,6 +335,14 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     if (error.message.includes('roles não foram encontradas')) {
       res.status(400).json({
         error: 'Roles inválidas',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error.message.includes('não tem permissão para atualizar os seguintes campos')) {
+      res.status(403).json({
+        error: 'Acesso negado',
         message: error.message,
       });
       return;
