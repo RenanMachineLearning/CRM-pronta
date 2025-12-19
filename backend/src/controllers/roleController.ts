@@ -138,7 +138,8 @@ export async function createRole(req: Request, res: Response): Promise<void> {
         description,
         permissionIds,
       },
-      tenantId
+      tenantId,
+      req.userId!
     );
 
     res.status(201).json(role);
@@ -305,7 +306,7 @@ export async function deleteRole(req: Request, res: Response): Promise<void> {
     }
 
     // Deletar role (soft delete)
-    await RoleService.deleteRole(roleId, tenantId);
+    await RoleService.deleteRole(roleId, tenantId, req.userId!);
 
     res.status(200).json({
       message: 'Role deletada com sucesso',

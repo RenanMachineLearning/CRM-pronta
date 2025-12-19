@@ -191,7 +191,8 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         password,
         roleIds,
       },
-      tenantId
+      tenantId,
+      req.userId!
     );
 
     res.status(201).json(user);
@@ -378,7 +379,7 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
     }
 
     // Deletar usuário (soft delete)
-    await UserService.deleteUser(targetUserId, tenantId);
+    await UserService.deleteUser(targetUserId, tenantId, req.userId!);
 
     res.status(200).json({
       message: 'Usuário deletado com sucesso',

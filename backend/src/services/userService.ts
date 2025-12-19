@@ -8,6 +8,7 @@
 import { PrismaClient, UserStatus } from '@prisma/client';
 import { hashPassword, validatePasswordPolicy } from '../utils/password';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
+import { logAudit } from '../utils/auditLog';
 
 const prisma = new PrismaClient();
 
@@ -249,12 +250,14 @@ export class UserService {
    * 
    * @param data - Dados do usuário (email, name, password, roleIds)
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (opcional, para auditoria)
    * @returns Usuário criado
    * @throws Error se email já existe ou roles inválidas
    */
   static async createUser(
     data: CreateUserData,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<UserResponse> {
     // Validar email único no tenant
     const existingUser = await prisma.user.findUnique({
@@ -348,7 +351,7 @@ export class UserService {
     }
 
     // Formatar resposta
-    return {
+    const userResponse = {
       id: user.id,
       email: user.email,
       name: user.name,
@@ -361,6 +364,17 @@ export class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido (ex: criação via seed), não registrar auditoria
+    if (requestingUserId) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('User', user.id, 'create', requestingUserId, tenantId).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
+
+    return userResponse;
   }
 
   /**
@@ -390,6 +404,13 @@ export class UserService {
     if (!existingUser) {
       throw new Error('Usuário não encontrado');
     }
+
+    // Capturar dados antigos para auditoria (antes de atualizar)
+    const oldData = {
+      name: existingUser.name,
+      email: existingUser.email,
+      status: existingUser.status,
+    };
 
     // Validar permissões de campo antes de atualizar
     if (requestingUserId) {
@@ -509,6 +530,30 @@ export class UserService {
       throw new Error('Erro ao atualizar usuário');
     }
 
+    // Comparar campos alterados para auditoria (após commit bem-sucedido)
+    const changes: Record<string, { old: any; new: any }> = {};
+    
+    // Comparar apenas campos que foram fornecidos para atualização
+    // Nota: Campos técnicos (updatedAt, createdAt) e sensíveis (passwordHash) são ignorados automaticamente
+    if (data.name !== undefined && data.name.trim() !== oldData.name) {
+      changes.name = { old: oldData.name, new: data.name.trim() };
+    }
+    if (data.email !== undefined && data.email.trim().toLowerCase() !== oldData.email) {
+      changes.email = { old: oldData.email, new: data.email.trim().toLowerCase() };
+    }
+    if (data.status !== undefined && data.status !== oldData.status) {
+      changes.status = { old: oldData.status, new: data.status };
+    }
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido, não registrar auditoria
+    if (requestingUserId && Object.keys(changes).length > 0) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('User', userId, 'update', requestingUserId, tenantId, changes).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
+
     // Formatar resposta
     return {
       id: user.id,
@@ -530,12 +575,14 @@ export class UserService {
    * 
    * @param userId - ID do usuário
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (opcional, para auditoria)
    * @returns true se deletado, false se já estava inativo
    * @throws Error se usuário não encontrado
    */
   static async deleteUser(
     userId: string,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<boolean> {
     // Verificar se usuário existe e pertence ao tenant
     const user = await prisma.user.findFirst({
@@ -559,6 +606,15 @@ export class UserService {
       where: { id: userId },
       data: { status: 'INACTIVE' },
     });
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido, não registrar auditoria
+    if (requestingUserId) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('User', userId, 'delete', requestingUserId, tenantId).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
 
     return true;
   }

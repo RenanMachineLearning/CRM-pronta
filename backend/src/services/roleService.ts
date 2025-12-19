@@ -7,6 +7,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
+import { logAudit } from '../utils/auditLog';
 
 const prisma = new PrismaClient();
 
@@ -185,12 +186,14 @@ export class RoleService {
    * 
    * @param data - Dados da role (name, description, permissionIds)
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (opcional, para auditoria)
    * @returns Role criada
    * @throws Error se nome já existe ou permissões inválidas
    */
   static async createRole(
     data: CreateRoleData,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<RoleDetail> {
     // Validar nome não vazio
     if (!data.name || data.name.trim().length === 0) {
@@ -273,7 +276,7 @@ export class RoleService {
     }
 
     // Formatar resposta
-    return {
+    const roleResponse = {
       id: role.id,
       name: role.name,
       description: role.description,
@@ -287,6 +290,17 @@ export class RoleService {
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     };
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido, não registrar auditoria
+    if (requestingUserId) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('Role', role.id, 'create', requestingUserId, tenantId).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
+
+    return roleResponse;
   }
 
   /**
@@ -316,6 +330,12 @@ export class RoleService {
     if (!existingRole) {
       throw new Error('Role não encontrada');
     }
+
+    // Capturar dados antigos para auditoria (antes de atualizar)
+    const oldData = {
+      name: existingRole.name,
+      description: existingRole.description,
+    };
 
     // Validar permissões de campo antes de atualizar
     if (requestingUserId) {
@@ -431,6 +451,31 @@ export class RoleService {
       throw new Error('Erro ao atualizar role');
     }
 
+    // Comparar campos alterados para auditoria (após commit bem-sucedido)
+    const changes: Record<string, { old: any; new: any }> = {};
+    
+    // Comparar apenas campos que foram fornecidos para atualização
+    if (data.name !== undefined && data.name.trim() !== oldData.name) {
+      changes.name = { old: oldData.name, new: data.name.trim() };
+    }
+    if (data.description !== undefined) {
+      const newDescription = data.description?.trim() || null;
+      const oldDescription = oldData.description || null;
+      // Comparar considerando null/undefined como iguais
+      if (newDescription !== oldDescription) {
+        changes.description = { old: oldDescription, new: newDescription };
+      }
+    }
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido, não registrar auditoria
+    if (requestingUserId && Object.keys(changes).length > 0) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('Role', roleId, 'update', requestingUserId, tenantId, changes).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
+
     // Formatar resposta
     return {
       id: role.id,
@@ -453,12 +498,14 @@ export class RoleService {
    * 
    * @param roleId - ID da role
    * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param requestingUserId - ID do usuário que está fazendo a requisição (opcional, para auditoria)
    * @returns true se deletado, false se já estava inativa
    * @throws Error se role não encontrada ou está em uso
    */
   static async deleteRole(
     roleId: string,
-    tenantId: string
+    tenantId: string,
+    requestingUserId?: string
   ): Promise<boolean> {
     // Verificar se role existe e pertence ao tenant
     const role = await prisma.role.findFirst({
@@ -493,6 +540,15 @@ export class RoleService {
       where: { id: roleId },
       data: { isActive: false },
     });
+
+    // Registrar auditoria (após commit bem-sucedido)
+    // Se requestingUserId não for fornecido, não registrar auditoria
+    if (requestingUserId) {
+      // Não aguardar auditoria para não bloquear resposta
+      logAudit('Role', roleId, 'delete', requestingUserId, tenantId).catch(() => {
+        // Erro já foi logado no helper, apenas evitar unhandled rejection
+      });
+    }
 
     return true;
   }

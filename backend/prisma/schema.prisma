@@ -70,6 +70,7 @@ model Tenant {
   passwordResetTokens PasswordResetToken[] // Etapa 2 (Recuperação de Senha)
   roles               Role[] // Etapa 3 (ACL)
   permissions         Permission[] // Etapa 3 (ACL)
+  auditLogs           AuditLog[] // Etapa 3 (ACL - Auditoria)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
@@ -97,6 +98,7 @@ model User {
   tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   passwordResetTokens PasswordResetToken[] // Etapa 2 (Recuperação de Senha)
   userRoles           UserRole[] // Etapa 3 (ACL)
+  auditLogs           AuditLog[] // Etapa 3 (ACL - Auditoria)
 
   // Índice único composto: email único por tenant
   @@unique([tenantId, email])
@@ -209,6 +211,30 @@ model UserRole {
   // Índice único adicional para garantir integridade
   @@unique([userId, roleId])
   @@map("user_roles")
+}
+
+// Modelo de AuditLog (auditoria de alterações)
+// Implementado na Etapa 3 (ACL - Auditoria)
+// Registra todas as alterações (create, update, delete) em entidades do sistema
+model AuditLog {
+  id         String   @id @default(uuid())
+  entityType String   // Tipo de entidade (ex: "User", "Role")
+  entityId   String   // ID do registro alterado
+  action     String   // Ação: "create", "update", "delete"
+  userId     String   // Quem fez a alteração
+  tenantId   String   // Foreign key para Tenant (isolamento multi-tenant)
+  changes    Json?    // JSON com campos alterados: { field: { old, new } }
+  timestamp  DateTime @default(now()) @map("timestamp")
+
+  // Relacionamentos
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índice composto para busca rápida por tenant, entidade e ID
+  @@index([tenantId, entityType, entityId])
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("audit_logs")
 }
 
 // ============================================================================
