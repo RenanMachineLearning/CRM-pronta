@@ -43,6 +43,7 @@ export interface UpdateUserData {
 // Interface para resposta de usuário (sem passwordHash)
 export interface UserResponse {
   id: string;
+  tenantId: string;
   email: string;
   name: string;
   status: UserStatus;
@@ -140,6 +141,7 @@ export class UserService {
     // Formatar resposta (remover passwordHash e estruturar roles)
     let data: UserResponse[] = users.map((user) => ({
       id: user.id,
+      tenantId: user.tenantId,
       email: user.email,
       name: user.name,
       status: user.status,
@@ -219,6 +221,7 @@ export class UserService {
     // Formatar resposta (remover passwordHash)
     let userResponse: UserResponse = {
       id: user.id,
+      tenantId: user.tenantId,
       email: user.email,
       name: user.name,
       status: user.status,
@@ -351,8 +354,9 @@ export class UserService {
     }
 
     // Formatar resposta
-    const userResponse = {
+    const userResponse: UserResponse = {
       id: user.id,
+      tenantId: user.tenantId,
       email: user.email,
       name: user.name,
       status: user.status,
@@ -557,6 +561,7 @@ export class UserService {
     // Formatar resposta
     return {
       id: user.id,
+      tenantId: user.tenantId,
       email: user.email,
       name: user.name,
       status: user.status,

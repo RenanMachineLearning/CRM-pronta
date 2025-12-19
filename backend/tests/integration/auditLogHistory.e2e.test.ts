@@ -17,7 +17,6 @@ import {
   createTestPermission,
   assignRoleToUser,
   closeDatabase,
-  prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
 
@@ -98,14 +97,6 @@ describe('Audit Log History - E2E Tests', () => {
 
   describe('GET /api/audit-logs - Listar logs com paginação', () => {
     it('deve listar logs de auditoria com paginação padrão', async () => {
-      // Criar alguns logs de auditoria
-      const testUser1 = await createTestUser({
-        email: 'test1@audithistory.test',
-        password: 'TestPass123',
-        name: 'Test User 1',
-        tenantId: tenant.id,
-      });
-
       // Criar logs via operações CRUD
       await request(app)
         .post('/api/users')

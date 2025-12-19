@@ -16,7 +16,6 @@ import {
   assignRoleToUser,
   getAuditLogs,
   closeDatabase,
-  prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
 

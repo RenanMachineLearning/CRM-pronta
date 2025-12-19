@@ -180,6 +180,184 @@ export async function getAuditLogs(
 }
 
 /**
+ * Cria roles padrão (Admin, Vendedor, Visualizador) com permissões conforme seed
+ * 
+ * @param tenantId - ID do tenant
+ * @returns Objeto com as 3 roles criadas
+ */
+export async function createStandardRoles(tenantId: string) {
+  // Criar todas as permissões padrão primeiro
+  const ENTITIES = ['Contact', 'Company', 'Lead', 'Opportunity', 'Task', 'Note', 'User', 'Role', 'AuditLog'];
+  const ACTIONS = ['create', 'read', 'update', 'delete', 'list'];
+  const FIELD_PERMISSIONS = [
+    { entity: 'Opportunity', action: 'read', field: 'value' },
+    { entity: 'Opportunity', action: 'update', field: 'value' },
+  ];
+
+  const permissions: any[] = [];
+
+  // Criar permissões por entidade e ação
+  for (const entity of ENTITIES) {
+    for (const action of ACTIONS) {
+      const existing = await prisma.permission.findFirst({
+        where: { tenantId, entity, action, field: null },
+      });
+      if (!existing) {
+        const perm = await prisma.permission.create({
+          data: { tenantId, entity, action, field: null },
+        });
+        permissions.push(perm);
+      } else {
+        permissions.push(existing);
+      }
+    }
+  }
+
+  // Criar permissões por campo
+  for (const fieldPerm of FIELD_PERMISSIONS) {
+    const existing = await prisma.permission.findFirst({
+      where: {
+        tenantId,
+        entity: fieldPerm.entity,
+        action: fieldPerm.action,
+        field: fieldPerm.field,
+      },
+    });
+    if (!existing) {
+      const perm = await prisma.permission.create({
+        data: {
+          tenantId,
+          entity: fieldPerm.entity,
+          action: fieldPerm.action,
+          field: fieldPerm.field,
+        },
+      });
+      permissions.push(perm);
+    } else {
+      permissions.push(existing);
+    }
+  }
+
+  // Helper para encontrar permissão
+  const findPermission = (entity: string, action: string, field: string | null = null) => {
+    return permissions.find(
+      (p) => p.entity === entity && p.action === action && p.field === field
+    );
+  };
+
+  // Criar roles
+  const admin = await prisma.role.upsert({
+    where: { tenantId_name: { tenantId, name: 'Admin' } },
+    update: {},
+    create: { name: 'Admin', tenantId, description: 'Administrador com acesso total', isActive: true },
+  });
+
+  const vendedor = await prisma.role.upsert({
+    where: { tenantId_name: { tenantId, name: 'Vendedor' } },
+    update: {},
+    create: { name: 'Vendedor', tenantId, description: 'Pode criar/editar contatos, leads e oportunidades', isActive: true },
+  });
+
+  const visualizador = await prisma.role.upsert({
+    where: { tenantId_name: { tenantId, name: 'Visualizador' } },
+    update: {},
+    create: { name: 'Visualizador', tenantId, description: 'Apenas leitura', isActive: true },
+  });
+
+  // Admin: todas as permissões
+  const adminPermissions = permissions.map((p) => ({
+    roleId: admin.id,
+    permissionId: p.id,
+  }));
+  await prisma.rolePermission.createMany({
+    data: adminPermissions,
+    skipDuplicates: true,
+  });
+
+  // Vendedor: permissões específicas
+  const vendedorPermissions: { roleId: string; permissionId: string }[] = [];
+  const entitiesWithCRUD = ['Contact', 'Company', 'Lead', 'Opportunity', 'Task', 'Note'];
+  for (const entity of entitiesWithCRUD) {
+    const create = findPermission(entity, 'create');
+    const read = findPermission(entity, 'read');
+    const update = findPermission(entity, 'update');
+    const list = findPermission(entity, 'list');
+    if (create) vendedorPermissions.push({ roleId: vendedor.id, permissionId: create.id });
+    if (read) vendedorPermissions.push({ roleId: vendedor.id, permissionId: read.id });
+    if (update) vendedorPermissions.push({ roleId: vendedor.id, permissionId: update.id });
+    if (list) vendedorPermissions.push({ roleId: vendedor.id, permissionId: list.id });
+  }
+  const oppValueRead = findPermission('Opportunity', 'read', 'value');
+  const oppValueUpdate = findPermission('Opportunity', 'update', 'value');
+  if (oppValueRead) vendedorPermissions.push({ roleId: vendedor.id, permissionId: oppValueRead.id });
+  if (oppValueUpdate) vendedorPermissions.push({ roleId: vendedor.id, permissionId: oppValueUpdate.id });
+  for (const entity of ['User', 'Role']) {
+    const read = findPermission(entity, 'read');
+    const list = findPermission(entity, 'list');
+    if (read) vendedorPermissions.push({ roleId: vendedor.id, permissionId: read.id });
+    if (list) vendedorPermissions.push({ roleId: vendedor.id, permissionId: list.id });
+  }
+  await prisma.rolePermission.createMany({
+    data: vendedorPermissions,
+    skipDuplicates: true,
+  });
+
+  // Visualizador: apenas read e list
+  const visualizadorPermissions: { roleId: string; permissionId: string }[] = [];
+  for (const entity of ENTITIES) {
+    const read = findPermission(entity, 'read');
+    const list = findPermission(entity, 'list');
+    if (read) visualizadorPermissions.push({ roleId: visualizador.id, permissionId: read.id });
+    if (list) visualizadorPermissions.push({ roleId: visualizador.id, permissionId: list.id });
+  }
+  const oppValueReadForViewer = findPermission('Opportunity', 'read', 'value');
+  if (oppValueReadForViewer) {
+    visualizadorPermissions.push({ roleId: visualizador.id, permissionId: oppValueReadForViewer.id });
+  }
+  await prisma.rolePermission.createMany({
+    data: visualizadorPermissions,
+    skipDuplicates: true,
+  });
+
+  return { admin, vendedor, visualizador };
+}
+
+/**
+ * Aguarda até que um log de auditoria seja criado (polling)
+ * 
+ * Útil para testes E2E onde logAudit é assíncrono e não bloqueia.
+ * Faz polling a cada 50ms até encontrar o log ou atingir timeout.
+ * 
+ * @param tenantId - ID do tenant
+ * @param filters - Filtros para buscar o log (entityType, entityId, action, userId)
+ * @param timeoutMs - Timeout em milissegundos (padrão: 2000ms)
+ * @returns Promise<boolean> - true se log foi encontrado, false se timeout
+ */
+export async function waitForAuditLog(
+  tenantId: string,
+  filters: {
+    entityType?: string;
+    entityId?: string;
+    action?: string;
+    userId?: string;
+  },
+  timeoutMs: number = 2000
+): Promise<boolean> {
+  const startTime = Date.now();
+  const pollInterval = 50; // Poll a cada 50ms
+
+  while (Date.now() - startTime < timeoutMs) {
+    const logs = await getAuditLogs(tenantId, filters);
+    if (logs.length > 0) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  return false;
+}
+
+/**
  * Fecha a conexão com o banco de dados
  */
 export async function closeDatabase() {
