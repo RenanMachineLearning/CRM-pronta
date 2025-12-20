@@ -6,6 +6,7 @@
 
 import express from 'express';
 import { login, logout, refresh, forgotPassword, resetPassword, changePassword } from '../controllers/authController';
+import { getProfile, updateProfile, updatePassword } from '../controllers/profileController';
 import { loginRateLimiter } from '../middleware/rateLimiter';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
@@ -128,6 +129,9 @@ router.post('/reset-password', resetPassword);
 /**
  * POST /api/auth/change-password
  * 
+ * @deprecated Use PUT /api/auth/me/password ao invés desta rota.
+ * Esta rota será removida em versão futura.
+ * 
  * Altera senha do usuário autenticado
  * 
  * Requer autenticação (token JWT no header Authorization: Bearer <token>)
@@ -163,6 +167,124 @@ router.post('/reset-password', resetPassword);
  * - V2: Considerar invalidar tokens após troca de senha
  */
 router.post('/change-password', tenantContextMiddleware, authMiddleware, changePassword);
+
+/**
+ * GET /api/auth/me
+ * 
+ * Busca perfil do usuário autenticado
+ * 
+ * Requer autenticação (token JWT no header Authorization: Bearer <token>)
+ * 
+ * Headers:
+ * - Authorization: Bearer <token> (obrigatório)
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - id: string
+ * - email: string
+ * - name: string
+ * - status: string
+ * - roles: Array<{ id: string, name: string, description?: string }>
+ * - permissions: Array<{ entity: string, action: string, field?: string }>
+ * - createdAt: Date
+ * - updatedAt: Date
+ * 
+ * Response 401:
+ * - Token não fornecido ou inválido
+ * 
+ * Response 404:
+ * - Usuário não encontrado
+ * 
+ * Nota de Segurança:
+ * - Rota protegida por authMiddleware (requer token JWT válido)
+ * - Permissões por campo NÃO se aplicam em GET /api/auth/me (regra especial de perfil próprio)
+ * - Usuário sempre vê seus próprios dados completos (exceto campos sensíveis)
+ */
+router.get('/me', tenantContextMiddleware, authMiddleware, getProfile);
+
+/**
+ * PUT /api/auth/me
+ * 
+ * Atualiza perfil do usuário autenticado
+ * 
+ * Requer autenticação (token JWT no header Authorization: Bearer <token>)
+ * 
+ * Body:
+ * - name: string (opcional) - Nome do usuário
+ * - email: string (opcional) - Email do usuário (deve ser único no tenant)
+ * 
+ * Headers:
+ * - Authorization: Bearer <token> (obrigatório)
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - id: string
+ * - email: string
+ * - name: string
+ * - status: string
+ * - roles: Array<{ id: string, name: string, description?: string }>
+ * - permissions: Array<{ entity: string, action: string, field?: string }>
+ * - createdAt: Date
+ * - updatedAt: Date
+ * 
+ * Response 400:
+ * - Nenhum campo fornecido para atualizar
+ * - Nome ou email inválidos
+ * - Tenant não identificado
+ * 
+ * Response 401:
+ * - Token não fornecido ou inválido
+ * 
+ * Response 404:
+ * - Usuário não encontrado
+ * 
+ * Response 409:
+ * - Email já está em uso no tenant
+ * 
+ * Nota de Segurança:
+ * - Rota protegida por authMiddleware (requer token JWT válido)
+ * - Apenas name e email podem ser atualizados (status e roles não podem ser alterados pelo próprio usuário)
+ */
+router.put('/me', tenantContextMiddleware, authMiddleware, updateProfile);
+
+/**
+ * PUT /api/auth/me/password
+ * 
+ * Atualiza senha do usuário autenticado
+ * 
+ * Requer autenticação (token JWT no header Authorization: Bearer <token>)
+ * 
+ * Body:
+ * - currentPassword: string (obrigatório) - Senha atual do usuário
+ * - newPassword: string (obrigatório) - Nova senha (mínimo 8 caracteres, diferente da atual)
+ * 
+ * Headers:
+ * - Authorization: Bearer <token> (obrigatório)
+ * - X-Tenant-Id ou X-Tenant-Slug (obrigatório)
+ * 
+ * Response 200:
+ * - message: string
+ * 
+ * Response 400:
+ * - Senha atual ou nova senha não fornecidas
+ * - Nova senha igual à atual
+ * - Senha não atende complexidade mínima (8 caracteres)
+ * - Tenant não identificado
+ * 
+ * Response 401:
+ * - Token não fornecido ou inválido
+ * - Credenciais inválidas (senha atual incorreta - mensagem genérica)
+ * 
+ * Response 403:
+ * - Tenant inválido ou inativo
+ * 
+ * Nota de Segurança:
+ * - Rota protegida por authMiddleware (requer token JWT válido)
+ * - Herda rate limiter global (100 req/min por IP)
+ * - Mensagens de erro genéricas (não revela qual validação falhou)
+ * - V2: Considerar invalidar tokens após troca de senha
+ */
+router.put('/me/password', tenantContextMiddleware, authMiddleware, updatePassword);
 
 export default router;
 
