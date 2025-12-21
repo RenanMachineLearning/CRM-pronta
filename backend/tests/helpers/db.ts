@@ -358,6 +358,31 @@ export async function waitForAuditLog(
 }
 
 /**
+ * Cria uma entidade de teste
+ * 
+ * @param tenantId - ID do tenant
+ * @param name - Nome técnico da entidade
+ * @param label - Nome amigável
+ * @param isSystem - Se é entidade do sistema (default: false)
+ * @returns Entidade criada
+ */
+export async function createTestEntity(data: {
+  tenantId: string;
+  name: string;
+  label: string;
+  isSystem?: boolean;
+}) {
+  return prisma.entity.create({
+    data: {
+      name: data.name,
+      label: data.label,
+      tenantId: data.tenantId,
+      isSystem: data.isSystem || false,
+    },
+  });
+}
+
+/**
  * Fecha a conexão com o banco de dados
  */
 export async function closeDatabase() {
