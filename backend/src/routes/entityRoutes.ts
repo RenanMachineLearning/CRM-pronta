@@ -13,6 +13,7 @@ import {
   updateEntity,
   deleteEntity,
 } from '../controllers/entityController';
+import { lookupEntity } from '../controllers/entityLookupController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
@@ -52,6 +53,39 @@ router.get(
   '/',
   authorizationMiddleware('Entity', 'list'),
   listEntities
+);
+
+/**
+ * GET /api/entities/:entityId/lookup
+ * 
+ * Busca registros de uma entidade para lookup.
+ * Retorna apenas id e label formatado para uso em campos lookup.
+ * 
+ * Requer autenticação (não requer permissão específica)
+ * 
+ * Query params:
+ * - query: string (opcional) - Termo de busca
+ * - limit: number (opcional, default: 20, max: 100) - Limite de resultados
+ * 
+ * Response 200:
+ * [
+ *   {
+ *     "id": "uuid",
+ *     "label": "Nome do Registro"
+ *   },
+ *   ...
+ * ]
+ * 
+ * Nota: Implementação preparatória - retorna array vazio por enquanto,
+ * pois tabelas de dados ainda não existem (serão criadas nas Etapas 5-7 para
+ * entidades do sistema e seção 10 para EntityData de entidades customizadas).
+ * 
+ * Response 404: Entidade não encontrada
+ * Response 401: Não autenticado
+ */
+router.get(
+  '/:entityId/lookup',
+  lookupEntity
 );
 
 /**
