@@ -5,6 +5,7 @@
  * Este script é idempotente - pode ser executado múltiplas vezes sem criar duplicados.
  * 
  * Etapa 3 (ACL): Cria roles padrão, permissões padrão e suas associações.
+ * Etapa 4 (Modelo de Dados): Cria entidades core e campos padrão.
  */
 
 import { PrismaClient, Permission, Role } from '@prisma/client';
@@ -273,6 +274,368 @@ async function associatePermissionsToRoles(
   console.log(`   ✅ Visualizador: ${visualizadorPermissions.length} permissões associadas`);
 }
 
+/**
+ * Cria as entidades core do sistema e seus campos padrão
+ * 
+ * Etapa 4 (Modelo de Dados): Cria Contact, Company, Lead, Opportunity, Task, Note
+ * com isSystem: true e seus campos padrão.
+ * 
+ * @param tenantId - ID do tenant
+ */
+async function createCoreEntities(tenantId: string): Promise<void> {
+  console.log('📦 Criando entidades core do sistema...');
+
+  // Definir entidades core
+  const coreEntities = [
+    { name: 'Contact', label: 'Contato' },
+    { name: 'Company', label: 'Empresa' },
+    { name: 'Lead', label: 'Lead' },
+    { name: 'Opportunity', label: 'Oportunidade' },
+    { name: 'Task', label: 'Tarefa' },
+    { name: 'Note', label: 'Nota' },
+  ];
+
+  // Criar ou obter entidades
+  const entitiesMap = new Map<string, string>(); // name -> id
+
+  for (const entityDef of coreEntities) {
+    const existing = await prisma.entity.findFirst({
+      where: {
+        tenantId,
+        name: entityDef.name,
+      },
+    });
+
+    if (existing) {
+      // Atualizar isSystem se necessário
+      if (!existing.isSystem) {
+        await prisma.entity.update({
+          where: { id: existing.id },
+          data: { isSystem: true },
+        });
+      }
+      entitiesMap.set(entityDef.name, existing.id);
+      console.log(`   ✅ Entidade ${entityDef.name} já existe`);
+    } else {
+      const entity = await prisma.entity.create({
+        data: {
+          name: entityDef.name,
+          label: entityDef.label,
+          tenantId,
+          isSystem: true,
+        },
+      });
+      entitiesMap.set(entityDef.name, entity.id);
+      console.log(`   ✅ Entidade ${entityDef.name} criada`);
+    }
+  }
+
+  console.log('');
+
+  // Criar campos para cada entidade
+  await createContactFields(entitiesMap.get('Contact')!, tenantId);
+  await createCompanyFields(entitiesMap.get('Company')!, tenantId);
+  await createLeadFields(entitiesMap.get('Lead')!, tenantId);
+  await createOpportunityFields(entitiesMap.get('Opportunity')!, tenantId);
+  await createTaskFields(entitiesMap.get('Task')!, tenantId);
+  await createNoteFields(entitiesMap.get('Note')!, tenantId);
+
+  console.log('✅ Entidades core e campos criados com sucesso!\n');
+}
+
+/**
+ * Cria campos padrão para Contact
+ */
+async function createContactFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'firstName', label: 'Nome', type: 'text', required: true, unique: false, order: 1 },
+    { name: 'lastName', label: 'Sobrenome', type: 'text', required: true, unique: false, order: 2 },
+    { name: 'email', label: 'Email', type: 'text', required: false, unique: true, order: 3 },
+    { name: 'phone', label: 'Telefone', type: 'text', required: false, unique: false, order: 4 },
+    { name: 'title', label: 'Cargo', type: 'text', required: false, unique: false, order: 5 },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 6,
+      options: [
+        { value: 'active', label: 'Ativo' },
+        { value: 'inactive', label: 'Inativo' },
+        { value: 'archived', label: 'Arquivado' },
+      ],
+    },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Contact');
+}
+
+/**
+ * Cria campos padrão para Company
+ */
+async function createCompanyFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'name', label: 'Nome', type: 'text', required: true, unique: true, order: 1 },
+    { name: 'website', label: 'Website', type: 'text', required: false, unique: false, order: 2 },
+    { name: 'industry', label: 'Indústria', type: 'text', required: false, unique: false, order: 3 },
+    {
+      name: 'size',
+      label: 'Tamanho',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 4,
+      options: [
+        { value: 'small', label: 'Pequena' },
+        { value: 'medium', label: 'Média' },
+        { value: 'large', label: 'Grande' },
+        { value: 'enterprise', label: 'Empresarial' },
+      ],
+    },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 5,
+      options: [
+        { value: 'active', label: 'Ativo' },
+        { value: 'inactive', label: 'Inativo' },
+        { value: 'archived', label: 'Arquivado' },
+      ],
+    },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Company');
+}
+
+/**
+ * Cria campos padrão para Lead
+ */
+async function createLeadFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'firstName', label: 'Nome', type: 'text', required: true, unique: false, order: 1 },
+    { name: 'lastName', label: 'Sobrenome', type: 'text', required: true, unique: false, order: 2 },
+    { name: 'email', label: 'Email', type: 'text', required: false, unique: false, order: 3 },
+    { name: 'phone', label: 'Telefone', type: 'text', required: false, unique: false, order: 4 },
+    { name: 'company', label: 'Empresa', type: 'text', required: false, unique: false, order: 5 },
+    {
+      name: 'source',
+      label: 'Origem',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 6,
+      options: [
+        { value: 'website', label: 'Website' },
+        { value: 'referral', label: 'Indicação' },
+        { value: 'social', label: 'Redes Sociais' },
+        { value: 'email', label: 'Email' },
+        { value: 'other', label: 'Outro' },
+      ],
+    },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 7,
+      options: [
+        { value: 'new', label: 'Novo' },
+        { value: 'qualified', label: 'Qualificado' },
+        { value: 'converted', label: 'Convertido' },
+        { value: 'lost', label: 'Perdido' },
+      ],
+    },
+    { name: 'converted', label: 'Convertido', type: 'boolean', required: false, unique: false, order: 8 },
+    { name: 'convertedAt', label: 'Data de Conversão', type: 'date', required: false, unique: false, order: 9 },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Lead');
+}
+
+/**
+ * Cria campos padrão para Opportunity
+ */
+async function createOpportunityFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'name', label: 'Nome', type: 'text', required: true, unique: false, order: 1 },
+    { name: 'value', label: 'Valor', type: 'number', required: true, unique: false, order: 2 },
+    {
+      name: 'currency',
+      label: 'Moeda',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 3,
+      options: [
+        { value: 'BRL', label: 'BRL (Real)' },
+        { value: 'USD', label: 'USD (Dólar)' },
+        { value: 'EUR', label: 'EUR (Euro)' },
+      ],
+    },
+    {
+      name: 'stage',
+      label: 'Estágio',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 4,
+      options: [
+        { value: 'qualification', label: 'Qualificação' },
+        { value: 'proposal', label: 'Proposta' },
+        { value: 'negotiation', label: 'Negociação' },
+        { value: 'closing', label: 'Fechamento' },
+      ],
+    },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 5,
+      options: [
+        { value: 'open', label: 'Aberto' },
+        { value: 'won', label: 'Ganho' },
+        { value: 'lost', label: 'Perdido' },
+        { value: 'archived', label: 'Arquivado' },
+      ],
+    },
+    { name: 'closeDate', label: 'Data de Fechamento', type: 'date', required: false, unique: false, order: 6 },
+    { name: 'probability', label: 'Probabilidade', type: 'number', required: false, unique: false, order: 7 },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Opportunity');
+}
+
+/**
+ * Cria campos padrão para Task
+ */
+async function createTaskFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'title', label: 'Título', type: 'text', required: true, unique: false, order: 1 },
+    { name: 'description', label: 'Descrição', type: 'text', required: false, unique: false, order: 2 },
+    { name: 'dueDate', label: 'Data de Vencimento', type: 'date', required: false, unique: false, order: 3 },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 4,
+      options: [
+        { value: 'pending', label: 'Pendente' },
+        { value: 'in_progress', label: 'Em Progresso' },
+        { value: 'completed', label: 'Concluída' },
+        { value: 'cancelled', label: 'Cancelada' },
+      ],
+    },
+    {
+      name: 'priority',
+      label: 'Prioridade',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 5,
+      options: [
+        { value: 'low', label: 'Baixa' },
+        { value: 'medium', label: 'Média' },
+        { value: 'high', label: 'Alta' },
+        { value: 'urgent', label: 'Urgente' },
+      ],
+    },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Task');
+}
+
+/**
+ * Cria campos padrão para Note
+ */
+async function createNoteFields(entityId: string, tenantId: string): Promise<void> {
+  const fields = [
+    { name: 'content', label: 'Conteúdo', type: 'text', required: true, unique: false, order: 1 },
+    {
+      name: 'type',
+      label: 'Tipo',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 2,
+      options: [
+        { value: 'general', label: 'Geral' },
+        { value: 'call', label: 'Chamada' },
+        { value: 'meeting', label: 'Reunião' },
+        { value: 'email', label: 'Email' },
+        { value: 'other', label: 'Outro' },
+      ],
+    },
+  ];
+
+  await createFieldsForEntity(entityId, tenantId, fields, 'Note');
+}
+
+/**
+ * Helper para criar campos de uma entidade (idempotente)
+ */
+async function createFieldsForEntity(
+  entityId: string,
+  tenantId: string,
+  fields: Array<{
+    name: string;
+    label: string;
+    type: string;
+    required: boolean;
+    unique: boolean;
+    order: number;
+    options?: Array<{ value: string; label: string }>;
+  }>,
+  entityName: string
+): Promise<void> {
+  const fieldsToCreate = fields.map((field) => {
+    const fieldData: any = {
+      entityId,
+      name: field.name,
+      label: field.label,
+      type: field.type,
+      required: field.required,
+      unique: field.unique,
+      tenantId,
+      order: field.order,
+    };
+
+    // Adicionar options se for campo select
+    if (field.type === 'select' && field.options) {
+      fieldData.options = field.options;
+    }
+
+    return fieldData;
+  });
+
+  // Criar campos usando createMany com skipDuplicates
+  // Mas primeiro verificar quais já existem para evitar erros
+  for (const fieldData of fieldsToCreate) {
+    const existing = await prisma.field.findFirst({
+      where: {
+        entityId,
+        name: fieldData.name,
+      },
+    });
+
+    if (!existing) {
+      await prisma.field.create({
+        data: fieldData,
+      });
+    }
+  }
+
+  console.log(`   ✅ Campos de ${entityName} criados/verificados`);
+}
+
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
 
@@ -282,6 +645,7 @@ async function main() {
   // 2. Criar permissões (depende do tenant)
   // 3. Criar roles (depende do tenant)
   // 4. Associar permissões às roles (depende de permissões e roles)
+  // 5. Criar entidades core e campos (depende do tenant) - Etapa 4
   // ============================================================================
 
   // 1. Criar ou obter tenant demo
@@ -331,6 +695,9 @@ async function main() {
   // 4. Associar permissões às roles
   await associatePermissionsToRoles(roles, permissions);
   console.log('');
+
+  // 5. Criar entidades core e campos (Etapa 4)
+  await createCoreEntities(demoTenant.id);
 
   console.log('✨ Seed concluído com sucesso!');
   console.log(`\n📊 Resumo:`);
