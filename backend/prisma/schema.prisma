@@ -75,6 +75,7 @@ model Tenant {
   fields              Field[] // Etapa 4 (Modelo de Dados)
   relationships       Relationship[] // Etapa 4 (Modelo de Dados)
   entityRelationData  EntityRelationData[] // Etapa 4 (Modelo de Dados)
+  entityData          EntityData[] // Etapa 4 (Modelo de Dados - Evolução do Schema)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
@@ -263,6 +264,7 @@ model Entity {
   fields              Field[] // Campos da entidade
   sourceRelationships Relationship[] @relation("SourceEntity") // Relacionamentos onde esta entidade é origem
   targetRelationships Relationship[] @relation("TargetEntity") // Relacionamentos onde esta entidade é destino
+  entityData          EntityData[] // Dados de entidades customizadas (Etapa 4 - Evolução do Schema)
 
   // Índice único composto: nome único por tenant
   @@unique([tenantId, name])
@@ -346,6 +348,29 @@ model EntityRelationData {
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
   @@map("entity_relation_data")
+}
+
+// Modelo de EntityData (dados de entidades customizadas e campos customizados)
+// Armazena dados de entidades customizadas e valores de campos customizados em formato JSON
+// Permite evolução do schema sem migrações manuais (EAV/JSON)
+// Implementado na Etapa 4 (Evolução do Schema)
+model EntityData {
+  id        String   @id @default(uuid())
+  entityId  String // Foreign key para Entity
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  data      Json // Payload JSON com campos customizados / dados de entidade custom
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índices para performance
+  @@index([tenantId, entityId]) // Para listagem por entidade
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("entity_data")
 }
 
 // ============================================================================
