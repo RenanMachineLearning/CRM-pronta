@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
  * 
  * Garantem type-safety e evitam typos em entityType e action
  */
-export type AuditEntity = 'User' | 'Role';
+export type AuditEntity = 'User' | 'Role' | 'Entity';
 export type AuditAction = 'create' | 'update' | 'delete';
 
 /**

@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
 // ============================================================================
 
 // Entidades que terão permissões ACL
-const ENTITIES = ['Contact', 'Company', 'Lead', 'Opportunity', 'Task', 'Note', 'User', 'Role', 'AuditLog'];
+const ENTITIES = ['Contact', 'Company', 'Lead', 'Opportunity', 'Task', 'Note', 'User', 'Role', 'AuditLog', 'Entity', 'Field', 'Relationship'];
 
 // Ações padrão para cada entidade
 const ACTIONS = ['create', 'read', 'update', 'delete', 'list'];
