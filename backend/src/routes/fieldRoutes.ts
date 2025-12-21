@@ -12,6 +12,8 @@ import {
   createField,
   updateField,
   deleteField,
+  getFieldOptions,
+  updateFieldOptions,
 } from '../controllers/fieldController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -62,6 +64,82 @@ router.get(
   '/entities/:entityId/fields',
   authorizationMiddleware('Field', 'list'),
   listFields
+);
+
+/**
+ * GET /api/fields/:id/options
+ * 
+ * Obtém opções de um campo select.
+ * 
+ * Requer autenticação (não requer permissão específica)
+ * 
+ * Response 200:
+ * [
+ *   {
+ *     "value": "option1",
+ *     "label": "Opção 1",
+ *     "color": "#FF0000"
+ *   },
+ *   {
+ *     "value": "option2",
+ *     "label": "Opção 2"
+ *   },
+ *   ...
+ * ]
+ * 
+ * Nota: A ordem do array é significativa e deve ser preservada pela UI.
+ * 
+ * Response 400: Campo deletado ou não é do tipo select
+ * Response 404: Campo não encontrado
+ * Response 401: Não autenticado
+ */
+router.get(
+  '/fields/:id/options',
+  getFieldOptions
+);
+
+/**
+ * PUT /api/fields/:id/options
+ * 
+ * Atualiza opções de um campo select.
+ * 
+ * Requer autenticação e permissão "Field.update"
+ * 
+ * Body:
+ * [
+ *   {
+ *     "value": "option1",
+ *     "label": "Opção 1",
+ *     "color": "#FF0000"
+ *   },
+ *   {
+ *     "value": "option2",
+ *     "label": "Opção 2 Atualizada"
+ *   },
+ *   {
+ *     "value": "option3",
+ *     "label": "Nova Opção"
+ *   }
+ * ]
+ * 
+ * Nota: A ordem do array é significativa e será preservada.
+ * Nota: Valores existentes em registros serão validados quando tabelas existirem.
+ * 
+ * Response 200:
+ * {
+ *   "message": "Opções atualizadas com sucesso",
+ *   "options": [...]
+ * }
+ * 
+ * Response 400: Campo deletado, não é select, ou opções inválidas
+ * Response 404: Campo não encontrado
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.put(
+  '/fields/:id/options',
+  authorizationMiddleware('Field', 'update'),
+  updateFieldOptions
 );
 
 /**

@@ -373,3 +373,150 @@ export async function deleteField(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Obtém opções de um campo select
+ * 
+ * @param req - Request com fieldId nos params
+ * @param res - Response para retornar opções
+ */
+export async function getFieldOptions(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
+
+    // Extrair ID dos params
+    const fieldId = req.params.id;
+    if (!fieldId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do campo',
+      });
+      return;
+    }
+
+    // Buscar opções
+    const options = await FieldService.getFieldOptions(tenantId, fieldId);
+
+    res.status(200).json(options);
+  } catch (error: any) {
+    if (error.message === 'Campo não encontrado') {
+      res.status(404).json({
+        error: 'Campo não encontrado',
+        message: 'Campo não encontrado ou não pertence ao tenant',
+      });
+      return;
+    }
+
+    if (error.message === 'Campo deletado não pode ter opções acessadas') {
+      res.status(400).json({
+        error: 'Campo deletado',
+        message: 'Campo deletado não pode ter opções acessadas',
+      });
+      return;
+    }
+
+    if (error.message === 'Campo não é do tipo select') {
+      res.status(400).json({
+        error: 'Tipo inválido',
+        message: 'Campo não é do tipo select',
+      });
+      return;
+    }
+
+    console.error('Erro ao buscar opções:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao buscar opções do campo',
+    });
+  }
+}
+
+/**
+ * Atualiza opções de um campo select
+ * 
+ * @param req - Request com fieldId nos params e opções no body
+ * @param res - Response para retornar opções atualizadas
+ */
+export async function updateFieldOptions(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair ID dos params
+    const fieldId = req.params.id;
+    if (!fieldId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do campo',
+      });
+      return;
+    }
+
+    // Extrair opções do body
+    const options = req.body;
+    if (!Array.isArray(options)) {
+      res.status(400).json({
+        error: 'Formato inválido',
+        message: 'Opções devem ser um array',
+      });
+      return;
+    }
+
+    // Atualizar opções
+    const updatedOptions = await FieldService.updateFieldOptions(
+      tenantId,
+      fieldId,
+      options,
+      userId
+    );
+
+    res.status(200).json({
+      message: 'Opções atualizadas com sucesso',
+      options: updatedOptions,
+    });
+  } catch (error: any) {
+    if (error.message === 'Campo não encontrado') {
+      res.status(404).json({
+        error: 'Campo não encontrado',
+        message: 'Campo não encontrado ou não pertence ao tenant',
+      });
+      return;
+    }
+
+    if (error.message === 'Campo deletado não pode ter opções alteradas') {
+      res.status(400).json({
+        error: 'Campo deletado',
+        message: 'Campo deletado não pode ter opções alteradas',
+      });
+      return;
+    }
+
+    if (error.message === 'Campo não é do tipo select') {
+      res.status(400).json({
+        error: 'Tipo inválido',
+        message: 'Campo não é do tipo select',
+      });
+      return;
+    }
+
+    if (
+      error.message.includes('Campos do tipo select') ||
+      error.message.includes('Opções devem ter') ||
+      error.message.includes('Valor duplicado nas opções')
+    ) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
+    console.error('Erro ao atualizar opções:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao atualizar opções do campo',
+    });
+  }
+}
+

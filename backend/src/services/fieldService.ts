@@ -486,5 +486,202 @@ export class FieldService {
       },
     });
   }
+
+  /**
+   * Obtém opções de um campo select
+   * 
+   * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param fieldId - ID do campo
+   * @returns Array de opções do campo
+   * @throws Error se campo não encontrado, está deletado, ou não é do tipo select
+   */
+  static async getFieldOptions(
+    tenantId: string,
+    fieldId: string
+  ): Promise<Array<{ value: string; label: string; color?: string }>> {
+    // Buscar campo e validar
+    const field = await prisma.field.findFirst({
+      where: {
+        id: fieldId,
+        tenantId, // Isolamento multi-tenant obrigatório
+      },
+    });
+
+    if (!field) {
+      throw new Error('Campo não encontrado');
+    }
+
+    // Validar que campo não está deletado
+    if (field.isDeleted) {
+      throw new Error('Campo deletado não pode ter opções acessadas');
+    }
+
+    // Validar que campo é do tipo select
+    if (field.type !== 'select') {
+      throw new Error('Campo não é do tipo select');
+    }
+
+    // Extrair e retornar opções
+    const options = field.options as Array<{ value: string; label: string; color?: string }> | null;
+    
+    if (!options || !Array.isArray(options)) {
+      return [];
+    }
+
+    return options;
+  }
+
+  /**
+   * Atualiza opções de um campo select
+   * 
+   * IMPLEMENTAÇÃO PREPARATÓRIA:
+   * - Valida apenas estrutura (formato, valores únicos)
+   * - Validação de valores existentes será implementada quando tabelas existirem
+   * 
+   * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param fieldId - ID do campo
+   * @param options - Array de opções: [{ value, label, color? }]
+   * @param userId - ID do usuário (para auditoria)
+   * @returns Array de opções atualizadas
+   * @throws Error se campo não encontrado, está deletado, não é select, ou opções inválidas
+   */
+  static async updateFieldOptions(
+    tenantId: string,
+    fieldId: string,
+    options: Array<{ value: string; label: string; color?: string }>,
+    userId: string
+  ): Promise<Array<{ value: string; label: string; color?: string }>> {
+    // Buscar campo e validar
+    const field = await prisma.field.findFirst({
+      where: {
+        id: fieldId,
+        tenantId, // Isolamento multi-tenant obrigatório
+      },
+      include: {
+        entity: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+            isSystem: true,
+          },
+        },
+      },
+    });
+
+    if (!field) {
+      throw new Error('Campo não encontrado');
+    }
+
+    // Validar que campo não está deletado
+    if (field.isDeleted) {
+      throw new Error('Campo deletado não pode ter opções alteradas');
+    }
+
+    // Validar que campo é do tipo select
+    if (field.type !== 'select') {
+      throw new Error('Campo não é do tipo select');
+    }
+
+    // Validar formato das opções
+    if (!Array.isArray(options) || options.length === 0) {
+      throw new Error('Campos do tipo select devem ter pelo menos uma opção');
+    }
+
+    // Validar formato de cada opção
+    const values = new Set<string>();
+    for (const option of options) {
+      if (!option.value || typeof option.value !== 'string') {
+        throw new Error('Opções devem ter campo "value" do tipo string');
+      }
+      if (!option.label || typeof option.label !== 'string') {
+        throw new Error('Opções devem ter campo "label" do tipo string');
+      }
+      if (values.has(option.value)) {
+        throw new Error(`Valor duplicado nas opções: ${option.value}`);
+      }
+      values.add(option.value);
+    }
+
+    // ============================================================================
+    // IMPLEMENTAÇÃO PREPARATÓRIA - Validação de valores existentes
+    // ============================================================================
+    //
+    // Quando as tabelas existirem, validar que valores removidos não estão em uso:
+    //
+    // Para entidades do sistema (isSystem=true):
+    // - Buscar registros na tabela específica onde campo tem valor que não está mais nas opções
+    // - Query: SELECT COUNT(*) FROM [tabela] WHERE tenantId = ? AND [campo] NOT IN (?)
+    // - Se count > 0, retornar erro listando valores inválidos
+    //
+    // Para entidades customizadas (isSystem=false):
+    // - Buscar registros em EntityData onde campo no JSON tem valor que não está mais nas opções
+    // - Query: SELECT COUNT(*) FROM entity_data WHERE tenantId = ? AND entityId = ? AND data->>'[campo]' NOT IN (?)
+    // - Se count > 0, retornar erro listando valores inválidos
+    //
+    // Por enquanto, apenas validar estrutura (opções válidas, valores únicos)
+    // ============================================================================
+
+    // TODO: Quando tabelas existirem, implementar validação de valores existentes
+    // Exemplo:
+    // const oldOptions = (field.options as Array<{ value: string }>) || [];
+    // const oldValues = new Set(oldOptions.map(opt => opt.value));
+    // const newValues = new Set(options.map(opt => opt.value));
+    // const removedValues = Array.from(oldValues).filter(v => !newValues.has(v));
+    //
+    // if (removedValues.length > 0) {
+    //   // Buscar registros usando valores removidos
+    //   if (field.entity.isSystem) {
+    //     const tableName = field.entity.name.toLowerCase() + 's';
+    //     const invalidRecords = await prisma.$queryRawUnsafe(
+    //       `SELECT COUNT(*) as count FROM ${tableName} WHERE tenant_id = $1 AND ${field.name} = ANY($2)`,
+    //       tenantId,
+    //       removedValues
+    //     );
+    //     if (invalidRecords[0].count > 0) {
+    //       throw new Error(`Não é possível remover opções que estão em uso: ${removedValues.join(', ')}`);
+    //     }
+    //   } else {
+    //     const invalidRecords = await prisma.entityData.findMany({
+    //       where: {
+    //         tenantId,
+    //         entityId: field.entityId,
+    //         data: {
+    //           path: [field.name],
+    //           in: removedValues
+    //         }
+    //       }
+    //     });
+    //     if (invalidRecords.length > 0) {
+    //       throw new Error(`Não é possível remover opções que estão em uso: ${removedValues.join(', ')}`);
+    //     }
+    //   }
+    // }
+
+    // Atualizar opções do campo
+    await prisma.field.update({
+      where: {
+        id: fieldId,
+      },
+      data: {
+        options: options,
+      },
+    });
+
+    // Registrar auditoria (não bloqueia se falhar)
+    try {
+      const { logAudit } = await import('../utils/auditLog');
+      await logAudit('Field', fieldId, 'update', userId, tenantId, {
+        action: 'update_options',
+        fieldName: field.name,
+        fieldLabel: field.label,
+      });
+    } catch (error) {
+      // Não bloquear se auditoria falhar
+      console.error('Erro ao registrar auditoria:', error);
+    }
+
+    return options;
+  }
 }
 
