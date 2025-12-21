@@ -383,6 +383,44 @@ export async function createTestEntity(data: {
 }
 
 /**
+ * Cria um campo de teste
+ * 
+ * @param tenantId - ID do tenant
+ * @param entityId - ID da entidade
+ * @param name - Nome técnico do campo
+ * @param label - Nome amigável
+ * @param type - Tipo do campo
+ * @param required - Se é obrigatório (default: false)
+ * @param unique - Se é único (default: false)
+ * @param order - Ordem de exibição (default: 0)
+ * @returns Campo criado
+ */
+export async function createTestField(data: {
+  tenantId: string;
+  entityId: string;
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  unique?: boolean;
+  order?: number;
+}) {
+  return prisma.field.create({
+    data: {
+      name: data.name,
+      label: data.label,
+      type: data.type,
+      required: data.required || false,
+      unique: data.unique || false,
+      order: data.order || 0,
+      entityId: data.entityId,
+      tenantId: data.tenantId,
+      isDeleted: false,
+    },
+  });
+}
+
+/**
  * Fecha a conexão com o banco de dados
  */
 export async function closeDatabase() {
