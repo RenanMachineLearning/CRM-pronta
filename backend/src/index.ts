@@ -12,6 +12,9 @@ import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
 import auditLogRoutes from './routes/auditLogRoutes';
+import entityRoutes from './routes/entityRoutes';
+import fieldRoutes from './routes/fieldRoutes';
+import relationshipRoutes from './routes/relationshipRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -54,6 +57,15 @@ app.use('/api/roles', roleRoutes);
 
 // Rotas de audit logs (protegidas - requerem tenant context + autenticação)
 app.use('/api/audit-logs', auditLogRoutes);
+
+// Rotas de entidades (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api/entities', entityRoutes);
+
+// Rotas de campos (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api', fieldRoutes);
+
+// Rotas de relacionamentos (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api', relationshipRoutes);
 
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {

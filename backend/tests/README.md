@@ -11,6 +11,9 @@ Testam funções isoladamente, usando mocks quando necessário.
 - **`password.test.ts`**: Testes de hash, comparação e validação de senhas
 - **`jwt.test.ts`**: Testes de geração e validação de tokens JWT
 - **`authMiddleware.test.ts`**: Testes unitários do middleware de autenticação (com mocks)
+- **`entityService.test.ts`**: Testes unitários para EntityService (criação, validações, regras de negócio, isolamento multi-tenant)
+- **`fieldService.test.ts`**: Testes unitários para FieldService (criação, validações de tipo, regras de negócio, isolamento multi-tenant)
+- **`fieldValueValidator.test.ts`**: Testes de validação e processamento de valores por tipo de campo
 
 ### Testes de Integração (`tests/integration/`)
 
@@ -34,6 +37,18 @@ Testam fluxos completos com banco de dados real.
 - **`tenantContext.test.ts`**: Contexto de tenant
 - **`tenantModel.contract.test.ts`**: Contratos do modelo de tenant
 - **`userModel.contract.test.ts`**: Contratos do modelo de usuário
+
+#### Modelo de Dados (Metadados)
+
+- **`entityCrud.e2e.test.ts`**: Testes E2E completos para CRUD de entidades via API (create, read, update, delete, isolamento, auditoria)
+- **`fieldCrud.e2e.test.ts`**: Testes E2E completos para CRUD de campos via API (create, read, update, delete, validações de tipo, isolamento, auditoria)
+- **`relationships.e2e.test.ts`**: Testes E2E para relacionamentos entre entidades
+- **`entityLookup.e2e.test.ts`**: Testes E2E para lookup de entidades
+- **`uniqueFieldValidation.e2e.test.ts`**: Testes E2E para validação de atributos únicos
+- **`fieldOptions.e2e.test.ts`**: Testes E2E para opções de campos select
+- **`customFields.e2e.test.ts`**: Testes E2E preparatórios para campos customizados usando EntityData (estrutura, validação JSON, isolamento)
+- **`entityData.schema.test.ts`**: Testes de validação do schema EntityData
+- **`indexes.validation.test.ts`**: Testes de validação de índices estratégicos
 
 ## Executando Testes
 
@@ -77,6 +92,11 @@ A cobertura está configurada em `jest.config.ts` com thresholds mínimos:
   - `src/utils/jwt.ts`
   - `src/services/authService.ts`
   - `src/services/passwordResetService.ts`
+- **Lógica de metadados**: 70% (quality gate)
+  - `src/services/entityService.ts`
+  - `src/services/fieldService.ts`
+  - `src/utils/fieldValueValidator.ts`
+  - `src/utils/uniqueFieldValidator.ts`
 - **Controllers e Middleware**: 70% (podem ter cobertura menor)
 
 ### Nota sobre Cobertura
@@ -168,6 +188,63 @@ Após executar `npm run test:coverage`, o relatório será gerado em:
   - Token com assinatura inválida
   - Token malformado
   - Token sem campos obrigatórios
+
+## Testes do Modelo de Dados
+
+### EntityService
+
+- **Unitário**: `tests/unit/entityService.test.ts`
+  - Criação de entidades (validação de nome, label, tenantId)
+  - Validação de nome único por tenant
+  - Validação de nome começando com letra
+  - Atualização de entidade (apenas label, não permite alterar name)
+  - Deleção de entidade (validação de campos associados)
+  - Listagem de entidades com contagem de campos
+  - Obtenção de entidade por ID com campos e relacionamentos
+  - Isolamento multi-tenant
+
+### FieldService
+
+- **Unitário**: `tests/unit/fieldService.test.ts`
+  - Criação de campos (validação de tipo, nome único por entidade)
+  - Validação de tipos de campo suportados
+  - Validação de nome único por entidade
+  - Atualização de campo (não permite alterar type)
+  - Soft delete de campo (isDeleted)
+  - Listagem de campos ordenados por `order`
+  - Obtenção de campo por ID
+  - Validação de opções para campos select
+  - Isolamento multi-tenant
+
+### CRUD de Entidades
+
+- **E2E**: `tests/integration/entityCrud.e2e.test.ts`
+  - Create: POST `/api/entities` (sucesso, validações, nome duplicado)
+  - Read: GET `/api/entities` (listagem), GET `/api/entities/:id` (detalhes)
+  - Update: PUT `/api/entities/:id` (sucesso, validações, entidades do sistema)
+  - Delete: DELETE `/api/entities/:id` (sucesso, validação de campos associados)
+  - Isolamento multi-tenant
+  - Auditoria (logs de auditoria para create/update/delete)
+
+### CRUD de Campos
+
+- **E2E**: `tests/integration/fieldCrud.e2e.test.ts`
+  - Create: POST `/api/fields` (sucesso, validações, tipo inválido, nome duplicado)
+  - Read: GET `/api/fields?entityId=...` (listagem), GET `/api/fields/:id` (detalhes)
+  - Update: PUT `/api/fields/:id` (sucesso, validações, não permite alterar type)
+  - Delete: DELETE `/api/fields/:id` (soft delete)
+  - Validação de tipos: todos os tipos suportados (text, number, date, boolean, lookup, select)
+  - Isolamento multi-tenant
+  - Auditoria (logs de auditoria para create/update/delete)
+
+### Campos Customizados (EntityData)
+
+- **E2E Preparatório**: `tests/integration/customFields.e2e.test.ts`
+  - Estrutura: validar que `EntityData` pode armazenar dados JSON
+  - Criação: criar registro em `EntityData` com campos customizados (preparatório)
+  - Validação: validar estrutura de dados JSON (campos text, number, date, boolean, select)
+  - Isolamento multi-tenant
+  - **Nota**: Testes completos de CRUD serão implementados nas próximas etapas quando o serviço completo de `EntityData` for criado
 
 ## Boas Práticas
 

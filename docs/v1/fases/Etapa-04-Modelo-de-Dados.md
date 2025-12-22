@@ -10,6 +10,60 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
 
 ---
 
+## Decisões e Regras Arquiteturais (V1) — (OBRIGATÓRIO ler antes de implementar)
+
+> Esta seção existe para **evitar retrabalho** nas Etapas 05–08 e para manter **coerência** com o que já foi implementado nas Etapas 01 (multi-tenant) e 03 (ACL/auditoria).
+
+### 1) Integração ACL ↔ Metadados (padrão canônico do projeto)
+
+- **Formato canônico de permissão (já implementado no projeto)**:
+  - **Por entidade**: `{entity}.{action}` (ex: `Contact.read`)
+  - **Por campo**: `{entity}.{action}.{field}` (ex: `Opportunity.read.value`)
+- **Regra V1**:
+  - `Entity.name` é o identificador canônico usado como `Permission.entity` (ex: `"Contact"`, `"Company"`).
+  - `Field.name` é o identificador canônico usado como `Permission.field` (ex: `"email"`, `"value"`).
+  - `action` segue o catálogo existente (create/read/update/delete/list).
+- **Nota importante**: as rotas de **metadados** (`/api/entities`, `/api/fields`, etc.) continuam usando permissões do “sistema” (ex: `Entity.list`, `Field.create`, `Relationship.delete`).  
+  Já as permissões de dados do CRM usam `Entity.name` (ex: `Contact.read.email`).
+
+### 2) `tenantId` em `Field` e `Relationship` (redundante de propósito, com invariantes)
+
+O projeto segue a convenção: **toda tabela de dados contém `tenantId`**. Por isso, manter `tenantId` em `Field` e `Relationship` é **aceito na V1**, porém é obrigatório garantir consistência:
+
+- **Invariante obrigatória**: `Field.tenantId` **deve ser igual** a `Entity.tenantId`.
+- **Invariante obrigatória**: `Relationship.tenantId` **deve ser igual** ao tenant das entidades (`sourceEntityId` e `targetEntityId`).
+- **Implicação**: serviços e queries devem sempre filtrar por `tenantId` (tenant-scoped) e validar as invariantes ao criar/alterar metadados.
+
+### 3) Relacionamentos sem migração dinâmica (OBRIGATÓRIO na V1)
+
+⚠️ **V1 não cria tabelas físicas dinamicamente** (ex: “criar tabela de junção via migração em runtime”). Isso reduz risco de deploy/rollback e evita comportamento frágil com Prisma.
+
+- `Relationship` continua existindo como **metadado** (definição do relacionamento).
+- Os **links entre registros** são armazenados em uma tabela genérica (ver `EntityRelationData` abaixo).
+- **Entidades core** das Etapas 05–07 podem (e devem) continuar usando FKs/join tables explícitas quando fizer sentido (ex: `Contact.companyId`, `ContactTag`), porque isso é melhor para performance e para a Etapa 08 (Busca/Filtros).
+
+### 4) JSON (`EntityData.data`) e estratégia de query (limitações explícitas na V1)
+
+Para evitar conflito com as Etapas 05/08 (que assumem filtros/ordenação em colunas reais):
+
+- **Regra V1**:
+  - Entidades **core** (Contact/Company/Lead/Opportunity/Task/Note) terão **tabelas próprias** nas Etapas 05–07.
+  - `EntityData` (quando usado) é direcionado para **dados de entidades customizadas** e/ou **campos customizados**, mantendo o core “indexável”.
+- **Limitação V1 (JSON)**:
+  - Sem filtros avançados complexos em JSON (isso fica para evolução posterior / Etapa 08+ se necessário).
+  - Suportar apenas o essencial:
+    - igualdade (`equals`)
+    - busca simples por texto (`contains`/`ILIKE`) quando aplicável
+  - Ordenação preferencial por `created_at`/`updated_at` e campos do sistema.
+
+### 5) Soft delete de `Field` e impacto em dados existentes (regra explícita)
+
+- **Soft delete de Field**:
+  - **não apaga** dados históricos já persistidos (incluindo valores dentro de JSON).
+  - campo deixa de aparecer em formulários/edições por padrão.
+  - leitura só inclui campos deletados quando `includeDeletedFields=true` (uso interno/admin/auditoria).
+- **Motivo**: preservar histórico (auditabilidade) e evitar perda de informação.
+
 ## Checklist de Implementação
 
 ### 1. Modelo de Dados — Metadados de Entidades
@@ -47,6 +101,18 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
   - [ ] Campo `name` (ex: "contacts", "companies")
   - [ ] Campo `tenantId` (foreign key)
   - [ ] Campos `created_at` e `updated_at`
+
+- [ ] Criar tabela `EntityRelationData` (links entre registros via metadados)
+  - [ ] Campo `id` (UUID)
+  - [ ] Campo `tenantId` (foreign key)
+  - [ ] Campo `relationshipId` (foreign key para `Relationship`)
+  - [ ] Campo `sourceRecordId` (UUID/string - ID do registro origem)
+  - [ ] Campo `targetRecordId` (UUID/string - ID do registro destino)
+  - [ ] Campos `created_at` e `updated_at`
+  - [ ] Índices recomendados:
+    - [ ] `(tenantId, relationshipId)`
+    - [ ] `(tenantId, relationshipId, sourceRecordId)`
+    - [ ] `(tenantId, relationshipId, targetRecordId)`
 
 - [ ] Criar migração Prisma
   - [ ] Executar `prisma migrate dev --name add_entity_metadata`
@@ -158,8 +224,11 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
 - [ ] Criar rota `DELETE /api/fields/:id`
   - [ ] Requer autenticação e permissão "Field.delete"
   - [ ] Validar que campo não é do sistema
-  - [ ] Soft delete (marcar como deletado) ou hard delete
-  - [ ] Se hard delete: migrar dados existentes (opcional na V1)
+  - [ ] **Regra V1 (recomendado)**: Soft delete (marcar como deletado)
+    - [ ] Não remover dados históricos já persistidos (incluindo JSON)
+    - [ ] Campo deixa de aparecer no uso normal (UI/edição)
+    - [ ] Campo só aparece se `includeDeletedFields=true` (interno/admin/auditoria)
+  - [ ] Hard delete fica fora do escopo padrão da V1 (evita perda de histórico)
 
 #### Validação
 - [ ] Teste E2E: criar campo customizado funciona
@@ -209,12 +278,13 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
   - [ ] Validar que entidades existem
   - [ ] Validar tipo de relacionamento (oneToMany, manyToMany)
   - [ ] Criar relacionamento
-  - [ ] Criar tabela de junção se manyToMany (via migração)
+  - [ ] **Regra V1**: NÃO criar tabela de junção via migração dinâmica
+  - [ ] Persistir links entre registros via `EntityRelationData`
 
 - [ ] Criar rota `DELETE /api/relationships/:id`
   - [ ] Requer autenticação e permissão "Relationship.delete"
   - [ ] Deletar relacionamento
-  - [ ] Remover tabela de junção se manyToMany
+  - [ ] Remover/invalidar links associados em `EntityRelationData` (tenant-scoped)
 
 #### Validação
 - [ ] Teste E2E: criar relacionamento oneToMany funciona
@@ -300,7 +370,7 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
   - [ ] Campo `id` (UUID)
   - [ ] Campo `entityId` (foreign key para `Entity`)
   - [ ] Campo `tenantId` (foreign key)
-  - [ ] Campo `data` (JSON - todos os campos do registro)
+  - [ ] Campo `data` (JSON - payload de campos customizados / dados de entidade custom)
   - [ ] Campos `created_at` e `updated_at`
   - [ ] Índice em `(tenantId, entityId)`
 
@@ -351,19 +421,19 @@ Implementar sistema de objetos/entidades e campos personalizáveis que suporta e
 ### 13. Documentação
 
 #### Documentação Técnica
-- [ ] Documentar sistema de entidades e campos
-  - [ ] Como criar entidade customizada
-  - [ ] Como adicionar campos
-  - [ ] Tipos de campo suportados
+- [x] Documentar sistema de entidades e campos
+  - [x] Como criar entidade customizada
+  - [x] Como adicionar campos
+  - [x] Tipos de campo suportados
 
-- [ ] Documentar relacionamentos
-  - [ ] Como criar relacionamento
-  - [ ] Tipos de relacionamento
+- [x] Documentar relacionamentos
+  - [x] Como criar relacionamento
+  - [x] Tipos de relacionamento
 
-- [ ] Documentar API de metadados
-  - [ ] Endpoints de entidades
-  - [ ] Endpoints de campos
-  - [ ] Endpoints de relacionamentos
+- [x] Documentar API de metadados
+  - [x] Endpoints de entidades
+  - [x] Endpoints de campos
+  - [x] Endpoints de relacionamentos
 
 ---
 

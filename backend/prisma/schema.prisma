@@ -71,6 +71,11 @@ model Tenant {
   roles               Role[] // Etapa 3 (ACL)
   permissions         Permission[] // Etapa 3 (ACL)
   auditLogs           AuditLog[] // Etapa 3 (ACL - Auditoria)
+  entities            Entity[] // Etapa 4 (Modelo de Dados)
+  fields              Field[] // Etapa 4 (Modelo de Dados)
+  relationships       Relationship[] // Etapa 4 (Modelo de Dados)
+  entityRelationData  EntityRelationData[] // Etapa 4 (Modelo de Dados)
+  entityData          EntityData[] // Etapa 4 (Modelo de Dados - Evolução do Schema)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
@@ -234,7 +239,143 @@ model AuditLog {
   @@index([tenantId, entityType, entityId])
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
+  // TODO V2: Adicionar @@index([tenantId, userId, timestamp]) quando UI de auditoria por usuário for implementada
+  // Este índice será necessário para queries como: SELECT * FROM audit_logs WHERE tenantId = ? AND userId = ? ORDER BY timestamp DESC
   @@map("audit_logs")
+}
+
+// ============================================================================
+// ETAPA 4 - MODELO DE DADOS (Metadados de Entidades e Campos)
+// ============================================================================
+// Sistema de metadados que suporta entidades e campos personalizáveis
+// Implementado na Etapa 4 (Modelo de Dados)
+
+// Modelo de Entity (definição de entidades)
+// Define as entidades do sistema (Contact, Company, Lead, etc.) e entidades customizadas
+model Entity {
+  id        String   @id @default(uuid())
+  name      String // Nome técnico da entidade (ex: "Contact", "Company", "Lead")
+  label     String // Nome amigável (ex: "Contato", "Empresa", "Lead")
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  isSystem Boolean  @default(false) // true = entidade do sistema, false = customizada
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fields              Field[] // Campos da entidade
+  sourceRelationships Relationship[] @relation("SourceEntity") // Relacionamentos onde esta entidade é origem
+  targetRelationships Relationship[] @relation("TargetEntity") // Relacionamentos onde esta entidade é destino
+  entityData          EntityData[] // Dados de entidades customizadas (Etapa 4 - Evolução do Schema)
+
+  // Índice único composto: nome único por tenant
+  @@unique([tenantId, name])
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("entities")
+}
+
+// Modelo de Field (definição de campos)
+// Define os campos de uma entidade (firstName, email, etc.)
+model Field {
+  id          String   @id @default(uuid())
+  entityId    String // Foreign key para Entity
+  name        String // Nome técnico do campo (ex: "firstName", "email")
+  label       String // Nome amigável (ex: "Nome", "Email")
+  type        String // Tipo do campo: "text", "number", "date", "boolean", "lookup", "select"
+  required    Boolean  @default(false) // Campo obrigatório
+  unique      Boolean  @default(false) // Campo único
+  defaultValue Json?   // Valor padrão (JSON para flexibilidade)
+  options     Json?    // Opções para campos select/lookup (JSON)
+  tenantId    String // Foreign key para Tenant (isolamento multi-tenant)
+  order       Int      @default(0) // Ordem de exibição
+  isDeleted   Boolean  @default(false) // Soft delete - não apaga dados históricos
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índice único composto: nome único por entidade
+  @@unique([entityId, name])
+  // Índice para listagem de campos por entidade (otimiza query central da UI)
+  // Query otimizada: SELECT * FROM fields WHERE tenantId = ? AND entityId = ? ORDER BY order
+  @@index([tenantId, entityId])
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("fields")
+}
+
+// Modelo de Relationship (relacionamentos entre entidades)
+// Define relacionamentos entre entidades (oneToMany, manyToMany)
+model Relationship {
+  id             String   @id @default(uuid())
+  sourceEntityId String // Foreign key para Entity (entidade origem)
+  targetEntityId String // Foreign key para Entity (entidade destino)
+  type           String // Tipo: "oneToMany", "manyToMany"
+  name           String // Nome do relacionamento (ex: "contacts", "companies")
+  tenantId       String // Foreign key para Tenant (isolamento multi-tenant)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  sourceEntity Entity @relation("SourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntity Entity @relation("TargetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  relationData EntityRelationData[] // Links entre registros via este relacionamento
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("relationships")
+}
+
+// Modelo de EntityRelationData (links entre registros via metadados)
+// Armazena os links entre registros de entidades relacionadas
+// Usado para relacionamentos definidos via metadados (não FKs explícitas)
+model EntityRelationData {
+  id              String   @id @default(uuid())
+  tenantId        String // Foreign key para Tenant (isolamento multi-tenant)
+  relationshipId  String // Foreign key para Relationship
+  sourceRecordId  String // ID do registro origem (UUID/string)
+  targetRecordId  String // ID do registro destino (UUID/string)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  relationship Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índices para performance em queries de relacionamentos
+  @@index([tenantId, relationshipId])
+  @@index([tenantId, relationshipId, sourceRecordId])
+  @@index([tenantId, relationshipId, targetRecordId])
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("entity_relation_data")
+}
+
+// Modelo de EntityData (dados de entidades customizadas e campos customizados)
+// Armazena dados de entidades customizadas e valores de campos customizados em formato JSON
+// Permite evolução do schema sem migrações manuais (EAV/JSON)
+// Implementado na Etapa 4 (Evolução do Schema)
+model EntityData {
+  id        String   @id @default(uuid())
+  entityId  String // Foreign key para Entity
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  data      Json // Payload JSON com campos customizados / dados de entidade custom
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índices para performance
+  @@index([tenantId, entityId]) // Para listagem por entidade
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("entity_data")
 }
 
 // ============================================================================
