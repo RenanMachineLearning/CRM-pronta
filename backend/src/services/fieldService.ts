@@ -552,7 +552,7 @@ export class FieldService {
     userId: string
   ): Promise<Array<{ value: string; label: string; color?: string }>> {
     // Buscar campo e validar
-    const field = await prisma.field.findFirst({
+    const existing = await prisma.field.findFirst({
       where: {
         id: fieldId,
         tenantId, // Isolamento multi-tenant obrigatório
@@ -569,17 +569,22 @@ export class FieldService {
       },
     });
 
-    if (!field) {
+    if (!existing) {
       throw new Error('Campo não encontrado');
     }
 
     // Validar que campo não está deletado
-    if (field.isDeleted) {
+    if (existing.isDeleted) {
       throw new Error('Campo deletado não pode ter opções alteradas');
     }
 
+    // Validar que campo não é de entidade do sistema
+    if (existing.entity.isSystem) {
+      throw new Error('Campos de entidades do sistema não podem ter opções alteradas');
+    }
+
     // Validar que campo é do tipo select
-    if (field.type !== 'select') {
+    if (existing.type !== 'select') {
       throw new Error('Campo não é do tipo select');
     }
 
@@ -672,9 +677,10 @@ export class FieldService {
     try {
       const { logAudit } = await import('../utils/auditLog');
       await logAudit('Field', fieldId, 'update', userId, tenantId, {
-        action: 'update_options',
-        fieldName: field.name,
-        fieldLabel: field.label,
+        options: {
+          old: existing.options,
+          new: options,
+        },
       });
     } catch (error) {
       // Não bloquear se auditoria falhar

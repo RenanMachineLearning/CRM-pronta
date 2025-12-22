@@ -157,12 +157,12 @@ export class EntityLookupService {
   static async lookupEntityRecords(
     tenantId: string,
     entityId: string,
-    query?: string,
-    limit?: number
+    _query?: string, // Preparatório: será usado quando tabelas existirem
+    _limit?: number // Preparatório: será usado quando tabelas existirem
   ): Promise<LookupRecord[]> {
-    // Validar limite
-    const maxLimit = Math.min(limit || 20, 100);
-    const actualLimit = Math.max(1, maxLimit);
+    // Validar limite (preparatório: será usado quando tabelas existirem)
+    // const maxLimit = Math.min(limit || 20, 100); // TODO: Usar quando tabelas existirem
+    // const actualLimit = Math.max(1, maxLimit); // TODO: Usar quando tabelas existirem
 
     // Buscar entidade e validar que existe e pertence ao tenant
     const entity = await prisma.entity.findFirst({
@@ -186,8 +186,8 @@ export class EntityLookupService {
       throw new Error('Entidade não encontrada');
     }
 
-    // Determinar estratégia de label
-    const labelField = this.determineLabelField(entity);
+    // Determinar estratégia de label (preparatório: será usado quando tabelas existirem)
+    // const labelField = this.determineLabelField(entity); // TODO: Usar quando tabelas existirem
 
     // ============================================================================
     // IMPLEMENTAÇÃO PREPARATÓRIA - Retornar array vazio por enquanto

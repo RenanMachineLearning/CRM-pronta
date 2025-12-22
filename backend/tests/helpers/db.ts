@@ -2,7 +2,7 @@
  * Helpers para gerenciamento do banco de dados nos testes
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -404,6 +404,7 @@ export async function createTestField(data: {
   required?: boolean;
   unique?: boolean;
   order?: number;
+  options?: Array<{ value: string; label: string; color?: string }>;
 }) {
   return prisma.field.create({
     data: {
@@ -413,6 +414,7 @@ export async function createTestField(data: {
       required: data.required || false,
       unique: data.unique || false,
       order: data.order || 0,
+      options: data.options ? data.options : Prisma.JsonNull,
       entityId: data.entityId,
       tenantId: data.tenantId,
       isDeleted: false,
