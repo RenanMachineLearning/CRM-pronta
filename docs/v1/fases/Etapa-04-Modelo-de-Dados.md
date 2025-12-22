@@ -421,19 +421,19 @@ Para evitar conflito com as Etapas 05/08 (que assumem filtros/ordenação em col
 ### 13. Documentação
 
 #### Documentação Técnica
-- [ ] Documentar sistema de entidades e campos
-  - [ ] Como criar entidade customizada
-  - [ ] Como adicionar campos
-  - [ ] Tipos de campo suportados
+- [x] Documentar sistema de entidades e campos
+  - [x] Como criar entidade customizada
+  - [x] Como adicionar campos
+  - [x] Tipos de campo suportados
 
-- [ ] Documentar relacionamentos
-  - [ ] Como criar relacionamento
-  - [ ] Tipos de relacionamento
+- [x] Documentar relacionamentos
+  - [x] Como criar relacionamento
+  - [x] Tipos de relacionamento
 
-- [ ] Documentar API de metadados
-  - [ ] Endpoints de entidades
-  - [ ] Endpoints de campos
-  - [ ] Endpoints de relacionamentos
+- [x] Documentar API de metadados
+  - [x] Endpoints de entidades
+  - [x] Endpoints de campos
+  - [x] Endpoints de relacionamentos
 
 ---
 
