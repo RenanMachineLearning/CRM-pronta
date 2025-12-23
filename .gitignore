@@ -1,0 +1,39 @@
+# Pasta de ajuda/auxiliar (comandos pessoais)
+.help/
+
+# Planos temporários do Cursor (podem ser recriados)
+.cursor/plans/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Testes - arquivos gerados e relatórios (os arquivos de teste DEVEM estar no repositório)
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+junit.xml
+*.test.js
+*.spec.js
+*.test.js.map
+*.spec.js.map
+
+# Scripts temporários ou pessoais (scripts úteis DEVEM estar no repositório)
+# backend/scripts/test-tenant-manual.sh - mantido no repositório (útil para desenvolvimento)
+

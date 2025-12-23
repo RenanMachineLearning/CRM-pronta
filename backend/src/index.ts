@@ -5,6 +5,16 @@
 
 import express from 'express';
 import dotenv from 'dotenv';
+import { tenantContextMiddleware } from './middleware/tenantContext';
+import { authMiddleware } from './middleware/authMiddleware';
+import { globalRateLimiter } from './middleware/rateLimiter';
+import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import roleRoutes from './routes/roleRoutes';
+import auditLogRoutes from './routes/auditLogRoutes';
+import entityRoutes from './routes/entityRoutes';
+import fieldRoutes from './routes/fieldRoutes';
+import relationshipRoutes from './routes/relationshipRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -16,8 +26,11 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rota de health check
-app.get('/health', (req, res) => {
+// Rate limiter global (100 req/min)
+app.use(globalRateLimiter);
+
+// Rota pública (sem tenant, pode ser skip pelo rate limiter)
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -25,9 +38,53 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+// Rotas de autenticação (antes do middleware de tenant)
+// Login precisa extrair tenant manualmente do header
+app.use('/api/auth', authRoutes);
+
+// Aplicar middleware de tenant em todas as outras rotas
+app.use(tenantContextMiddleware);
+
+// Aplicar middleware de autenticação em rotas protegidas
+// Rotas públicas (/health, /api/auth/*) não precisam de autenticação
+app.use(authMiddleware);
+
+// Rotas de usuários (protegidas - requerem tenant context + autenticação)
+app.use('/api/users', userRoutes);
+
+// Rotas de roles (protegidas - requerem tenant context + autenticação)
+app.use('/api/roles', roleRoutes);
+
+// Rotas de audit logs (protegidas - requerem tenant context + autenticação)
+app.use('/api/audit-logs', auditLogRoutes);
+
+// Rotas de entidades (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api/entities', entityRoutes);
+
+// Rotas de campos (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api', fieldRoutes);
+
+// Rotas de relacionamentos (metadados) (protegidas - requerem tenant context + autenticação)
+app.use('/api', relationshipRoutes);
+
+// Exemplo de rota protegida (requer tenant context + autenticação)
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'Rota protegida',
+    tenantId: req.tenantId,
+    tenant: req.tenant?.name,
+    userId: req.userId,
+  });
 });
+
+// Exportar app para testes
+export { app };
+
+// Iniciar servidor apenas se não estiver em modo de teste
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 

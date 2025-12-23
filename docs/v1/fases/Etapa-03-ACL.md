@@ -15,323 +15,349 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 ### 1. Modelo de Dados — Roles e Permissões
 
 #### Backend (Prisma Schema)
-- [ ] Criar tabela `Role` no schema Prisma
-  - [ ] Campo `id` (UUID)
-  - [ ] Campo `name` (ex: "Admin", "Vendedor", "Visualizador")
-  - [ ] Campo `tenantId` (foreign key para `Tenant`)
-  - [ ] Campo `description` (opcional)
-  - [ ] Campos `created_at` e `updated_at`
-  - [ ] Índice único composto: `(tenantId, name)` para garantir nome único por tenant
+- [x] Criar tabela `Role` no schema Prisma
+  - [x] Campo `id` (UUID)
+  - [x] Campo `name` (ex: "Admin", "Vendedor", "Visualizador")
+  - [x] Campo `tenantId` (foreign key para `Tenant`)
+  - [x] Campo `description` (opcional)
+  - [x] Campos `created_at` e `updated_at`
+  - [x] Índice único composto: `(tenantId, name)` para garantir nome único por tenant
 
-- [ ] Criar tabela `Permission` no schema Prisma
-  - [ ] Campo `id` (UUID)
-  - [ ] Campo `entity` (ex: "Contact", "Company", "Lead", "Opportunity")
-  - [ ] Campo `action` (ex: "create", "read", "update", "delete", "list")
-  - [ ] Campo `field` (opcional, para permissões por campo)
-  - [ ] Campo `tenantId` (foreign key)
-  - [ ] Campos `created_at` e `updated_at`
+- [x] Criar tabela `Permission` no schema Prisma
+  - [x] Campo `id` (UUID)
+  - [x] Campo `entity` (ex: "Contact", "Company", "Lead", "Opportunity")
+  - [x] Campo `action` (ex: "create", "read", "update", "delete", "list")
+  - [x] Campo `field` (opcional, para permissões por campo)
+  - [x] Campo `tenantId` (foreign key)
+  - [x] Campos `created_at` e `updated_at`
 
-- [ ] Criar tabela `RolePermission` (relação N:N)
-  - [ ] Campo `roleId` (foreign key para `Role`)
-  - [ ] Campo `permissionId` (foreign key para `Permission`)
-  - [ ] Índice único composto: `(roleId, permissionId)`
+- [x] Criar tabela `RolePermission` (relação N:N)
+  - [x] Campo `roleId` (foreign key para `Role`)
+  - [x] Campo `permissionId` (foreign key para `Permission`)
+  - [x] Índice único composto: `(roleId, permissionId)`
 
-- [ ] Criar tabela `UserRole` (relação N:N)
-  - [ ] Campo `userId` (foreign key para `User`)
-  - [ ] Campo `roleId` (foreign key para `Role`)
-  - [ ] Índice único composto: `(userId, roleId)`
+- [x] Criar tabela `UserRole` (relação N:N)
+  - [x] Campo `userId` (foreign key para `User`)
+  - [x] Campo `roleId` (foreign key para `Role`)
+  - [x] Índice único composto: `(userId, roleId)`
 
-- [ ] Criar migração Prisma
-  - [ ] Executar `prisma migrate dev --name add_acl`
-  - [ ] Validar que todas as tabelas foram criadas
+- [x] Criar migração Prisma
+  - [x] Executar `prisma migrate dev --name add_acl`
+  - [x] Validar que todas as tabelas foram criadas
 
 #### Validação
-- [ ] Testar criação de roles via Prisma
-- [ ] Testar associação de permissões a roles
-- [ ] Testar associação de roles a usuários
+- [x] Testar criação de roles via Prisma
+- [x] Testar associação de permissões a roles
+- [x] Testar associação de roles a usuários
 
 ---
 
 ### 2. Roles Padrão e Permissões Iniciais
 
 #### Backend (Seed Script)
-- [ ] Criar roles padrão no seed
-  - [ ] **Admin**: acesso total (todas as permissões)
-  - [ ] **Vendedor**: pode criar/editar contatos, leads, oportunidades; pode visualizar relatórios
-  - [ ] **Visualizador**: apenas leitura (read, list) em todas as entidades
 
-- [ ] Criar permissões padrão
-  - [ ] Permissões por entidade: Contact, Company, Lead, Opportunity, Task, Note
-  - [ ] Permissões por ação: create, read, update, delete, list
-  - [ ] Permissões por campo (ex: "Opportunity.value" - read/write)
+- Admin recebe todas as permissões existentes via seed.
+- O middleware de autorização não possui exceções por nome de role.
 
-- [ ] Associar permissões a roles
-  - [ ] Admin: todas as permissões
-  - [ ] Vendedor: permissões específicas
-  - [ ] Visualizador: apenas read e list
+- [x] Criar roles padrão no seed
+  - [x] **Admin**: acesso total (todas as permissões)
+  - [x] **Vendedor**: pode criar/editar contatos, leads, oportunidades; pode visualizar relatórios
+  - [x] **Visualizador**: apenas leitura (read, list) em todas as entidades
+
+- [x] Criar permissões padrão
+  - [x] Permissões por entidade: Contact, Company, Lead, Opportunity, Task, Note
+  - [x] Permissões por ação: create, read, update, delete, list
+  - [x] Permissões por campo (ex: "Opportunity.value" - read/write)
+
+- [x] Associar permissões a roles
+  - [x] Admin: todas as permissões
+  - [x] Vendedor: permissões específicas
+  - [x] Visualizador: apenas read e list
 
 #### Validação
-- [ ] Executar seed e verificar que roles foram criados
-- [ ] Verificar que permissões foram associadas corretamente
+- [ ] Executar seed e verificar que roles foram criados (validação manual)
+- [ ] Verificar que permissões foram associadas corretamente (validação manual)
 
 ---
 
 ### 3. CRUD de Usuários
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/users`
-  - [ ] Requer autenticação e permissão "User.list"
-  - [ ] Listar usuários do tenant atual
-  - [ ] Paginação (limit, offset)
-  - [ ] Filtros opcionais (status, role)
+- [x] Criar rota `GET /api/users`
+  - [x] Requer autenticação e permissão "User.list"
+  - [x] Listar usuários do tenant atual
+  - [x] Paginação (limit, offset)
+  - [x] Filtros opcionais (status, role)
 
-- [ ] Criar rota `GET /api/users/:id`
-  - [ ] Requer autenticação e permissão "User.read"
-  - [ ] Retornar usuário específico (apenas do tenant atual)
-  - [ ] Incluir roles do usuário
+- [x] Criar rota `GET /api/users/:id`
+  - [x] Requer autenticação e permissão "User.read"
+  - [x] Retornar usuário específico (apenas do tenant atual)
+  - [x] Incluir roles do usuário
 
-- [ ] Criar rota `POST /api/users`
-  - [ ] Requer autenticação e permissão "User.create"
-  - [ ] Receber: `email`, `name`, `password`, `roleIds[]`
-  - [ ] Validar email único no tenant
-  - [ ] Hash da senha
-  - [ ] Criar usuário e associar roles
-  - [ ] Retornar usuário criado (sem senha)
+- [x] Criar rota `POST /api/users`
+  - [x] Requer autenticação e permissão "User.create"
+  - [x] Receber: `email`, `name`, `password`, `roleIds[]`
+  - [x] Validar email único no tenant
+  - [x] Hash da senha
+  - [x] Criar usuário e associar roles
+  - [x] Retornar usuário criado (sem senha)
 
-- [ ] Criar rota `PUT /api/users/:id`
-  - [ ] Requer autenticação e permissão "User.update"
-  - [ ] Receber: `name`, `email`, `roleIds[]`, `status`
-  - [ ] Validar que usuário pertence ao tenant atual
-  - [ ] Atualizar dados e roles
-  - [ ] Retornar usuário atualizado
+- [x] Criar rota `PUT /api/users/:id`
+  - [x] Requer autenticação e permissão "User.update"
+  - [x] Receber: `name`, `email`, `roleIds[]`, `status`
+  - [x] Validar que usuário pertence ao tenant atual
+  - [x] Atualizar dados e roles
+  - [x] Retornar usuário atualizado
 
-- [ ] Criar rota `DELETE /api/users/:id`
-  - [ ] Requer autenticação e permissão "User.delete"
-  - [ ] Validar que usuário pertence ao tenant atual
-  - [ ] Soft delete (marcar como inativo) ou hard delete
-  - [ ] Retornar sucesso
+- [x] Criar rota `DELETE /api/users/:id`
+  - [x] Requer autenticação e permissão "User.delete"
+  - [x] Validar que usuário pertence ao tenant atual
+  - [x] Soft delete (marcar como inativo) ou hard delete
+  - [x] Retornar sucesso
 
 #### Validação
-- [ ] Teste E2E: criar usuário funciona
-- [ ] Teste E2E: listar usuários retorna apenas do tenant atual
-- [ ] Teste E2E: atualizar usuário funciona
-- [ ] Teste E2E: deletar usuário funciona
+- [x] Teste E2E: criar usuário funciona
+- [x] Teste E2E: listar usuários retorna apenas do tenant atual
+- [x] Teste E2E: atualizar usuário funciona
+- [x] Teste E2E: deletar usuário funciona
 
 ---
 
 ### 4. CRUD de Roles
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/roles`
-  - [ ] Requer autenticação e permissão "Role.list"
-  - [ ] Listar roles do tenant atual
+- [x] Criar rota `GET /api/roles`
+  - [x] Requer autenticação e permissão "Role.list"
+  - [x] Listar roles do tenant atual
 
-- [ ] Criar rota `GET /api/roles/:id`
-  - [ ] Requer autenticação e permissão "Role.read"
-  - [ ] Retornar role específica com permissões
+- [x] Criar rota `GET /api/roles/:id`
+  - [x] Requer autenticação e permissão "Role.read"
+  - [x] Retornar role específica com permissões
 
-- [ ] Criar rota `POST /api/roles`
-  - [ ] Requer autenticação e permissão "Role.create"
-  - [ ] Receber: `name`, `description`, `permissionIds[]`
-  - [ ] Criar role e associar permissões
+- [x] Criar rota `POST /api/roles`
+  - [x] Requer autenticação e permissão "Role.create"
+  - [x] Receber: `name`, `description`, `permissionIds[]`
+  - [x] Criar role e associar permissões
 
-- [ ] Criar rota `PUT /api/roles/:id`
-  - [ ] Requer autenticação e permissão "Role.update"
-  - [ ] Receber: `name`, `description`, `permissionIds[]`
-  - [ ] Atualizar role e permissões
+- [x] Criar rota `PUT /api/roles/:id`
+  - [x] Requer autenticação e permissão "Role.update"
+  - [x] Receber: `name`, `description`, `permissionIds[]`
+  - [x] Atualizar role e permissões
 
-- [ ] Criar rota `DELETE /api/roles/:id`
-  - [ ] Requer autenticação e permissão "Role.delete"
-  - [ ] Validar que role não está em uso
-  - [ ] Deletar role
+- [x] Criar rota `DELETE /api/roles/:id`
+  - [x] Requer autenticação e permissão "Role.delete"
+  - [x] Validar que role não está em uso
+  - [x] Deletar role
 
 #### Validação
-- [ ] Teste E2E: criar role funciona
-- [ ] Teste E2E: associar permissões a role funciona
+- [x] Teste E2E: criar role funciona
+- [x] Teste E2E: associar permissões a role funciona
 - [ ] Teste E2E: deletar role em uso falha
 
 ---
 
 ### 5. Middleware de Autorização
 
+- O JWT contém apenas userId e tenantId.
+- Roles e permissões são resolvidas em tempo de requisição.
+
+
 #### Backend (Node.js + TypeScript)
-- [ ] Criar middleware `authorizationMiddleware.ts`
-  - [ ] Receber: `entity` (ex: "Contact"), `action` (ex: "create")
-  - [ ] Buscar roles do usuário atual (do token)
-  - [ ] Buscar permissões das roles
-  - [ ] Verificar se usuário tem permissão para `entity.action`
-  - [ ] Retornar erro 403 se não tiver permissão
+- [x] Criar middleware `authorizationMiddleware.ts`
+  - [x] Receber: `entity` (ex: "Contact"), `action` (ex: "create")
+  - [x] Buscar roles do usuário atual (do token)
+  - [x] Buscar permissões das roles
+  - [x] Verificar se usuário tem permissão para `entity.action`
+  - [x] Retornar erro 403 se não tiver permissão
 
-- [ ] Criar helper `checkPermission(entity, action, field?)`
-  - [ ] Função reutilizável para verificar permissões
-  - [ ] Usar em controllers e middlewares
+- [x] Criar helper `checkPermission(entity, action, field?)`
+  - [x] Função reutilizável para verificar permissões
+  - [x] Usar em controllers e middlewares
 
-- [ ] Integrar middleware nas rotas
-  - [ ] Aplicar middleware em rotas que precisam de autorização
-  - [ ] Exemplo: `authorizationMiddleware('Contact', 'create')`
+- [x] Integrar middleware nas rotas
+  - [x] Aplicar middleware em rotas que precisam de autorização
+  - [x] Exemplo: `authorizationMiddleware('Contact', 'create')`
 
 #### Validação
-- [ ] Teste: usuário sem permissão recebe 403
-- [ ] Teste: usuário com permissão passa
-- [ ] Teste: Admin sempre tem acesso
+- [x] Teste: usuário sem permissão recebe 403
+- [x] Teste: usuário com permissão passa
+- [x] Teste: Admin sempre tem acesso
 
 ---
 
 ### 6. Permissões por Campo
 
 #### Backend (Node.js + TypeScript)
-- [ ] Estender sistema de permissões
-  - [ ] Suportar permissões por campo (ex: "Opportunity.value")
-  - [ ] Verificar permissão de campo antes de retornar/atualizar dados
-  - [ ] Filtrar campos não permitidos nas respostas
 
-- [ ] Criar helper `filterFieldsByPermission(data, entity)`
-  - [ ] Remover campos que usuário não tem permissão de ler
-  - [ ] Aplicar em todas as respostas GET
+⚠️ Implementar permissões por campo apenas após:
+- ACL por entidade estabilizado
+- CRUD de usuários e roles finalizados
+- Testes de autorização básicos passando
 
-- [ ] Validar permissões de campo em updates
-  - [ ] Verificar se usuário pode atualizar cada campo
-  - [ ] Rejeitar update se tentar atualizar campo sem permissão
+- [x] Estender sistema de permissões
+  - [x] Suportar permissões por campo (ex: "Opportunity.value")
+  - [x] Verificar permissão de campo antes de retornar/atualizar dados
+  - [x] Filtrar campos não permitidos nas respostas
+
+- [x] Criar helper `filterFieldsByPermission(data, entity)`
+  - [x] Remover campos que usuário não tem permissão de ler
+  - [x] Aplicar em todas as respostas GET
+
+- [x] Validar permissões de campo em updates
+  - [x] Verificar se usuário pode atualizar cada campo
+  - [x] Rejeitar update se tentar atualizar campo sem permissão
 
 #### Validação
-- [ ] Teste: usuário sem permissão de campo não vê o campo
-- [ ] Teste: usuário sem permissão de campo não pode atualizar
-- [ ] Teste: Admin vê todos os campos
+- [x] Teste: usuário sem permissão de campo não vê o campo
+- [x] Teste: usuário sem permissão de campo não pode atualizar
+- [x] Teste: Admin vê todos os campos
 
 ---
 
 ### 7. Perfil do Usuário
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/auth/me`
-  - [ ] Requer autenticação
-  - [ ] Retornar dados do usuário atual (do token)
-  - [ ] Incluir roles e permissões
+- [x] Criar rota `GET /api/auth/me`
+  - [x] Requer autenticação
+  - [x] Retornar dados do usuário atual (do token)
+  - [x] Incluir roles e permissões
 
-- [ ] Criar rota `PUT /api/auth/me`
-  - [ ] Requer autenticação
-  - [ ] Receber: `name`, `email` (opcional)
-  - [ ] Atualizar perfil do usuário atual
-  - [ ] Validar email único (se alterado)
-  - [ ] Retornar perfil atualizado
+- [x] Criar rota `PUT /api/auth/me`
+  - [x] Requer autenticação
+  - [x] Receber: `name`, `email` (opcional)
+  - [x] Atualizar perfil do usuário atual
+  - [x] Validar email único (se alterado)
+  - [x] Retornar perfil atualizado
 
-- [ ] Criar rota `PUT /api/auth/me/password`
-  - [ ] Requer autenticação
-  - [ ] Receber: `currentPassword`, `newPassword`
-  - [ ] Validar senha atual
-  - [ ] Atualizar senha
-  - [ ] (Reutilizar lógica da Etapa 2)
+- [x] Criar rota `PUT /api/auth/me/password`
+  - [x] Requer autenticação
+  - [x] Receber: `currentPassword`, `newPassword`
+  - [x] Validar senha atual
+  - [x] Atualizar senha
+  - [x] (Reutilizar lógica da Etapa 2)
 
 #### Validação
 - [ ] Teste: obter perfil funciona
 - [ ] Teste: atualizar perfil funciona
-- [ ] Teste: alterar senha funciona
+- [ ] Teste: alterar senha funciona (há testes para `/api/auth/change-password`, mas não para `/api/auth/me/password`)
 
 ---
 
 ### 8. Auditoria de Alterações
 
 #### Backend (Prisma Schema)
-- [ ] Criar tabela `AuditLog` no schema Prisma
-  - [ ] Campo `id` (UUID)
-  - [ ] Campo `entityType` (ex: "Contact", "Company")
-  - [ ] Campo `entityId` (ID do registro alterado)
-  - [ ] Campo `action` (create, update, delete)
-  - [ ] Campo `userId` (quem fez a alteração)
-  - [ ] Campo `tenantId` (foreign key)
-  - [ ] Campo `changes` (JSON com campos alterados: `{ field: { old, new } }`)
-  - [ ] Campo `timestamp` (quando ocorreu)
-  - [ ] Índice em `(tenantId, entityType, entityId)` para busca rápida
 
-- [ ] Criar migração Prisma
-  - [ ] Executar `prisma migrate dev --name add_audit_log`
+- Falhas na auditoria não devem impedir a operação principal.
+- Auditoria não altera o comportamento funcional do sistema.
+
+- [x] Criar tabela `AuditLog` no schema Prisma
+  - [x] Campo `id` (UUID)
+  - [x] Campo `entityType` (ex: "Contact", "Company")
+  - [x] Campo `entityId` (ID do registro alterado)
+  - [x] Campo `action` (create, update, delete)
+  - [x] Campo `userId` (quem fez a alteração)
+  - [x] Campo `tenantId` (foreign key)
+  - [x] Campo `changes` (JSON com campos alterados: `{ field: { old, new } }`)
+  - [x] Campo `timestamp` (quando ocorreu)
+  - [x] Índice em `(tenantId, entityType, entityId)` para busca rápida
+
+- [x] Criar migração Prisma
+  - [x] Executar `prisma migrate dev --name add_audit_log`
 
 #### Backend (Middleware/Helper)
-- [ ] Criar helper `logAudit(entityType, entityId, action, changes)`
-  - [ ] Registrar alteração na tabela `AuditLog`
-  - [ ] Capturar `userId` e `tenantId` do contexto
+- [x] Criar helper `logAudit(entityType, entityId, action, changes)`
+  - [x] Registrar alteração na tabela `AuditLog`
+  - [x] Capturar `userId` e `tenantId` do contexto
 
-- [ ] Integrar auditoria em operações CRUD
-  - [ ] Após criar registro: logar "create"
-  - [ ] Após atualizar registro: logar "update" com changes
-  - [ ] Após deletar registro: logar "delete"
+- [x] Integrar auditoria em operações CRUD
+  - [x] Após criar registro: logar "create"
+  - [x] Após atualizar registro: logar "update" com changes
+  - [x] Após deletar registro: logar "delete"
 
 #### Validação
-- [ ] Teste: criação de registro gera log de auditoria
-- [ ] Teste: atualização de registro gera log com changes
-- [ ] Teste: deleção de registro gera log
+- [x] Teste: criação de registro gera log de auditoria
+- [x] Teste: atualização de registro gera log com changes
+- [x] Teste: deleção de registro gera log
 
 ---
 
 ### 9. Histórico de Alterações
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/audit-logs`
-  - [ ] Requer autenticação e permissão "AuditLog.read"
-  - [ ] Listar logs de auditoria do tenant atual
-  - [ ] Filtros: `entityType`, `entityId`, `userId`, `action`, `dateFrom`, `dateTo`
-  - [ ] Paginação
+- [x] Criar rota `GET /api/audit-logs`
+  - [x] Requer autenticação e permissão "AuditLog.read"
+  - [x] Listar logs de auditoria do tenant atual
+  - [x] Filtros: `entityType`, `entityId`, `userId`, `action`, `dateFrom`, `dateTo`
+  - [x] Paginação
 
-- [ ] Criar rota `GET /api/audit-logs/:entityType/:entityId`
-  - [ ] Requer autenticação e permissão "AuditLog.read"
-  - [ ] Retornar histórico de alterações de um registro específico
-  - [ ] Ordenado por timestamp (mais recente primeiro)
+- [x] Criar rota `GET /api/audit-logs/:entityType/:entityId`
+  - [x] Requer autenticação e permissão "AuditLog.read"
+  - [x] Retornar histórico de alterações de um registro específico
+  - [x] Ordenado por timestamp (mais recente primeiro)
 
 #### Validação
-- [ ] Teste: listar logs de auditoria funciona
-- [ ] Teste: filtrar logs por entidade funciona
-- [ ] Teste: histórico de registro específico funciona
+- [x] Teste: listar logs de auditoria funciona
+- [x] Teste: filtrar logs por entidade funciona
+- [x] Teste: histórico de registro específico funciona
 
 ---
 
 ### 10. Testes de ACL
 
 #### Backend (Testes)
-- [ ] Testes unitários
-  - [ ] Verificação de permissões
-  - [ ] Filtro de campos por permissão
-  - [ ] Auditoria de alterações
 
-- [ ] Testes de integração
-  - [ ] Usuário com role Admin tem acesso total
-  - [ ] Usuário com role Vendedor tem permissões corretas
-  - [ ] Usuário com role Visualizador não pode criar/editar
-  - [ ] Permissões por campo funcionam corretamente
+Testes mínimos obrigatórios:
+- Visualizador recebe 403 em create/update/delete
+- Vendedor cria e atualiza, mas não deleta
+- Admin possui acesso total via permissões
+- Usuário não acessa recursos de outro tenant
+- Campo restrito não é retornado
 
-- [ ] Testes de segurança
-  - [ ] Usuário não pode acessar dados de outro tenant
-  - [ ] Usuário sem permissão recebe 403
-  - [ ] Auditoria registra todas as alterações
+- [x] Testes unitários
+  - [x] Verificação de permissões
+  - [x] Filtro de campos por permissão
+  - [x] Auditoria de alterações
+
+- [x] Testes de integração
+  - [x] Usuário com role Admin tem acesso total
+  - [x] Usuário com role Vendedor tem permissões corretas
+  - [x] Usuário com role Visualizador não pode criar/editar
+  - [x] Permissões por campo funcionam corretamente
+
+- [x] Testes de segurança
+  - [x] Usuário não pode acessar dados de outro tenant
+  - [x] Usuário sem permissão recebe 403
+  - [x] Auditoria registra todas as alterações
 
 #### Validação
-- [ ] Todos os testes passando
-- [ ] Cobertura de testes > 80% para lógica de ACL
+- [x] Todos os testes passando
+- [x] Cobertura de testes > 80% para lógica de ACL
 
 ---
 
 ### 11. Documentação
 
 #### Documentação Técnica
-- [ ] Documentar sistema de roles e permissões
-  - [ ] Roles padrão e suas permissões
-  - [ ] Como criar novas roles
-  - [ ] Como associar permissões
+- [x] Documentar sistema de roles e permissões
+  - [x] Roles padrão e suas permissões
+  - [x] Como criar novas roles
+  - [x] Como associar permissões
 
-- [ ] Documentar endpoints de usuários e roles
-  - [ ] `GET /api/users`
-  - [ ] `POST /api/users`
-  - [ ] `PUT /api/users/:id`
-  - [ ] `DELETE /api/users/:id`
-  - [ ] Endpoints de roles
+- [x] Documentar endpoints de usuários e roles
+  - [x] `GET /api/users`
+  - [x] `POST /api/users`
+  - [x] `PUT /api/users/:id`
+  - [x] `DELETE /api/users/:id`
+  - [x] Endpoints de roles
 
-- [ ] Documentar permissões por campo
-  - [ ] Como funcionam
-  - [ ] Como configurar
-  - [ ] Exemplos
+- [x] Documentar permissões por campo
+  - [x] Como funcionam
+  - [x] Como configurar
+  - [x] Exemplos
 
-- [ ] Documentar auditoria
-  - [ ] O que é registrado
-  - [ ] Como consultar histórico
+- [x] Documentar auditoria
+  - [x] O que é registrado
+  - [x] Como consultar histórico
 
 ---
 
@@ -339,15 +365,15 @@ Implementar gestão de usuários, roles/funções e controle de acesso granular 
 
 Antes de avançar para a **Etapa 4 (Modelo de Dados)**, verifique:
 
-- [ ] Roles e permissões funcionais
-- [ ] Permissões por objeto e campo operacionais
-- [ ] Auditoria registrando alterações
-- [ ] Perfil do usuário editável
-- [ ] CRUD de usuários funcionando
-- [ ] CRUD de roles funcionando
-- [ ] Middleware de autorização funcionando
-- [ ] Testes de ACL passando
-- [ ] Documentação atualizada
+- [x] Roles e permissões funcionais
+- [x] Permissões por objeto e campo operacionais
+- [x] Auditoria registrando alterações
+- [x] Perfil do usuário editável
+- [x] CRUD de usuários funcionando
+- [x] CRUD de roles funcionando
+- [x] Middleware de autorização funcionando
+- [x] Testes de ACL passando
+- [x] Documentação atualizada
 
 ---
 
