@@ -12,6 +12,7 @@ import {
   createCompany,
   updateCompany,
   deleteCompany,
+  getCompanyContacts,
 } from '../controllers/companyController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -57,6 +58,40 @@ router.get(
 );
 
 /**
+ * GET /api/companies/:id/contacts
+ * 
+ * Lista contatos associados a uma empresa específica.
+ * 
+ * Requer autenticação e permissão "Contact.list"
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
+ * - tagId: string (opcional: UUID da tag)
+ * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
+ * - order: string (opcional: asc, desc, default: desc)
+ * 
+ * Response 200:
+ * {
+ *   "data": [...],
+ *   "pagination": { "total": 10, "limit": 20, "offset": 0 }
+ * }
+ * 
+ * Nota: Retorna apenas contatos não deletados (soft delete) associados à empresa.
+ * 
+ * Response 400: Parâmetros inválidos
+ * Response 404: Empresa não encontrada, não pertence ao tenant ou foi deletada
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão (Contact.list)
+ */
+router.get(
+  '/:id/contacts',
+  authorizationMiddleware('Contact', 'list'), // Permissão de Contact.list (não Company)
+  getCompanyContacts
+);
+
+/**
  * GET /api/companies/:id
  * 
  * Obtém empresa específica do tenant atual.
@@ -69,6 +104,8 @@ router.get(
  * Response 403: Sem permissão
  * 
  * Nota: Inclui lista completa de contatos associados (id, firstName, lastName, title).
+ * 
+ * IMPORTANTE: Esta rota deve vir DEPOIS de /:id/contacts para evitar conflito de roteamento.
  */
 router.get(
   '/:id',

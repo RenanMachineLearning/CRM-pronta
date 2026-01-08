@@ -390,6 +390,196 @@ export class ContactService {
   }
 
   /**
+   * Lista contatos de uma empresa específica
+   * 
+   * @param companyId - ID da empresa
+   * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param filters - Filtros opcionais (status, tagId) - excluir companyId pois já está no parâmetro
+   * @param pagination - Parâmetros de paginação (limit, offset, orderBy, order)
+   * @param userId - ID do usuário que está fazendo a requisição (para filtrar campos por permissão)
+   * @returns Objeto com lista de contatos e informações de paginação
+   * @throws Error se empresa não encontrada, não pertence ao tenant ou está soft deleted
+   */
+  static async listContactsByCompany(
+    companyId: string,
+    tenantId: string,
+    filters?: Omit<ContactFilters, 'companyId'>, // Excluir companyId pois já está no parâmetro
+    pagination?: PaginationParams,
+    userId?: string
+  ): Promise<{
+    data: ContactResponse[];
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+    };
+  }> {
+    // Validar formato UUID (se aplicável)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)) {
+      throw new Error('ID da empresa inválido');
+    }
+
+    // Validar que empresa existe, pertence ao tenant e não está soft deleted
+    const company = await prisma.company.findFirst({
+      where: {
+        id: companyId,
+        tenantId, // Isolamento multi-tenant obrigatório
+        deletedAt: null, // Empresa não pode estar soft deleted
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!company) {
+      throw new Error('Empresa não encontrada, não pertence ao seu tenant ou foi deletada');
+    }
+
+    // Valores padrão para paginação
+    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
+    const offset = pagination?.offset || 0;
+
+    // Construir condições de filtro
+    const where: any = {
+      tenantId, // Isolamento multi-tenant obrigatório
+      companyId, // Filtro principal - contatos desta empresa
+      deletedAt: null, // Excluir soft deleted
+    };
+
+    // Adicionar filtro de status se fornecido
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    // Adicionar filtro de tagId se fornecido
+    if (filters?.tagId) {
+      where.tags = {
+        some: {
+          tagId: filters.tagId,
+          tag: {
+            tenantId, // Garantir que tag pertence ao tenant
+          },
+        },
+      };
+    }
+
+    // Configurar ordenação
+    const orderByField = pagination?.orderBy || 'createdAt';
+    const orderDirection = pagination?.order || 'desc';
+
+    const orderBy: any = {};
+    if (orderByField === 'firstName' || orderByField === 'lastName' || orderByField === 'createdAt') {
+      orderBy[orderByField] = orderDirection;
+    } else {
+      // Fallback para createdAt desc se campo inválido
+      orderBy.createdAt = 'desc';
+    }
+
+    // Buscar contatos com relacionamentos e contagem total
+    const [contacts, total] = await Promise.all([
+      prisma.contact.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          emails: true,
+          phones: true,
+          addresses: true,
+          tags: {
+            include: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy,
+      }),
+      prisma.contact.count({ where }),
+    ]);
+
+    // Formatar resposta
+    let data: ContactResponse[] = contacts.map((contact) => ({
+      id: contact.id,
+      tenantId: contact.tenantId,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      title: contact.title,
+      gender: contact.gender,
+      birthDate: contact.birthDate,
+      notes: contact.notes,
+      status: contact.status,
+      companyId: contact.companyId,
+      deletedAt: contact.deletedAt,
+      createdAt: contact.createdAt,
+      updatedAt: contact.updatedAt,
+      company: contact.company
+        ? {
+            id: contact.company.id,
+            name: contact.company.name,
+          }
+        : null,
+      emails: contact.emails.map((email) => ({
+        id: email.id,
+        email: email.email,
+        type: email.type,
+        isPrimary: email.isPrimary,
+      })),
+      phones: contact.phones.map((phone) => ({
+        id: phone.id,
+        phone: phone.phone,
+        type: phone.type,
+        isPrimary: phone.isPrimary,
+      })),
+      addresses: contact.addresses.map((address) => ({
+        id: address.id,
+        street: address.street,
+        city: address.city,
+        state: address.state,
+        zipCode: address.zipCode,
+        country: address.country,
+        type: address.type,
+      })),
+      tags: contact.tags.map((ct) => ({
+        id: ct.tag.id,
+        name: ct.tag.name,
+        color: ct.tag.color,
+      })),
+    }));
+
+    // Filtrar campos baseado em permissões do usuário
+    if (userId) {
+      data = (await filterFieldsByPermission(
+        data,
+        userId,
+        tenantId,
+        'Contact',
+        'read'
+      )) as ContactResponse[];
+    }
+
+    return {
+      data,
+      pagination: {
+        total,
+        limit,
+        offset,
+      },
+    };
+  }
+
+  /**
    * Cria contato e relacionamentos
    * 
    * @param data - Dados do contato
@@ -435,16 +625,26 @@ export class ContactService {
 
     // Validar companyId se fornecido
     if (data.companyId) {
+      // Validação de formato UUID (opcional, mas recomendado para robustez)
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.companyId)) {
+        throw new Error('companyId deve ser um UUID válido');
+      }
+
       const company = await prisma.company.findFirst({
         where: {
           id: data.companyId,
-          tenantId, // Garantir que empresa pertence ao tenant
+          tenantId, // Garantir isolamento multi-tenant
           deletedAt: null, // Empresa não pode estar soft deleted
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
         },
       });
 
       if (!company) {
-        throw new Error('Empresa não encontrada ou não pertence ao tenant');
+        throw new Error('Empresa não encontrada, não pertence ao seu tenant ou foi deletada');
       }
     }
 
@@ -769,17 +969,30 @@ export class ContactService {
 
     // Validar companyId se fornecido
     if (data.companyId !== undefined) {
-      if (data.companyId) {
+      if (data.companyId === null) {
+        // Desassociação explícita - permitir sem validação adicional
+      } else {
+        // Validação de formato UUID (opcional, mas recomendado para robustez)
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.companyId)) {
+          throw new Error('companyId deve ser um UUID válido');
+        }
+
+        // Validar empresa existe, pertence ao tenant e não está soft deleted
         const company = await prisma.company.findFirst({
           where: {
             id: data.companyId,
-            tenantId, // Garantir que empresa pertence ao tenant
+            tenantId, // Garantir isolamento multi-tenant
             deletedAt: null, // Empresa não pode estar soft deleted
+          },
+          select: {
+            id: true,
+            name: true,
+            status: true,
           },
         });
 
         if (!company) {
-          throw new Error('Empresa não encontrada ou não pertence ao tenant');
+          throw new Error('Empresa não encontrada, não pertence ao seu tenant ou foi deletada');
         }
       }
     }

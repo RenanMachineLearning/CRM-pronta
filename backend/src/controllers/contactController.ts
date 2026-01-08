@@ -316,7 +316,8 @@ export async function createContact(req: Request, res: Response): Promise<void> 
     if (
       error.message.includes('não encontrada') ||
       error.message.includes('não encontradas') ||
-      error.message.includes('não pertence')
+      error.message.includes('não pertence') ||
+      error.message.includes('foi deletada')
     ) {
       res.status(404).json({
         error: 'Recurso não encontrado',
@@ -328,7 +329,8 @@ export async function createContact(req: Request, res: Response): Promise<void> 
     if (
       error.message.includes('inválido') ||
       error.message.includes('obrigatório') ||
-      error.message.includes('futura')
+      error.message.includes('futura') ||
+      error.message.includes('UUID')
     ) {
       res.status(400).json({
         error: 'Dados inválidos',
@@ -530,7 +532,8 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
     if (
       error.message.includes('não encontrada') ||
       error.message.includes('não encontradas') ||
-      error.message.includes('não pertence')
+      error.message.includes('não pertence') ||
+      error.message.includes('foi deletada')
     ) {
       res.status(404).json({
         error: 'Recurso não encontrado',
@@ -550,7 +553,8 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
     if (
       error.message.includes('inválido') ||
       error.message.includes('obrigatório') ||
-      error.message.includes('futura')
+      error.message.includes('futura') ||
+      error.message.includes('UUID')
     ) {
       res.status(400).json({
         error: 'Dados inválidos',

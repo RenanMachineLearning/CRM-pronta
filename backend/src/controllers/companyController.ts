@@ -10,7 +10,8 @@
 
 import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
-import { CompanySize, CompanyStatus } from '@prisma/client';
+import { ContactService } from '../services/contactService';
+import { CompanySize, CompanyStatus, ContactStatus } from '@prisma/client';
 import { validateUrl } from '../utils/validators';
 
 /**
@@ -572,6 +573,131 @@ export async function deleteCompany(req: Request, res: Response): Promise<void> 
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: 'Falha ao deletar empresa',
+    });
+  }
+}
+
+/**
+ * Lista contatos de uma empresa específica
+ * 
+ * @param req - Request com companyId nos params e query params opcionais
+ * @param res - Response para retornar lista de contatos
+ */
+export async function getCompanyContacts(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair ID dos params
+    const companyId = req.params.id;
+    if (!companyId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID da empresa',
+      });
+      return;
+    }
+
+    // Extrair query params (mesmos de listContacts, exceto companyId)
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+    const status = req.query.status as string | undefined;
+    const tagId = req.query.tagId as string | undefined;
+    const orderBy = req.query.orderBy as string | undefined;
+    const order = req.query.order as string | undefined;
+
+    // Validar limit
+    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'limit deve ser um número entre 1 e 100',
+      });
+      return;
+    }
+
+    // Validar offset
+    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'offset deve ser um número maior ou igual a 0',
+      });
+      return;
+    }
+
+    // Validar status
+    if (status && !['ACTIVE', 'INACTIVE', 'ARCHIVED'].includes(status)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'status deve ser ACTIVE, INACTIVE ou ARCHIVED',
+      });
+      return;
+    }
+
+    // Validar orderBy
+    if (orderBy && !['firstName', 'lastName', 'createdAt'].includes(orderBy)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'orderBy deve ser firstName, lastName ou createdAt',
+      });
+      return;
+    }
+
+    // Validar order
+    if (order && !['asc', 'desc'].includes(order)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'order deve ser asc ou desc',
+      });
+      return;
+    }
+
+    // Buscar contatos da empresa
+    const result = await ContactService.listContactsByCompany(
+      companyId,
+      tenantId,
+      {
+        status: status as ContactStatus | undefined,
+        tagId,
+      },
+      {
+        limit,
+        offset,
+        orderBy: orderBy as 'firstName' | 'lastName' | 'createdAt' | undefined,
+        order: order as 'asc' | 'desc' | undefined,
+      },
+      userId
+    );
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    // Tratar erros específicos do service
+    if (
+      error.message.includes('não encontrada') ||
+      error.message.includes('não encontradas') ||
+      error.message.includes('não pertence') ||
+      error.message.includes('foi deletada') ||
+      error.message.includes('inválido')
+    ) {
+      res.status(404).json({
+        error: 'Empresa não encontrada',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error.message.includes('UUID')) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
+    console.error('Erro ao listar contatos da empresa:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao listar contatos da empresa',
     });
   }
 }
