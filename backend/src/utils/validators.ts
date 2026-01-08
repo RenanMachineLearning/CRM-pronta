@@ -39,3 +39,18 @@ export function validateDateNotFuture(date: Date | string): boolean {
   return dateObj <= new Date(); // Não pode ser futura
 }
 
+/**
+ * Valida formato de URL
+ * @param url - URL a ser validada
+ * @returns true se válido, false caso contrário
+ */
+export function validateUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    // Aceitar apenas http e https
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
