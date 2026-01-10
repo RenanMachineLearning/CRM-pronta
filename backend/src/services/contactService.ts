@@ -623,6 +623,21 @@ export class ContactService {
       }
     }
 
+    // Validar e normalizar gender se fornecido
+    let normalizedGender: string | null | undefined = undefined;
+    if (data.gender !== undefined) {
+      if (data.gender === null) {
+        // Permitir null explicitamente
+        normalizedGender = null;
+      } else {
+        const validGenders = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'];
+        normalizedGender = (data.gender as string).trim().toUpperCase();
+        if (!validGenders.includes(normalizedGender)) {
+          throw new Error(`gender deve ser um dos valores: ${validGenders.join(', ')}`);
+        }
+      }
+    }
+
     // Validar companyId se fornecido
     if (data.companyId) {
       // Validação de formato UUID (opcional, mas recomendado para robustez)
@@ -716,7 +731,7 @@ export class ContactService {
           firstName: data.firstName.trim(),
           lastName: data.lastName?.trim(),
           title: data.title?.trim(),
-          gender: data.gender?.trim(),
+          gender: normalizedGender,
           birthDate,
           notes: data.notes?.trim(),
           status: data.status || 'ACTIVE',
@@ -967,6 +982,21 @@ export class ContactService {
       }
     }
 
+    // Validar e normalizar gender se fornecido
+    let normalizedGender: string | null | undefined = undefined;
+    if (data.gender !== undefined) {
+      if (data.gender === null) {
+        // Permitir null explicitamente para remover gender
+        normalizedGender = null;
+      } else {
+        const validGenders = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'];
+        normalizedGender = (data.gender as string).trim().toUpperCase();
+        if (!validGenders.includes(normalizedGender)) {
+          throw new Error(`gender deve ser um dos valores: ${validGenders.join(', ')}`);
+        }
+      }
+    }
+
     // Validar companyId se fornecido
     if (data.companyId !== undefined) {
       if (data.companyId === null) {
@@ -1063,7 +1093,7 @@ export class ContactService {
       if (data.firstName !== undefined) updateData.firstName = data.firstName.trim();
       if (data.lastName !== undefined) updateData.lastName = data.lastName?.trim();
       if (data.title !== undefined) updateData.title = data.title?.trim();
-      if (data.gender !== undefined) updateData.gender = data.gender?.trim();
+      if (normalizedGender !== undefined) updateData.gender = normalizedGender;
       if (data.birthDate !== undefined) updateData.birthDate = birthDate;
       if (data.notes !== undefined) updateData.notes = data.notes?.trim();
       if (data.status !== undefined) updateData.status = data.status;

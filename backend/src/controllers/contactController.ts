@@ -11,7 +11,7 @@
 import { Request, Response } from 'express';
 import { ContactService } from '../services/contactService';
 import { ContactStatus } from '@prisma/client';
-import { validateEmail, validatePhone } from '../utils/validators';
+import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
 
 /**
  * Lista contatos com paginação e filtros
@@ -270,6 +270,37 @@ export async function createContact(req: Request, res: Response): Promise<void> 
         });
         return;
       }
+      
+      // Adicionar validação de data não futura
+      const dateObj = birthDate instanceof Date ? birthDate : new Date(birthDate);
+      if (!validateDateNotFuture(dateObj)) {
+        res.status(400).json({
+          error: 'birthDate inválido',
+          message: 'Data de nascimento não pode ser futura',
+        });
+        return;
+      }
+    }
+
+    // Validar gender se fornecido
+    if (gender !== undefined && gender !== null) {
+      if (typeof gender !== 'string') {
+        res.status(400).json({
+          error: 'gender inválido',
+          message: 'gender deve ser uma string',
+        });
+        return;
+      }
+      
+      const validGenders = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'];
+      const normalizedGender = gender.trim().toUpperCase();
+      if (!validGenders.includes(normalizedGender)) {
+        res.status(400).json({
+          error: 'gender inválido',
+          message: `gender deve ser um dos valores: ${validGenders.join(', ')}`,
+        });
+        return;
+      }
     }
 
     // Validar status se fornecido
@@ -474,6 +505,37 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
         res.status(400).json({
           error: 'birthDate inválido',
           message: 'birthDate deve ser uma string ISO ou Date',
+        });
+        return;
+      }
+      
+      // Adicionar validação de data não futura
+      const dateObj = birthDate instanceof Date ? birthDate : new Date(birthDate);
+      if (!validateDateNotFuture(dateObj)) {
+        res.status(400).json({
+          error: 'birthDate inválido',
+          message: 'Data de nascimento não pode ser futura',
+        });
+        return;
+      }
+    }
+
+    // Validar gender se fornecido
+    if (gender !== undefined && gender !== null) {
+      if (typeof gender !== 'string') {
+        res.status(400).json({
+          error: 'gender inválido',
+          message: 'gender deve ser uma string',
+        });
+        return;
+      }
+      
+      const validGenders = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'];
+      const normalizedGender = gender.trim().toUpperCase();
+      if (!validGenders.includes(normalizedGender)) {
+        res.status(400).json({
+          error: 'gender inválido',
+          message: `gender deve ser um dos valores: ${validGenders.join(', ')}`,
         });
         return;
       }
