@@ -338,6 +338,11 @@ export class CompanyService {
     tenantId: string,
     userId: string
   ): Promise<CompanyResponse> {
+    // Validar que id não foi fornecido (gerado automaticamente)
+    if ((data as any).id !== undefined) {
+      throw new Error('O ID é gerado automaticamente e não pode ser fornecido');
+    }
+
     // Validar name obrigatório
     if (!data.name || !data.name.trim()) {
       throw new Error('Nome da empresa é obrigatório');

@@ -593,6 +593,11 @@ export class ContactService {
     tenantId: string,
     requestingUserId?: string
   ): Promise<ContactResponse> {
+    // Validar que id não foi fornecido (gerado automaticamente)
+    if ((data as any).id !== undefined) {
+      throw new Error('O ID é gerado automaticamente e não pode ser fornecido');
+    }
+
     // Validar firstName obrigatório
     if (!data.firstName || data.firstName.trim().length === 0) {
       throw new Error('firstName é obrigatório');

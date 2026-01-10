@@ -162,6 +162,15 @@ export async function createContact(req: Request, res: Response): Promise<void> 
     // tenantId já validado pelo middleware
     const tenantId = req.tenantId!;
 
+    // Validar que id não foi fornecido (gerado automaticamente)
+    if (req.body.id !== undefined) {
+      res.status(400).json({
+        error: 'Campo id não permitido',
+        message: 'O ID é gerado automaticamente e não pode ser fornecido',
+      });
+      return;
+    }
+
     // Extrair dados do body
     const {
       firstName,

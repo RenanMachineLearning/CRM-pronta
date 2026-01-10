@@ -158,6 +158,15 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
     const tenantId = req.tenantId!;
     const userId = req.userId!;
 
+    // Validar que id não foi fornecido (gerado automaticamente)
+    if (req.body.id !== undefined) {
+      res.status(400).json({
+        error: 'Campo id não permitido',
+        message: 'O ID é gerado automaticamente e não pode ser fornecido',
+      });
+      return;
+    }
+
     // Extrair dados do body
     const { name, website, industry, size, status, addresses, tagIds } = req.body;
 

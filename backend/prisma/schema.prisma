@@ -438,8 +438,11 @@ model EntityData {
 
 // Modelo de Company (empresas/organizações)
 // Uma empresa pode ter múltiplos contatos associados
+// Nota: Campo externalId não implementado na V1
+// Seria usado para integrações externas e seria único por tenant (não globalmente)
+// Deixado para implementação futura se necessário
 model Company {
-  id        String        @id @default(uuid())
+  id        String        @id @default(uuid()) // UUID gerado automaticamente pelo Prisma
   tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
   name      String // Nome da empresa (obrigatório)
   website   String? // Website da empresa (opcional)
@@ -463,8 +466,11 @@ model Company {
 
 // Modelo de Contact (contatos/pessoas)
 // Um contato pode estar associado a uma empresa (opcional)
+// Nota: Campo externalId não implementado na V1
+// Seria usado para integrações externas e seria único por tenant (não globalmente)
+// Deixado para implementação futura se necessário
 model Contact {
-  id        String        @id @default(uuid())
+  id        String        @id @default(uuid()) // UUID gerado automaticamente pelo Prisma
   tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
   firstName String // Primeiro nome (obrigatório)
   lastName  String? // Sobrenome (opcional)
