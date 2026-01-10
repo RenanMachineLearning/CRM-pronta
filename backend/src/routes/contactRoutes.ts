@@ -13,6 +13,16 @@ import {
   updateContact,
   deleteContact,
 } from '../controllers/contactController';
+import {
+  addEmail,
+  updateEmail,
+  deleteEmail,
+} from '../controllers/contactEmailController';
+import {
+  addPhone,
+  updatePhone,
+  deletePhone,
+} from '../controllers/contactPhoneController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
@@ -56,6 +66,156 @@ router.get(
 );
 
 /**
+ * POST /api/contacts/:id/emails
+ * 
+ * Adiciona email a um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Body:
+ * {
+ *   "email": "joao@example.com",
+ *   "type": "WORK" (WORK, HOME, OTHER),
+ *   "isPrimary": true (opcional, boolean)
+ * }
+ * 
+ * Response 201: Email criado
+ * Response 400: Dados inválidos (formato de email, tipo inválido)
+ * Response 404: Contato não encontrado ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * Nota: Se não houver email primary e isPrimary não for fornecido, o email será marcado como primary automaticamente.
+ */
+router.post(
+  '/:id/emails',
+  authorizationMiddleware('Contact', 'update'),
+  addEmail
+);
+
+/**
+ * PUT /api/contacts/:id/emails/:emailId
+ * 
+ * Atualiza email de um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Body (todos opcionais):
+ * {
+ *   "email": "novo@example.com" (opcional),
+ *   "type": "HOME" (opcional: WORK, HOME, OTHER),
+ *   "isPrimary": false (opcional, boolean)
+ * }
+ * 
+ * Response 200: Email atualizado
+ * Response 400: Dados inválidos (formato de email, tipo inválido, tentativa de remover único primary)
+ * Response 404: Contato ou email não encontrado
+ * Response 409: Tentativa de remover único email primary
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * Nota: Não é possível remover o único email primary. Pelo menos um email deve ser primary.
+ */
+router.put(
+  '/:id/emails/:emailId',
+  authorizationMiddleware('Contact', 'update'),
+  updateEmail
+);
+
+/**
+ * DELETE /api/contacts/:id/emails/:emailId
+ * 
+ * Remove email de um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Response 200: { "message": "Email deletado com sucesso", "id": "uuid" }
+ * Response 404: Contato ou email não encontrado
+ * Response 409: Tentativa de deletar último email do contato
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * Nota: Não é possível deletar o último email do contato. Se o email deletado for primary, o primeiro email restante será marcado como primary.
+ */
+router.delete(
+  '/:id/emails/:emailId',
+  authorizationMiddleware('Contact', 'update'),
+  deleteEmail
+);
+
+/**
+ * POST /api/contacts/:id/phones
+ * 
+ * Adiciona telefone a um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Body:
+ * {
+ *   "phone": "+55 11 99999-9999",
+ *   "type": "MOBILE" (WORK, HOME, MOBILE, OTHER),
+ *   "isPrimary": true (opcional, boolean)
+ * }
+ * 
+ * Response 201: Telefone criado
+ * Response 400: Dados inválidos (formato de telefone, tipo inválido)
+ * Response 404: Contato não encontrado ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.post(
+  '/:id/phones',
+  authorizationMiddleware('Contact', 'update'),
+  addPhone
+);
+
+/**
+ * PUT /api/contacts/:id/phones/:phoneId
+ * 
+ * Atualiza telefone de um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Body (todos opcionais):
+ * {
+ *   "phone": "+55 11 88888-8888" (opcional),
+ *   "type": "WORK" (opcional: WORK, HOME, MOBILE, OTHER),
+ *   "isPrimary": false (opcional, boolean)
+ * }
+ * 
+ * Response 200: Telefone atualizado
+ * Response 400: Dados inválidos (formato de telefone, tipo inválido)
+ * Response 404: Contato ou telefone não encontrado
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.put(
+  '/:id/phones/:phoneId',
+  authorizationMiddleware('Contact', 'update'),
+  updatePhone
+);
+
+/**
+ * DELETE /api/contacts/:id/phones/:phoneId
+ * 
+ * Remove telefone de um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Response 200: { "message": "Telefone deletado com sucesso", "id": "uuid" }
+ * Response 404: Contato ou telefone não encontrado
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * Nota: Se o telefone deletado for primary e houver outros telefones, o primeiro telefone restante será marcado como primary.
+ */
+router.delete(
+  '/:id/phones/:phoneId',
+  authorizationMiddleware('Contact', 'update'),
+  deletePhone
+);
+
+/**
  * GET /api/contacts/:id
  * 
  * Obtém contato específico do tenant atual.
@@ -66,6 +226,8 @@ router.get(
  * Response 404: Contato não encontrado ou não pertence ao tenant
  * Response 401: Não autenticado
  * Response 403: Sem permissão
+ * 
+ * IMPORTANTE: Esta rota deve vir DEPOIS das rotas aninhadas (/:id/emails, /:id/phones) para evitar conflito de roteamento.
  */
 router.get(
   '/:id',
