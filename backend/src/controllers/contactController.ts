@@ -187,11 +187,14 @@ export async function createContact(req: Request, res: Response): Promise<void> 
       tagIds,
     } = req.body;
 
-    // Validar campos obrigatórios
-    if (!firstName || typeof firstName !== 'string' || firstName.trim().length === 0) {
+    // Validar que pelo menos firstName ou lastName é fornecido
+    const hasFirstName = firstName && typeof firstName === 'string' && firstName.trim().length > 0;
+    const hasLastName = lastName && typeof lastName === 'string' && lastName.trim().length > 0;
+
+    if (!hasFirstName && !hasLastName) {
       res.status(400).json({
-        error: 'firstName é obrigatório',
-        message: 'Forneça um firstName válido',
+        error: 'Campos obrigatórios inválidos',
+        message: 'Pelo menos firstName ou lastName deve ser fornecido',
       });
       return;
     }

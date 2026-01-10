@@ -141,3 +141,41 @@ export function validateUUID(uuid: string): boolean {
   return UUID_V4_REGEX.test(uuid);
 }
 
+/**
+ * Normaliza formato de telefone removendo caracteres especiais
+ * Mantém apenas dígitos
+ * 
+ * @param phone - Telefone a ser normalizado
+ * @returns Telefone normalizado (apenas dígitos)
+ */
+export function normalizePhone(phone: string): string {
+  if (!phone || typeof phone !== 'string') {
+    return phone;
+  }
+  
+  // Remove espaços, parênteses, hífens, pontos, barras e +
+  return phone.replace(/[\s\(\)\-\+\.\/]/g, '');
+}
+
+/**
+ * Normaliza URL adicionando http:// se não tiver protocolo
+ * 
+ * @param url - URL a ser normalizada
+ * @returns URL normalizada com protocolo
+ */
+export function normalizeUrl(url: string): string {
+  if (!url || typeof url !== 'string') {
+    return url;
+  }
+  
+  const trimmedUrl = url.trim();
+  
+  // Se já tem protocolo, retornar como está
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    return trimmedUrl;
+  }
+  
+  // Adicionar http:// se não tiver protocolo
+  return `http://${trimmedUrl}`;
+}
+

@@ -12,7 +12,7 @@ import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
 import { ContactService } from '../services/contactService';
 import { CompanySize, CompanyStatus, ContactStatus } from '@prisma/client';
-import { validateUrl } from '../utils/validators';
+import { validateUrl, normalizeUrl } from '../utils/validators';
 
 /**
  * Lista empresas com paginação e filtros
@@ -189,12 +189,21 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
         return;
       }
 
-      if (website.trim().length > 0 && !validateUrl(website)) {
-        res.status(400).json({
-          error: 'website inválido',
-          message: 'website deve ser uma URL válida (http:// ou https://)',
-        });
-        return;
+      if (website.trim().length > 0) {
+        // Normalizar primeiro (adicionar http:// se necessário)
+        const normalizedWebsite = normalizeUrl(website);
+        
+        // Validar formato
+        if (!validateUrl(normalizedWebsite)) {
+          res.status(400).json({
+            error: 'website inválido',
+            message: 'website deve ser uma URL válida',
+          });
+          return;
+        }
+        
+        // Usar website normalizado
+        website = normalizedWebsite;
       }
     }
 
@@ -374,12 +383,21 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
         return;
       }
 
-      if (website.trim().length > 0 && !validateUrl(website)) {
-        res.status(400).json({
-          error: 'website inválido',
-          message: 'website deve ser uma URL válida (http:// ou https://)',
-        });
-        return;
+      if (website.trim().length > 0) {
+        // Normalizar primeiro (adicionar http:// se necessário)
+        const normalizedWebsite = normalizeUrl(website);
+        
+        // Validar formato
+        if (!validateUrl(normalizedWebsite)) {
+          res.status(400).json({
+            error: 'website inválido',
+            message: 'website deve ser uma URL válida',
+          });
+          return;
+        }
+        
+        // Usar website normalizado
+        website = normalizedWebsite;
       }
     }
 

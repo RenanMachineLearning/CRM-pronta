@@ -598,9 +598,12 @@ export class ContactService {
       throw new Error('O ID é gerado automaticamente e não pode ser fornecido');
     }
 
-    // Validar firstName obrigatório
-    if (!data.firstName || data.firstName.trim().length === 0) {
-      throw new Error('firstName é obrigatório');
+    // Validar que pelo menos firstName ou lastName é fornecido
+    const hasFirstName = data.firstName && data.firstName.trim().length > 0;
+    const hasLastName = data.lastName && data.lastName.trim().length > 0;
+
+    if (!hasFirstName && !hasLastName) {
+      throw new Error('Pelo menos firstName ou lastName deve ser fornecido');
     }
 
     // Validar emails se fornecidos
@@ -687,6 +690,17 @@ export class ContactService {
       ...e,
       email: e.email.trim().toLowerCase(),
     }));
+
+    // Verificar duplicatas dentro do array de emails fornecido
+    if (normalizedEmails && normalizedEmails.length > 0) {
+      const emailSet = new Set<string>();
+      for (const emailData of normalizedEmails) {
+        if (emailSet.has(emailData.email)) {
+          throw new Error(`Email duplicado no array: ${emailData.email}`);
+        }
+        emailSet.add(emailData.email);
+      }
+    }
 
     // Garantir que apenas um email seja primary
     if (normalizedEmails && normalizedEmails.length > 0) {
@@ -957,9 +971,25 @@ export class ContactService {
       }
     }
 
+    // Validar que pelo menos firstName ou lastName estará presente após atualização
+    const finalFirstName = data.firstName !== undefined ? data.firstName : existingContact.firstName;
+    const finalLastName = data.lastName !== undefined ? data.lastName : existingContact.lastName;
+    
+    const hasFirstName = finalFirstName && finalFirstName.trim().length > 0;
+    const hasLastName = finalLastName && finalLastName.trim().length > 0;
+
+    if (!hasFirstName && !hasLastName) {
+      throw new Error('Pelo menos firstName ou lastName deve estar presente');
+    }
+
     // Validar firstName se fornecido
     if (data.firstName !== undefined && data.firstName.trim().length === 0) {
       throw new Error('firstName não pode ser vazio');
+    }
+
+    // Validar lastName se fornecido
+    if (data.lastName !== undefined && data.lastName.trim().length === 0) {
+      throw new Error('lastName não pode ser vazio');
     }
 
     // Validar emails se fornecidos
@@ -1051,6 +1081,17 @@ export class ContactService {
       ...e,
       email: e.email.trim().toLowerCase(),
     }));
+
+    // Verificar duplicatas dentro do array de emails fornecido
+    if (normalizedEmails && normalizedEmails.length > 0) {
+      const emailSet = new Set<string>();
+      for (const emailData of normalizedEmails) {
+        if (emailSet.has(emailData.email)) {
+          throw new Error(`Email duplicado no array: ${emailData.email}`);
+        }
+        emailSet.add(emailData.email);
+      }
+    }
 
     // Garantir que apenas um email seja primary
     if (normalizedEmails && normalizedEmails.length > 0) {

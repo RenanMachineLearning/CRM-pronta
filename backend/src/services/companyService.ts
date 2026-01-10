@@ -8,7 +8,7 @@
 import { PrismaClient, CompanyStatus, CompanySize } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
-import { validateUrl } from '../utils/validators';
+import { validateUrl, normalizeUrl } from '../utils/validators';
 
 const prisma = new PrismaClient();
 
@@ -348,9 +348,19 @@ export class CompanyService {
       throw new Error('Nome da empresa é obrigatório');
     }
 
-    // Validar website se fornecido
-    if (data.website && !validateUrl(data.website)) {
-      throw new Error('Website deve ser uma URL válida (http:// ou https://)');
+    // Validar e normalizar website se fornecido
+    let website: string | null = null;
+    if (data.website) {
+      // Normalizar primeiro (adicionar http:// se necessário)
+      const normalizedWebsite = normalizeUrl(data.website);
+      
+      // Validar formato do website normalizado
+      if (!validateUrl(normalizedWebsite)) {
+        throw new Error('Website deve ser uma URL válida');
+      }
+      
+      // Usar website normalizado
+      website = normalizedWebsite.trim();
     }
 
     // Validar tagIds se fornecidos
@@ -374,7 +384,7 @@ export class CompanyService {
         data: {
           tenantId,
           name: data.name.trim(),
-          website: data.website?.trim() || null,
+          website: website,
           industry: data.industry?.trim() || null,
           size: data.size || null,
           status: data.status || CompanyStatus.ACTIVE,
@@ -492,9 +502,19 @@ export class CompanyService {
       throw new Error('Nome da empresa não pode ser vazio');
     }
 
-    // Validar website se fornecido
-    if (data.website !== undefined && data.website !== null && !validateUrl(data.website)) {
-      throw new Error('Website deve ser uma URL válida (http:// ou https://)');
+    // Validar e normalizar website se fornecido
+    let website: string | null | undefined = undefined;
+    if (data.website !== undefined && data.website !== null) {
+      // Normalizar primeiro (adicionar http:// se necessário)
+      const normalizedWebsite = normalizeUrl(data.website);
+      
+      // Validar formato do website normalizado
+      if (!validateUrl(normalizedWebsite)) {
+        throw new Error('Website deve ser uma URL válida');
+      }
+      
+      // Usar website normalizado
+      website = normalizedWebsite.trim();
     }
 
     // Validar tagIds se fornecidos
@@ -518,7 +538,7 @@ export class CompanyService {
         where: { id: companyId },
         data: {
           ...(data.name !== undefined && { name: data.name.trim() }),
-          ...(data.website !== undefined && { website: data.website?.trim() || null }),
+          ...(website !== undefined && { website: website }),
           ...(data.industry !== undefined && { industry: data.industry?.trim() || null }),
           ...(data.size !== undefined && { size: data.size || null }),
           ...(data.status !== undefined && { status: data.status }),
