@@ -94,3 +94,35 @@ export interface ContactListResponse {
   };
 }
 
+// Dados do formulário de contato (para criação/atualização)
+// Alinhado com POST /api/contacts e PUT /api/contacts/:id
+export interface ContactFormData {
+  firstName: string; // Obrigatório (pelo menos firstName ou lastName)
+  lastName?: string;
+  title?: string;
+  status: ContactStatus; // Default: ACTIVE
+  companyId?: string | null; // UUID ou null para remover associação
+  emails: Array<{
+    email: string; // Formato válido (regex)
+    type: EmailType; // WORK | HOME | OTHER
+    isPrimary: boolean;
+  }>;
+  phones: Array<{
+    phone: string; // Formato válido (10-15 dígitos)
+    type: PhoneType; // WORK | HOME | MOBILE | OTHER
+    isPrimary: boolean;
+  }>;
+  tagIds: string[]; // Array de UUIDs válidos
+  // Nota: Campos gender, birthDate, notes, addresses não estão na especificação V1
+}
+
+// Erros de validação do formulário
+export interface ContactFormErrors {
+  firstName?: string;
+  lastName?: string;
+  emails?: string[]; // Array de erros por índice de email
+  phones?: string[]; // Array de erros por índice de telefone
+  companyId?: string;
+  tagIds?: string;
+}
+

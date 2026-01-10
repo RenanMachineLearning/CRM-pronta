@@ -8,6 +8,7 @@ import type {
   ContactListResponse,
   ContactFilters,
   PaginationParams,
+  ContactFormData,
 } from '../types/contact';
 
 /**
@@ -64,5 +65,42 @@ export async function listContacts(
  */
 export async function getContactById(id: string): Promise<Contact> {
   return apiRequest<Contact>(`/api/contacts/${id}`);
+}
+
+/**
+ * Cria novo contato
+ * 
+ * Endpoint: POST /api/contacts
+ * Permissão: Contact.create
+ * 
+ * @param data - Dados do contato (ContactFormData)
+ * @returns Promise com contato criado
+ * @throws Error se validações falharem (400) ou sem permissão (403)
+ */
+export async function createContact(data: ContactFormData): Promise<Contact> {
+  return apiRequest<Contact>('/api/contacts', {
+    method: 'POST',
+    body: data,
+  });
+}
+
+/**
+ * Atualiza contato existente
+ * 
+ * Endpoint: PUT /api/contacts/:id
+ * Permissão: Contact.update
+ * 
+ * Nota: Arrays de relacionamentos (emails, phones, tagIds) substituem completamente os existentes.
+ * 
+ * @param id - ID do contato (UUID)
+ * @param data - Dados do contato (parcial, mas firstName obrigatório se fornecido)
+ * @returns Promise com contato atualizado
+ * @throws Error se validações falharem (400), não encontrado (404) ou sem permissão (403)
+ */
+export async function updateContact(id: string, data: Partial<ContactFormData>): Promise<Contact> {
+  return apiRequest<Contact>(`/api/contacts/${id}`, {
+    method: 'PUT',
+    body: data,
+  });
 }
 
