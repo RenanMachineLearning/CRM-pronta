@@ -54,3 +54,55 @@ export function validateUrl(url: string): boolean {
   }
 }
 
+/**
+ * Valida formato de CEP brasileiro
+ * Aceita formato XXXXX-XXX (com hífen) ou XXXXXXXX (sem hífen)
+ * 
+ * @param zipCode - CEP a ser validado
+ * @returns true se válido, false caso contrário
+ */
+export function validateZipCode(zipCode: string): boolean {
+  if (!zipCode || typeof zipCode !== 'string') {
+    return false;
+  }
+  
+  // Remove hífen e espaços
+  const digitsOnly = zipCode.replace(/[\s\-]/g, '');
+  // Deve ter exatamente 8 dígitos
+  return /^\d{8}$/.test(digitsOnly);
+}
+
+/**
+ * Valida se país está na lista de países suportados
+ * Aceita nomes comuns em português e inglês
+ * 
+ * @param country - País a ser validado
+ * @returns true se válido, false caso contrário
+ */
+export function validateCountry(country: string): boolean {
+  if (!country || typeof country !== 'string') {
+    return false;
+  }
+  
+  const validCountries = [
+    'Brasil', 'Brazil',
+    'Estados Unidos', 'United States', 'USA', 'US',
+    'Argentina',
+    'Chile',
+    'Colômbia', 'Colombia',
+    'México', 'Mexico',
+    'Peru', 'Perú',
+    'Uruguai', 'Uruguay',
+    'Paraguai', 'Paraguay',
+    'Venezuela',
+    'Equador', 'Ecuador',
+    'Bolívia', 'Bolivia',
+    // Adicionar mais conforme necessário
+  ];
+  
+  const normalizedCountry = country.trim().toLowerCase();
+  return validCountries.some(valid => 
+    valid.toLowerCase() === normalizedCountry
+  );
+}
+

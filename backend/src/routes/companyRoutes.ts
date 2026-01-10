@@ -14,6 +14,7 @@ import {
   deleteCompany,
   getCompanyContacts,
 } from '../controllers/companyController';
+import { addAddressToCompany } from '../controllers/addressController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
@@ -89,6 +90,37 @@ router.get(
   '/:id/contacts',
   authorizationMiddleware('Contact', 'list'), // Permissão de Contact.list (não Company)
   getCompanyContacts
+);
+
+/**
+ * POST /api/companies/:id/addresses
+ * 
+ * Adiciona endereço a uma empresa.
+ * 
+ * Requer autenticação e permissão "Company.update"
+ * 
+ * Body:
+ * {
+ *   "street": "Rua das Flores, 123",
+ *   "city": "São Paulo",
+ *   "state": "SP",
+ *   "zipCode": "01234-567",
+ *   "country": "Brasil" (opcional, default: "Brasil"),
+ *   "type": "BILLING" (BILLING, SHIPPING, OTHER)
+ * }
+ * 
+ * Response 201: Endereço criado
+ * Response 400: Dados inválidos (campos obrigatórios, formato CEP, país)
+ * Response 404: Empresa não encontrada ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * IMPORTANTE: Esta rota deve vir ANTES da rota /:id para evitar conflito de roteamento.
+ */
+router.post(
+  '/:id/addresses',
+  authorizationMiddleware('Company', 'update'),
+  addAddressToCompany
 );
 
 /**

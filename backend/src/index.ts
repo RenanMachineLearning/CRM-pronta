@@ -17,6 +17,7 @@ import fieldRoutes from './routes/fieldRoutes';
 import relationshipRoutes from './routes/relationshipRoutes';
 import contactRoutes from './routes/contactRoutes';
 import companyRoutes from './routes/companyRoutes';
+import addressRoutes from './routes/addressRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -74,6 +75,9 @@ app.use('/api/contacts', contactRoutes);
 
 // Rotas de empresas (protegidas - requerem tenant context + autenticação)
 app.use('/api/companies', companyRoutes);
+
+// Rotas de endereços (protegidas - requerem tenant context + autenticação)
+app.use('/api/addresses', addressRoutes);
 
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {

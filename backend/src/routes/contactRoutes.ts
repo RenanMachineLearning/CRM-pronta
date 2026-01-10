@@ -23,6 +23,7 @@ import {
   updatePhone,
   deletePhone,
 } from '../controllers/contactPhoneController';
+import { addAddressToContact } from '../controllers/addressController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
@@ -213,6 +214,37 @@ router.delete(
   '/:id/phones/:phoneId',
   authorizationMiddleware('Contact', 'update'),
   deletePhone
+);
+
+/**
+ * POST /api/contacts/:id/addresses
+ * 
+ * Adiciona endereço a um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Body:
+ * {
+ *   "street": "Rua das Flores, 123",
+ *   "city": "São Paulo",
+ *   "state": "SP",
+ *   "zipCode": "01234-567",
+ *   "country": "Brasil" (opcional, default: "Brasil"),
+ *   "type": "BILLING" (BILLING, SHIPPING, OTHER)
+ * }
+ * 
+ * Response 201: Endereço criado
+ * Response 400: Dados inválidos (campos obrigatórios, formato CEP, país)
+ * Response 404: Contato não encontrado ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * IMPORTANTE: Esta rota deve vir ANTES da rota /:id para evitar conflito de roteamento.
+ */
+router.post(
+  '/:id/addresses',
+  authorizationMiddleware('Contact', 'update'),
+  addAddressToContact
 );
 
 /**

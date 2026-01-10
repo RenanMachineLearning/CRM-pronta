@@ -27,6 +27,7 @@ export enum AuditEntityEnum {
   Company = 'Company',
   ContactEmail = 'ContactEmail',
   ContactPhone = 'ContactPhone',
+  Address = 'Address',
 }
 
 /**
