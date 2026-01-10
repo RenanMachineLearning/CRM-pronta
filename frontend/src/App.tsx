@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ContactsPage } from './pages/ContactsPage';
+import './index.css';
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>CRM SaaS - Frontend</h1>
-      <p>Bem-vindo ao CRM SaaS!</p>
-      <button onClick={() => setCount((count) => count + 1)}>
-        Contador: {count}
-      </button>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<div>Dashboard (a implementar)</div>} />
+        <Route path="/contacts" element={<ContactsPage />} />
+        <Route path="/contacts/:id" element={<div>Detalhes do Contato (a implementar)</div>} />
+        <Route path="/contacts/new" element={<div>Novo Contato (a implementar)</div>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
