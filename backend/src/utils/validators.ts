@@ -106,3 +106,23 @@ export function validateCountry(country: string): boolean {
   );
 }
 
+/**
+ * Valida formato de cor hexadecimal
+ * Aceita formato #RRGGBB ou #RRGGBBAA (com ou sem #)
+ * 
+ * @param color - Cor a ser validada
+ * @returns true se válido, false caso contrário
+ */
+export function validateHexColor(color: string): boolean {
+  if (!color || typeof color !== 'string') {
+    return false;
+  }
+  
+  // Remove # se presente
+  const hex = color.startsWith('#') ? color.slice(1) : color;
+  
+  // Aceita 6 dígitos (RRGGBB) ou 8 dígitos (RRGGBBAA)
+  const hexRegex = /^[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
+  return hexRegex.test(hex);
+}
+

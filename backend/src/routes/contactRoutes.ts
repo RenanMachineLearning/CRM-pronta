@@ -24,6 +24,7 @@ import {
   deletePhone,
 } from '../controllers/contactPhoneController';
 import { addAddressToContact } from '../controllers/addressController';
+import { addTagToContact, removeTagFromContact } from '../controllers/contactTagController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
@@ -303,6 +304,55 @@ router.post(
   '/',
   authorizationMiddleware('Contact', 'create'),
   createContact
+);
+
+/**
+ * POST /api/contacts/:id/tags
+ * 
+ * Adiciona tag a um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Params:
+ * - id: string (UUID do contato)
+ * 
+ * Body:
+ * - tagId: string (UUID da tag)
+ * 
+ * Response 200: Contato atualizado com tags
+ * Response 400: Dados inválidos
+ * Response 404: Contato ou tag não encontrada
+ * Response 409: Tag já está associada ao contato
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.post(
+  '/:id/tags',
+  authorizationMiddleware('Contact', 'update'),
+  addTagToContact
+);
+
+/**
+ * DELETE /api/contacts/:id/tags/:tagId
+ * 
+ * Remove tag de um contato.
+ * 
+ * Requer autenticação e permissão "Contact.update"
+ * 
+ * Params:
+ * - id: string (UUID do contato)
+ * - tagId: string (UUID da tag)
+ * 
+ * Response 200: Confirmação de remoção
+ * Response 400: Dados inválidos
+ * Response 404: Contato, tag ou associação não encontrada
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.delete(
+  '/:id/tags/:tagId',
+  authorizationMiddleware('Contact', 'update'),
+  removeTagFromContact
 );
 
 /**
