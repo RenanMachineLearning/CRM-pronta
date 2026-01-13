@@ -54,6 +54,54 @@ enum UserStatus {
   BLOCKED
 }
 
+// ============================================================================
+// ETAPA 5 - ENUMS PARA CONTATOS E EMPRESAS
+// ============================================================================
+
+// Enum para status de contato
+enum ContactStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+// Enum para status de empresa
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+// Enum para tamanho de empresa
+enum CompanySize {
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+// Enum para tipo de email
+enum EmailType {
+  WORK
+  HOME
+  OTHER
+}
+
+// Enum para tipo de telefone
+enum PhoneType {
+  WORK
+  HOME
+  MOBILE
+  OTHER
+}
+
+// Enum para tipo de endereço
+enum AddressType {
+  BILLING
+  SHIPPING
+  OTHER
+}
+
 // Modelo de Tenant (base do multi-tenant)
 // Implementado na Etapa 1 (Multi-tenant)
 model Tenant {
@@ -76,11 +124,15 @@ model Tenant {
   relationships       Relationship[] // Etapa 4 (Modelo de Dados)
   entityRelationData  EntityRelationData[] // Etapa 4 (Modelo de Dados)
   entityData          EntityData[] // Etapa 4 (Modelo de Dados - Evolução do Schema)
+  contacts            Contact[] // Etapa 5 (Contatos/Empresas)
+  companies           Company[] // Etapa 5 (Contatos/Empresas)
+  contactEmails       ContactEmail[] // Etapa 5 (Contatos/Empresas)
+  contactPhones       ContactPhone[] // Etapa 5 (Contatos/Empresas)
+  addresses           Address[] // Etapa 5 (Contatos/Empresas)
+  tags                Tag[] // Etapa 5 (Contatos/Empresas)
   // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
   // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
   // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
-  // contacts    Contact[]    // Etapa 5 (Contatos/Empresas)
-  // companies   Company[]    // Etapa 5 (Contatos/Empresas)
   // leads       Lead[]       // Etapa 6 (Leads/Oportunidades)
   // opportunities Opportunity[] // Etapa 6 (Leads/Oportunidades)
 
@@ -362,6 +414,7 @@ model EntityRelationData {
 model EntityData {
   id        String   @id @default(uuid())
   entityId  String // Foreign key para Entity
+  recordId  String // ID do registro (Contact.id ou Company.id)
   tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
   data      Json // Payload JSON com campos customizados / dados de entidade custom
   createdAt DateTime @default(now()) @map("created_at")
@@ -372,10 +425,206 @@ model EntityData {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Índices para performance
+  @@unique([tenantId, entityId, recordId]) // Garantir um registro por entidade+record
   @@index([tenantId, entityId]) // Para listagem por entidade
+  @@index([tenantId, recordId]) // Para busca por registro
+  @@map("entity_data")
+}
+
+// ============================================================================
+// ETAPA 5 - CONTATOS E EMPRESAS
+// ============================================================================
+// Modelos para gestão de contatos, empresas e entidades relacionadas
+// Implementado na Etapa 5 (Contatos/Empresas)
+
+// Modelo de Company (empresas/organizações)
+// Uma empresa pode ter múltiplos contatos associados
+// Nota: Campo externalId não implementado na V1
+// Seria usado para integrações externas e seria único por tenant (não globalmente)
+// Deixado para implementação futura se necessário
+model Company {
+  id        String        @id @default(uuid()) // UUID gerado automaticamente pelo Prisma
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  name      String // Nome da empresa (obrigatório)
+  website   String? // Website da empresa (opcional)
+  industry  String? // Indústria/setor (opcional)
+  size      CompanySize? // Tamanho da empresa (opcional)
+  status    CompanyStatus @default(ACTIVE) // Status da empresa
+  deletedAt DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts  Contact[] // 1:N - Uma empresa tem muitos contatos
+  addresses Address[] // 1:N - Uma empresa tem múltiplos endereços
+  tags      CompanyTag[] // N:N - Uma empresa pode ter múltiplas tags
+
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
-  @@map("entity_data")
+  @@map("companies")
+}
+
+// Modelo de Contact (contatos/pessoas)
+// Um contato pode estar associado a uma empresa (opcional)
+// Nota: Campo externalId não implementado na V1
+// Seria usado para integrações externas e seria único por tenant (não globalmente)
+// Deixado para implementação futura se necessário
+model Contact {
+  id        String        @id @default(uuid()) // UUID gerado automaticamente pelo Prisma
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  firstName String // Primeiro nome (obrigatório)
+  lastName  String? // Sobrenome (opcional)
+  title     String? // Cargo/título profissional (opcional)
+  gender    String? // Gênero (opcional)
+  birthDate DateTime? // Data de nascimento (opcional)
+  notes     String?       @db.Text // Notas/observações (campo de texto livre)
+  status    ContactStatus @default(ACTIVE) // Status do contato
+  companyId String? // FK opcional para Company (relação 1:N)
+  deletedAt DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company   Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  emails    ContactEmail[] // 1:N - Um contato tem múltiplos emails
+  phones    ContactPhone[] // 1:N - Um contato tem múltiplos telefones
+  addresses Address[] // 1:N - Um contato tem múltiplos endereços
+  tags      ContactTag[] // N:N - Um contato pode ter múltiplas tags
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por empresa
+  @@index([tenantId, companyId])
+  @@map("contacts")
+}
+
+// Modelo de ContactEmail (emails de contato)
+// Um contato pode ter múltiplos emails (work, home, other)
+model ContactEmail {
+  id        String    @id @default(uuid())
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  contactId String // Foreign key para Contact
+  email     String // Endereço de email
+  type      EmailType @default(WORK) // Tipo do email (Work, Home, Other)
+  isPrimary Boolean   @default(false) // Se é o email principal do contato
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por contato
+  @@index([tenantId, contactId])
+  @@map("contact_emails")
+}
+
+// Modelo de ContactPhone (telefones de contato)
+// Um contato pode ter múltiplos telefones (work, home, mobile, other)
+model ContactPhone {
+  id        String    @id @default(uuid())
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  contactId String // Foreign key para Contact
+  phone     String // Número de telefone
+  type      PhoneType @default(MOBILE) // Tipo do telefone (Work, Home, Mobile, Other)
+  isPrimary Boolean   @default(false) // Se é o telefone principal do contato
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por contato
+  @@index([tenantId, contactId])
+  @@map("contact_phones")
+}
+
+// Modelo de Address (endereços)
+// Polimórfico: pode pertencer a um Contact ou uma Company
+model Address {
+  id        String      @id @default(uuid())
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  contactId String? // FK opcional para Contact
+  companyId String? // FK opcional para Company
+  street    String // Rua/logradouro
+  city      String // Cidade
+  state     String // Estado/UF
+  zipCode   String // CEP
+  country   String      @default("Brasil") // País
+  type      AddressType @default(OTHER) // Tipo do endereço (Billing, Shipping, Other)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índices para busca por contato e empresa
+  @@index([tenantId, contactId])
+  @@index([tenantId, companyId])
+  @@map("addresses")
+}
+
+// Modelo de Tag (tags para categorização)
+// Tags são reutilizáveis entre Contact e Company
+model Tag {
+  id        String   @id @default(uuid())
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  name      String // Nome da tag (único por tenant)
+  color     String   @default("#3B82F6") // Cor da tag em hex (azul padrão)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts  ContactTag[] // N:N com Contact
+  companies CompanyTag[] // N:N com Company
+
+  // Nome único por tenant
+  @@unique([tenantId, name])
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("tags")
+}
+
+// Modelo de ContactTag (relação N:N entre Contact e Tag)
+// Permite associar múltiplas tags a um contato
+model ContactTag {
+  contactId String
+  tagId     String
+
+  // Relacionamentos
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // Primary key composta
+  @@id([contactId, tagId])
+  @@map("contact_tags")
+}
+
+// Modelo de CompanyTag (relação N:N entre Company e Tag)
+// Permite associar múltiplas tags a uma empresa
+model CompanyTag {
+  companyId String
+  tagId     String
+
+  // Relacionamentos
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // Primary key composta
+  @@id([companyId, tagId])
+  @@map("company_tags")
 }
 
 // ============================================================================

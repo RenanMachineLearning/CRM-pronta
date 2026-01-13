@@ -359,5 +359,62 @@ export class EntityService {
       },
     });
   }
+
+  /**
+   * Busca entidade por nome
+   * 
+   * @param tenantId - ID do tenant (obrigatório para isolamento)
+   * @param name - Nome da entidade (ex: "Contact", "Company")
+   * @returns Entidade encontrada com campos
+   * @throws Error se entidade não encontrada ou não pertence ao tenant
+   */
+  static async getEntityByName(tenantId: string, name: string): Promise<EntityResponse> {
+    const entity = await prisma.entity.findFirst({
+      where: {
+        name,
+        tenantId, // Isolamento multi-tenant obrigatório
+      },
+      include: {
+        fields: {
+          where: {
+            isDeleted: false, // Apenas campos não deletados
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!entity) {
+      throw new Error(`Entidade '${name}' não encontrada`);
+    }
+
+    return {
+      id: entity.id,
+      name: entity.name,
+      label: entity.label,
+      tenantId: entity.tenantId,
+      isSystem: entity.isSystem,
+      fields: entity.fields.map((field) => ({
+        id: field.id,
+        entityId: field.entityId,
+        name: field.name,
+        label: field.label,
+        type: field.type,
+        required: field.required,
+        unique: field.unique,
+        defaultValue: field.defaultValue,
+        options: field.options,
+        tenantId: field.tenantId,
+        order: field.order,
+        isDeleted: field.isDeleted,
+        createdAt: field.createdAt,
+        updatedAt: field.updatedAt,
+      })),
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    };
+  }
 }
 

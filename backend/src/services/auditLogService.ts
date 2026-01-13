@@ -20,6 +20,15 @@ const prisma = new PrismaClient();
 export enum AuditEntityEnum {
   User = 'User',
   Role = 'Role',
+  Entity = 'Entity',
+  Field = 'Field',
+  Relationship = 'Relationship',
+  Contact = 'Contact',
+  Company = 'Company',
+  ContactEmail = 'ContactEmail',
+  ContactPhone = 'ContactPhone',
+  Address = 'Address',
+  Tag = 'Tag',
 }
 
 /**

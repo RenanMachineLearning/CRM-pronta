@@ -55,8 +55,10 @@ export async function validateUniqueField(
   entityId: string,
   fieldId: string,
   value: any,
-  recordId?: string
+  recordId?: string // Será usado quando implementação real for feita
 ): Promise<void> {
+  // recordId será usado na implementação real (ver comentários abaixo)
+  void recordId; // Suprimir warning TypeScript
   // Validar que entidade existe e pertence ao tenant
   const entity = await prisma.entity.findFirst({
     where: {
@@ -112,93 +114,52 @@ export async function validateUniqueField(
   }
 
   // ============================================================================
-  // IMPLEMENTAÇÃO PREPARATÓRIA - Apenas validar estrutura por enquanto
+  // IMPLEMENTAÇÃO REAL - Validar unicidade em EntityData para campos customizados
   // ============================================================================
+  // 
+  // Para campos customizados em entidades do sistema (Contact, Company):
+  // - Valores são armazenados em EntityData
+  // - Buscar em EntityData usando JSON path para o campo customizado
   //
-  // Quando as tabelas existirem, implementar busca real:
-  //
-  // Para entidades do sistema (isSystem=true):
-  // - Contact, Company, Lead, Opportunity, Task, Note terão tabelas próprias
-  // - Query será: SELECT id FROM [tabela] WHERE tenantId = ? AND [campo] = ? [AND id != ?]
-  // - Exemplo: SELECT id FROM contacts WHERE tenant_id = $1 AND email = $2 AND id != $3
-  //
-  // Para entidades customizadas (isSystem=false):
-  // - Usar tabela EntityData (será criada na seção 10)
-  // - Query será: SELECT id FROM entity_data WHERE tenantId = ? AND entityId = ? AND data->>'[campo]' = ? [AND id != ?]
-  // - Exemplo: SELECT id FROM entity_data WHERE tenant_id = $1 AND entity_id = $2 AND data->>'customField' = $3 AND id != $4
-  //
-  // Por enquanto, apenas validar estrutura (retornar sucesso se estrutura válida)
+  // Para campos nativos de entidades do sistema (firstName, lastName, etc.):
+  // - Ainda não implementado (será feito quando necessário)
+  // - Por enquanto, apenas validar estrutura
   // ============================================================================
 
-  // TODO: Quando tabelas existirem, implementar busca real aqui
-  // Exemplo para entidades do sistema:
-  // if (entity.isSystem) {
-  //   const tableName = entity.name.toLowerCase() + 's'; // contacts, companies, etc.
-  //   const fieldName = field.name;
-  //   
-  //   // Normalizar valor para busca (case-insensitive para strings)
-  //   let searchValue = value;
-  //   if (typeof value === 'string') {
-  //     searchValue = value.trim().toLowerCase();
-  //   }
-  //   
-  //   // Construir query
-  //   let query = `SELECT id FROM ${tableName} WHERE tenant_id = $1 AND ${fieldName} = $2`;
-  //   const params: any[] = [tenantId, searchValue];
-  //   
-  //   // Se é atualização, excluir registro atual
-  //   if (recordId) {
-  //     query += ' AND id != $3';
-  //     params.push(recordId);
-  //   }
-  //   
-  //   const existing = await prisma.$queryRawUnsafe(query, ...params);
-  //   
-  //   if (existing && Array.isArray(existing) && existing.length > 0) {
-  //     throw new UniqueFieldValidationError(
-  //       field.name,
-  //       field.label,
-  //       `Valor "${value}" já está em uso`
-  //     );
-  //   }
-  // }
-  //
-  // Exemplo para entidades customizadas:
-  // else {
-  //   // Normalizar valor para busca
-  //   let searchValue = value;
-  //   if (typeof value === 'string') {
-  //     searchValue = value.trim();
-  //   }
-  //   
-  //   const where: any = {
-  //     tenantId,
-  //     entityId,
-  //     data: {
-  //       path: [field.name],
-  //       equals: searchValue
-  //     }
-  //   };
-  //   
-  //   // Se é atualização, excluir registro atual
-  //   if (recordId) {
-  //     where.id = { not: recordId };
-  //   }
-  //   
-  //   const existing = await prisma.entityData.findFirst({
-  //     where
-  //   });
-  //   
-  //   if (existing) {
-  //     throw new UniqueFieldValidationError(
-  //       field.name,
-  //       field.label,
-  //       `Valor "${value}" já está em uso`
-  //     );
-  //   }
-  // }
-
-  // Por enquanto, apenas validar estrutura (implementação preparatória)
-  // Quando tabelas existirem, a busca real será implementada acima
+  // Para campos customizados, sempre buscar em EntityData
+  // (mesmo para entidades do sistema, campos customizados estão em EntityData)
+  
+  // Normalizar valor para busca
+  let searchValue = value;
+  if (typeof value === 'string') {
+    searchValue = value.trim();
+  }
+  
+  // Buscar em EntityData usando JSON path
+  const where: any = {
+    tenantId,
+    entityId,
+    data: {
+      path: [field.name],
+      equals: searchValue,
+    },
+  };
+  
+  // Se é atualização, excluir registro atual
+  if (recordId) {
+    where.recordId = { not: recordId };
+  }
+  
+  const existing = await prisma.entityData.findFirst({
+    where,
+  });
+  
+  if (existing) {
+    throw new UniqueFieldValidationError(
+      field.name,
+      field.label,
+      `Valor "${value}" já está em uso`
+    );
+  }
 }
 
