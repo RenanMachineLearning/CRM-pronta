@@ -17,6 +17,7 @@ import {
   createTestPermission,
   closeDatabase,
   waitForAuditLog,
+  getAuditLogs,
   prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
@@ -204,7 +205,7 @@ describe('Contact CRUD - E2E Tests', () => {
       expect(contact?.phones).toHaveLength(1);
       expect(contact?.tags).toHaveLength(1);
 
-      // Verificar auditoria
+      // Verificar auditoria - aguardar log aparecer
       const auditFound = await waitForAuditLog(tenant1.id, {
         entityType: 'Contact',
         entityId: response.body.id,
@@ -212,6 +213,21 @@ describe('Contact CRUD - E2E Tests', () => {
         userId: adminUser1.id,
       });
       expect(auditFound).toBe(true);
+
+      // Validar estrutura completa do log de auditoria
+      const auditLogs = await getAuditLogs(tenant1.id, {
+        entityType: 'Contact',
+        entityId: response.body.id,
+        action: 'create',
+        userId: adminUser1.id,
+      });
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].action).toBe('create');
+      expect(auditLogs[0].changes).toBeNull(); // Create não tem changes
+      expect(auditLogs[0].userId).toBe(adminUser1.id);
+      expect(auditLogs[0].tenantId).toBe(tenant1.id);
+      expect(auditLogs[0].entityType).toBe('Contact');
+      expect(auditLogs[0].entityId).toBe(response.body.id);
     });
 
     it('deve criar contato apenas com firstName', async () => {
@@ -563,6 +579,11 @@ describe('Contact CRUD - E2E Tests', () => {
     });
 
     it('deve atualizar contato com dados válidos', async () => {
+      // Buscar dados originais do contato para comparar
+      const originalContact = await prisma.contact.findUnique({
+        where: { id: contactId },
+      });
+
       const updateData = {
         firstName: 'Contato Atualizado',
         lastName: 'Novo',
@@ -582,7 +603,7 @@ describe('Contact CRUD - E2E Tests', () => {
       expect(response.body.title).toBe(updateData.title);
       expect(response.body.status).toBe(updateData.status);
 
-      // Verificar auditoria com changes
+      // Verificar auditoria - aguardar log aparecer
       const auditFound = await waitForAuditLog(tenant1.id, {
         entityType: 'Contact',
         entityId: contactId,
@@ -590,6 +611,108 @@ describe('Contact CRUD - E2E Tests', () => {
         userId: adminUser1.id,
       });
       expect(auditFound).toBe(true);
+
+      // Validar estrutura completa de changes com old/new values
+      const auditLogs = await getAuditLogs(tenant1.id, {
+        entityType: 'Contact',
+        entityId: contactId,
+        action: 'update',
+        userId: adminUser1.id,
+      });
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].action).toBe('update');
+      expect(auditLogs[0].changes).toBeDefined();
+      expect(auditLogs[0].changes).not.toBeNull();
+
+      // Validar que changes contém apenas campos alterados
+      const changes = auditLogs[0].changes as any;
+      expect(changes).toHaveProperty('firstName');
+      expect(changes).toHaveProperty('lastName');
+      expect(changes).toHaveProperty('title');
+      expect(changes).toHaveProperty('status');
+
+      // Validar estrutura de changes: { field: { old: value, new: value } }
+      expect(changes.firstName).toEqual({
+        old: originalContact?.firstName,
+        new: updateData.firstName,
+      });
+      expect(changes.lastName).toEqual({
+        old: originalContact?.lastName,
+        new: updateData.lastName,
+      });
+      expect(changes.title).toEqual({
+        old: originalContact?.title,
+        new: updateData.title,
+      });
+      expect(changes.status).toEqual({
+        old: originalContact?.status,
+        new: updateData.status,
+      });
+
+      // Validar que campos técnicos NÃO estão em changes
+      expect(changes).not.toHaveProperty('id');
+      expect(changes).not.toHaveProperty('tenantId');
+      expect(changes).not.toHaveProperty('createdAt');
+      expect(changes).not.toHaveProperty('updatedAt');
+      expect(changes).not.toHaveProperty('deletedAt');
+    });
+
+    it('deve gerar log de auditoria com changes contendo apenas campos alterados', async () => {
+      // Criar contato com dados iniciais
+      const contact = await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'João',
+          lastName: 'Silva',
+          title: 'Analista',
+          status: 'ACTIVE',
+        },
+      });
+
+      // Atualizar apenas firstName
+      const updateData = {
+        firstName: 'Maria',
+      };
+
+      await request(app)
+        .put(`/api/contacts/${contact.id}`)
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .send(updateData)
+        .expect(200);
+
+      // Aguardar log de auditoria
+      const auditFound = await waitForAuditLog(tenant1.id, {
+        entityType: 'Contact',
+        entityId: contact.id,
+        action: 'update',
+        userId: adminUser1.id,
+      });
+      expect(auditFound).toBe(true);
+
+      // Buscar log de auditoria
+      const auditLogs = await getAuditLogs(tenant1.id, {
+        entityType: 'Contact',
+        entityId: contact.id,
+        action: 'update',
+        userId: adminUser1.id,
+      });
+
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].changes).toBeDefined();
+      const changes = auditLogs[0].changes as any;
+
+      // Verificar: changes contém apenas firstName
+      expect(changes).toHaveProperty('firstName');
+      expect(changes.firstName).toEqual({
+        old: 'João',
+        new: 'Maria',
+      });
+
+      // Verificar: campos não alterados NÃO estão em changes
+      expect(changes).not.toHaveProperty('lastName');
+      expect(changes).not.toHaveProperty('title');
+      expect(changes).not.toHaveProperty('status');
     });
 
     it('deve atualizar emails (substituição completa)', async () => {
@@ -727,6 +850,30 @@ describe('Contact CRUD - E2E Tests', () => {
       expect(contact).toBeTruthy();
       expect(contact?.deletedAt).toBeTruthy();
 
+      // Verificar auditoria - aguardar log aparecer
+      const auditFound = await waitForAuditLog(tenant1.id, {
+        entityType: 'Contact',
+        entityId: contactId,
+        action: 'delete',
+        userId: adminUser1.id,
+      });
+      expect(auditFound).toBe(true);
+
+      // Validar estrutura completa do log de auditoria
+      const auditLogs = await getAuditLogs(tenant1.id, {
+        entityType: 'Contact',
+        entityId: contactId,
+        action: 'delete',
+        userId: adminUser1.id,
+      });
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].action).toBe('delete');
+      expect(auditLogs[0].changes).toBeNull(); // Delete não tem changes
+      expect(auditLogs[0].userId).toBe(adminUser1.id);
+      expect(auditLogs[0].tenantId).toBe(tenant1.id);
+      expect(auditLogs[0].entityType).toBe('Contact');
+      expect(auditLogs[0].entityId).toBe(contactId);
+
       // Verificar que não aparece mais na listagem
       const listResponse = await request(app)
         .get('/api/contacts')
@@ -736,15 +883,6 @@ describe('Contact CRUD - E2E Tests', () => {
 
       const found = listResponse.body.data.find((c: any) => c.id === contactId);
       expect(found).toBeUndefined();
-
-      // Verificar auditoria
-      const auditFound = await waitForAuditLog(tenant1.id, {
-        entityType: 'Contact',
-        entityId: contactId,
-        action: 'delete',
-        userId: adminUser1.id,
-      });
-      expect(auditFound).toBe(true);
     });
 
     it('deve retornar 404 se contato não existir', async () => {

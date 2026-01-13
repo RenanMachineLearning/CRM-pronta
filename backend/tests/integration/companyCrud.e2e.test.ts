@@ -17,6 +17,7 @@ import {
   createTestPermission,
   closeDatabase,
   waitForAuditLog,
+  getAuditLogs,
   prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
@@ -486,6 +487,11 @@ describe('Company CRUD - E2E Tests', () => {
     });
 
     it('deve atualizar empresa com dados válidos', async () => {
+      // Buscar dados originais da empresa para comparar
+      const originalCompany = await prisma.company.findUnique({
+        where: { id: companyId },
+      });
+
       const updateData = {
         name: 'Empresa Atualizada',
         website: 'https://new.com',
@@ -507,7 +513,7 @@ describe('Company CRUD - E2E Tests', () => {
       expect(response.body.size).toBe(updateData.size);
       expect(response.body.status).toBe(updateData.status);
 
-      // Verificar auditoria com changes
+      // Verificar auditoria - aguardar log aparecer
       const auditFound = await waitForAuditLog(tenant1.id, {
         entityType: 'Company',
         entityId: companyId,
@@ -515,6 +521,55 @@ describe('Company CRUD - E2E Tests', () => {
         userId: adminUser1.id,
       });
       expect(auditFound).toBe(true);
+
+      // Validar estrutura completa de changes com old/new values
+      const auditLogs = await getAuditLogs(tenant1.id, {
+        entityType: 'Company',
+        entityId: companyId,
+        action: 'update',
+        userId: adminUser1.id,
+      });
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].action).toBe('update');
+      expect(auditLogs[0].changes).toBeDefined();
+      expect(auditLogs[0].changes).not.toBeNull();
+
+      // Validar que changes contém apenas campos alterados
+      const changes = auditLogs[0].changes as any;
+      expect(changes).toHaveProperty('name');
+      expect(changes).toHaveProperty('website');
+      expect(changes).toHaveProperty('industry');
+      expect(changes).toHaveProperty('size');
+      expect(changes).toHaveProperty('status');
+
+      // Validar estrutura de changes: { field: { old: value, new: value } }
+      expect(changes.name).toEqual({
+        old: originalCompany?.name,
+        new: updateData.name,
+      });
+      expect(changes.website).toEqual({
+        old: originalCompany?.website,
+        new: updateData.website,
+      });
+      expect(changes.industry).toEqual({
+        old: originalCompany?.industry,
+        new: updateData.industry,
+      });
+      expect(changes.size).toEqual({
+        old: originalCompany?.size,
+        new: updateData.size,
+      });
+      expect(changes.status).toEqual({
+        old: originalCompany?.status,
+        new: updateData.status,
+      });
+
+      // Validar que campos técnicos NÃO estão em changes
+      expect(changes).not.toHaveProperty('id');
+      expect(changes).not.toHaveProperty('tenantId');
+      expect(changes).not.toHaveProperty('createdAt');
+      expect(changes).not.toHaveProperty('updatedAt');
+      expect(changes).not.toHaveProperty('deletedAt');
     });
 
     it('deve atualizar endereços (substituir completamente)', async () => {
