@@ -115,6 +115,20 @@ export async function createTestPermission(data: {
   action: string;
   field?: string | null;
 }) {
+  // Verificar se permissão já existe (evitar duplicatas)
+  const existing = await prisma.permission.findFirst({
+    where: {
+      tenantId: data.tenantId,
+      entity: data.entity,
+      action: data.action,
+      field: data.field || null,
+    },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
   return prisma.permission.create({
     data: {
       entity: data.entity,
