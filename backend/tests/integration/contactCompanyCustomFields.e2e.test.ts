@@ -7,6 +7,8 @@
  * - Campos customizados podem ser atualizados
  */
 
+/// <reference types="jest" />
+
 import request from 'supertest';
 import { app } from '../../src/index';
 import {
