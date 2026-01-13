@@ -9,6 +9,11 @@ import { PrismaClient, CompanyStatus, CompanySize } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateUrl, normalizeUrl } from '../utils/validators';
+import { processAndValidateFieldValue } from '../utils/fieldValueValidator';
+import { validateUniqueField } from '../utils/uniqueFieldValidator';
+import { EntityService } from './entityService';
+import { FieldService } from './fieldService';
+import { EntityDataService } from './entityDataService';
 
 const prisma = new PrismaClient();
 
@@ -42,6 +47,7 @@ export interface CreateCompanyData {
     type: 'BILLING' | 'SHIPPING' | 'OTHER';
   }>;
   tagIds?: string[];
+  customFields?: Record<string, any>; // Campos customizados
 }
 
 // Interface para atualização de empresa
@@ -204,6 +210,26 @@ export class CompanyService {
       contactsCount: company._count.contacts, // Contagem de contatos
     }));
 
+    // Buscar campos customizados para cada empresa (batch)
+    try {
+      const companyEntity = await EntityService.getEntityByName(tenantId, 'Company');
+      const recordIds = data.map(c => c.id);
+      const entityDataMap = await EntityDataService.getEntityDataByRecords(
+        tenantId,
+        companyEntity.id,
+        recordIds
+      );
+      
+      // Mesclar campos customizados com cada empresa
+      data = data.map(company => ({
+        ...company,
+        ...(entityDataMap.get(company.id)?.data || {}),
+      })) as CompanyResponse[];
+    } catch (error) {
+      // Se não conseguir buscar campos customizados, continuar sem eles
+      // (pode ser que entidade Company não exista ainda no sistema de metadados)
+    }
+
     // Filtrar campos baseado em permissões do usuário
     if (userId) {
       data = (await filterFieldsByPermission(
@@ -309,6 +335,29 @@ export class CompanyService {
         color: ct.tag.color,
       })),
     };
+
+    // Buscar campos customizados para incluir na resposta
+    let customFieldsData: Record<string, any> = {};
+    try {
+      const companyEntity = await EntityService.getEntityByName(tenantId, 'Company');
+      const entityData = await EntityDataService.getEntityDataByRecord(
+        tenantId,
+        companyEntity.id,
+        company.id
+      );
+      if (entityData) {
+        customFieldsData = entityData.data;
+      }
+    } catch (error) {
+      // Se não conseguir buscar campos customizados, continuar sem eles
+      // (pode ser que entidade Company não exista ainda no sistema de metadados)
+    }
+
+    // Mesclar campos customizados com resposta
+    data = {
+      ...data,
+      ...customFieldsData,
+    } as CompanyResponse;
 
     // Filtrar campos baseado em permissões do usuário
     if (userId) {
@@ -420,6 +469,61 @@ export class CompanyService {
 
       return newCompany;
     });
+
+    // Validar e salvar campos customizados se fornecidos
+    if (data.customFields && Object.keys(data.customFields).length > 0) {
+      try {
+        // Buscar entidade Company
+        const companyEntity = await EntityService.getEntityByName(tenantId, 'Company');
+        
+        // Buscar campos customizados da entidade
+        const customFields = await FieldService.listFields(tenantId, companyEntity.id);
+        
+        // Validar cada campo customizado
+        const validatedCustomFields: Record<string, any> = {};
+        for (const [fieldName, value] of Object.entries(data.customFields)) {
+          const field = customFields.find(f => f.name === fieldName);
+          if (!field) {
+            throw new Error(`Campo customizado '${fieldName}' não encontrado`);
+          }
+          
+          // Processar e validar valor
+          const validatedValue = processAndValidateFieldValue(field, value);
+          validatedCustomFields[fieldName] = validatedValue;
+          
+          // Validar unicidade se necessário
+          if (field.unique) {
+            await validateUniqueField(tenantId, companyEntity.id, field.id, validatedValue);
+          }
+        }
+        
+        // Validar campos obrigatórios que não foram fornecidos
+        for (const field of customFields) {
+          if (field.required && !(field.name in validatedCustomFields)) {
+            // Verificar se tem valor padrão
+            if (field.defaultValue === null || field.defaultValue === undefined) {
+              throw new Error(`Campo customizado obrigatório '${field.label}' (${field.name}) não foi fornecido`);
+            }
+            // Usar valor padrão se disponível
+            validatedCustomFields[field.name] = field.defaultValue;
+          }
+        }
+        
+        // Salvar em EntityData
+        await EntityDataService.saveEntityData(
+          tenantId,
+          companyEntity.id,
+          company.id,
+          validatedCustomFields
+        );
+      } catch (error: any) {
+        // Se houver erro ao salvar campos customizados, deletar empresa criada
+        await prisma.company.delete({ where: { id: company.id } }).catch(() => {
+          // Ignorar erro ao deletar (pode já ter sido deletado)
+        });
+        throw error;
+      }
+    }
 
     // Registrar auditoria (não bloqueia se falhar)
     logAudit('Company', company.id, 'create', userId, tenantId).catch(() => {
@@ -590,6 +694,69 @@ export class CompanyService {
               tenantId,
             })),
           });
+        }
+      }
+
+      // Validar e atualizar campos customizados se fornecidos
+      if (data.customFields !== undefined) {
+        try {
+          // Buscar entidade Company
+          const companyEntity = await EntityService.getEntityByName(tenantId, 'Company');
+          
+          // Buscar campos customizados da entidade
+          const customFields = await FieldService.listFields(tenantId, companyEntity.id);
+          
+          // Buscar dados customizados existentes
+          const existingEntityData = await EntityDataService.getEntityDataByRecord(
+            tenantId,
+            companyEntity.id,
+            companyId
+          );
+          const existingCustomFields = existingEntityData?.data || {};
+          
+          // Mesclar campos customizados existentes com novos
+          const mergedCustomFields = { ...existingCustomFields, ...data.customFields };
+          
+          // Validar cada campo customizado
+          const validatedCustomFields: Record<string, any> = {};
+          for (const [fieldName, value] of Object.entries(mergedCustomFields)) {
+            const field = customFields.find(f => f.name === fieldName);
+            if (!field) {
+              // Se campo não existe mais, ignorar (pode ter sido deletado)
+              continue;
+            }
+            
+            // Processar e validar valor
+            const validatedValue = processAndValidateFieldValue(field, value);
+            validatedCustomFields[fieldName] = validatedValue;
+            
+            // Validar unicidade se necessário
+            if (field.unique) {
+              await validateUniqueField(tenantId, companyEntity.id, field.id, validatedValue, companyId);
+            }
+          }
+          
+          // Validar campos obrigatórios que não foram fornecidos
+          for (const field of customFields) {
+            if (field.required && !(field.name in validatedCustomFields)) {
+              // Verificar se tem valor padrão
+              if (field.defaultValue === null || field.defaultValue === undefined) {
+                throw new Error(`Campo customizado obrigatório '${field.label}' (${field.name}) não foi fornecido`);
+              }
+              // Usar valor padrão se disponível
+              validatedCustomFields[field.name] = field.defaultValue;
+            }
+          }
+          
+          // Salvar em EntityData
+          await EntityDataService.saveEntityData(
+            tenantId,
+            companyEntity.id,
+            companyId,
+            validatedCustomFields
+          );
+        } catch (error: any) {
+          throw error;
         }
       }
 

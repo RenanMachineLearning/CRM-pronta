@@ -414,6 +414,7 @@ model EntityRelationData {
 model EntityData {
   id        String   @id @default(uuid())
   entityId  String // Foreign key para Entity
+  recordId  String // ID do registro (Contact.id ou Company.id)
   tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
   data      Json // Payload JSON com campos customizados / dados de entidade custom
   createdAt DateTime @default(now()) @map("created_at")
@@ -424,9 +425,9 @@ model EntityData {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Índices para performance
+  @@unique([tenantId, entityId, recordId]) // Garantir um registro por entidade+record
   @@index([tenantId, entityId]) // Para listagem por entidade
-  // Índice composto obrigatório para performance (convenção multi-tenant)
-  @@index([tenantId, id])
+  @@index([tenantId, recordId]) // Para busca por registro
   @@map("entity_data")
 }
 
