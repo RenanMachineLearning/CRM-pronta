@@ -642,15 +642,41 @@ if (!validation.allowed) {
 
 Antes de avançar para a **Etapa 6 (Leads/Oportunidades)**, verifique:
 
-- [ ] CRUD completo de contatos e empresas
-- [ ] Associações entre pessoas e organizações funcionando
-- [ ] Múltiplos emails/telefones por contato
-- [ ] Endereços funcionando
-- [ ] Tags operacionais
-- [ ] Validações básicas funcionando
-- [ ] Frontend básico funcionando
-- [ ] Testes passando
-- [ ] Documentação atualizada
+- [x] CRUD completo de contatos e empresas
+  - ✅ GET, POST, PUT, DELETE para `/api/contacts`
+  - ✅ GET, POST, PUT, DELETE para `/api/companies`
+  - ✅ Paginação, filtros e ordenação implementados
+- [x] Associações entre pessoas e organizações funcionando
+  - ✅ Relação 1:N (Contact.companyId)
+  - ✅ Rota `GET /api/companies/:id/contacts` implementada
+  - ✅ Filtro por `companyId` em listagem de contatos
+- [x] Múltiplos emails/telefones por contato
+  - ✅ Rotas para gerenciar emails: POST, PUT, DELETE
+  - ✅ Rotas para gerenciar phones: POST, PUT, DELETE
+  - ✅ Suporte a múltiplos emails/telefones por contato
+- [x] Endereços funcionando
+  - ✅ Rotas para gerenciar endereços de contatos e empresas
+  - ✅ Validação de campos obrigatórios
+  - ✅ Suporte a tipos (BILLING, SHIPPING, OTHER)
+- [x] Tags operacionais
+  - ✅ Rotas para associar/remover tags de contatos
+  - ✅ Filtro por tag em listagem de contatos
+  - ✅ Tags reutilizáveis por tenant
+- [x] Validações básicas funcionando
+  - ✅ Validação de emails, telefones, websites
+  - ✅ Validação de campos obrigatórios
+  - ✅ Validação de formatos (UUID, datas, etc.)
+- [x] Frontend básico funcionando
+  - ✅ Componente `ContactList` implementado
+  - ✅ Componente `ContactForm` implementado
+  - ✅ Componente `CompanyList` implementado
+  - ✅ Componente `CompanyForm` implementado
+- [x] Testes passando
+  - ✅ 48 testes E2E passando (Contact CRUD, Company CRUD, Custom Fields, Field Permissions)
+  - ✅ Testes de validação, auditoria e permissões implementados
+- [x] Documentação atualizada
+  - ✅ Documentação técnica criada: `docs/API-Contatos-Empresas.md`
+  - ✅ Endpoints, validações, permissões e campos customizados documentados
 
 ---
 
