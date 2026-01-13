@@ -420,8 +420,23 @@ export async function createTestField(data: {
   order?: number;
   options?: Array<{ value: string; label: string; color?: string }>;
 }) {
-  return prisma.field.create({
-    data: {
+  return prisma.field.upsert({
+    where: {
+      entityId_name: {
+        entityId: data.entityId,
+        name: data.name,
+      },
+    },
+    update: {
+      label: data.label,
+      type: data.type,
+      required: data.required || false,
+      unique: data.unique || false,
+      order: data.order || 0,
+      options: data.options ? data.options : Prisma.JsonNull,
+      isDeleted: false,
+    },
+    create: {
       name: data.name,
       label: data.label,
       type: data.type,

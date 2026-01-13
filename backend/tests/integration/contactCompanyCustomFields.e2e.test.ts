@@ -19,6 +19,7 @@ import {
   createTestField,
   assignRoleToUser,
   closeDatabase,
+  prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
 
@@ -120,6 +121,24 @@ describe('Campos Customizados - Contact e Company - E2E Tests', () => {
     adminToken = generateToken(adminUser.id, tenant.id);
   });
 
+  beforeEach(async () => {
+    // Limpar EntityData, Contact, Company e Fields antes de cada teste
+    // Mantém tenant e entidades criados no beforeAll
+    await prisma.entityData.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+    await prisma.contact.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+    await prisma.company.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+    // Limpar campos customizados criados nos testes anteriores
+    await prisma.field.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+  });
+
   afterAll(async () => {
     await closeDatabase();
   });
@@ -179,7 +198,8 @@ describe('Campos Customizados - Contact e Company - E2E Tests', () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain('customAge');
+      // Verifica que a mensagem de erro indica valor inválido para número
+      expect(response.body.message).toContain('não é um número válido');
     });
 
     it('campo customizado único é validado ao criar empresa', async () => {
@@ -223,7 +243,8 @@ describe('Campos Customizados - Contact e Company - E2E Tests', () => {
         })
         .expect(400);
 
-      expect(createResponse2.body.message).toContain('customCode');
+      // Verifica que a mensagem de erro indica valor duplicado
+      expect(createResponse2.body.message).toContain('já está em uso');
     });
   });
 

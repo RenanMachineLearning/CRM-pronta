@@ -894,7 +894,8 @@ export class ContactService {
     }
 
     // Validar e salvar campos customizados se fornecidos
-    if (data.customFields && Object.keys(data.customFields).length > 0) {
+    // Processar campos customizados se fornecidos (mesmo que vazio, para validar obrigatórios)
+    if (data.customFields !== undefined) {
       try {
         // Buscar entidade Contact
         const contactEntity = await EntityService.getEntityByName(tenantId, 'Contact');
@@ -902,21 +903,23 @@ export class ContactService {
         // Buscar campos customizados da entidade
         const customFields = await FieldService.listFields(tenantId, contactEntity.id);
         
-        // Validar cada campo customizado
+        // Validar cada campo customizado fornecido
         const validatedCustomFields: Record<string, any> = {};
-        for (const [fieldName, value] of Object.entries(data.customFields)) {
-          const field = customFields.find(f => f.name === fieldName);
-          if (!field) {
-            throw new Error(`Campo customizado '${fieldName}' não encontrado`);
-          }
-          
-          // Processar e validar valor
-          const validatedValue = processAndValidateFieldValue(field, value);
-          validatedCustomFields[fieldName] = validatedValue;
-          
-          // Validar unicidade se necessário
-          if (field.unique) {
-            await validateUniqueField(tenantId, contactEntity.id, field.id, validatedValue);
+        if (data.customFields && Object.keys(data.customFields).length > 0) {
+          for (const [fieldName, value] of Object.entries(data.customFields)) {
+            const field = customFields.find(f => f.name === fieldName);
+            if (!field) {
+              throw new Error(`Campo customizado '${fieldName}' não encontrado`);
+            }
+            
+            // Processar e validar valor
+            const validatedValue = processAndValidateFieldValue(field, value);
+            validatedCustomFields[fieldName] = validatedValue;
+            
+            // Validar unicidade se necessário
+            if (field.unique) {
+              await validateUniqueField(tenantId, contactEntity.id, field.id, validatedValue);
+            }
           }
         }
         
@@ -932,13 +935,15 @@ export class ContactService {
           }
         }
         
-        // Salvar em EntityData
-        await EntityDataService.saveEntityData(
-          tenantId,
-          contactEntity.id,
-          contact.id,
-          validatedCustomFields
-        );
+        // Salvar em EntityData apenas se houver campos para salvar
+        if (Object.keys(validatedCustomFields).length > 0) {
+          await EntityDataService.saveEntityData(
+            tenantId,
+            contactEntity.id,
+            contact.id,
+            validatedCustomFields
+          );
+        }
       } catch (error: any) {
         // Se houver erro ao salvar campos customizados, deletar contato criado
         await prisma.contact.delete({ where: { id: contact.id } }).catch(() => {

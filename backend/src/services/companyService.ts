@@ -470,8 +470,8 @@ export class CompanyService {
       return newCompany;
     });
 
-    // Validar e salvar campos customizados se fornecidos
-    if (data.customFields && Object.keys(data.customFields).length > 0) {
+    // Processar campos customizados se fornecidos (mesmo que vazio, para validar obrigatórios)
+    if (data.customFields !== undefined) {
       try {
         // Buscar entidade Company
         const companyEntity = await EntityService.getEntityByName(tenantId, 'Company');
@@ -479,21 +479,23 @@ export class CompanyService {
         // Buscar campos customizados da entidade
         const customFields = await FieldService.listFields(tenantId, companyEntity.id);
         
-        // Validar cada campo customizado
+        // Validar cada campo customizado fornecido
         const validatedCustomFields: Record<string, any> = {};
-        for (const [fieldName, value] of Object.entries(data.customFields)) {
-          const field = customFields.find(f => f.name === fieldName);
-          if (!field) {
-            throw new Error(`Campo customizado '${fieldName}' não encontrado`);
-          }
-          
-          // Processar e validar valor
-          const validatedValue = processAndValidateFieldValue(field, value);
-          validatedCustomFields[fieldName] = validatedValue;
-          
-          // Validar unicidade se necessário
-          if (field.unique) {
-            await validateUniqueField(tenantId, companyEntity.id, field.id, validatedValue);
+        if (data.customFields && Object.keys(data.customFields).length > 0) {
+          for (const [fieldName, value] of Object.entries(data.customFields)) {
+            const field = customFields.find(f => f.name === fieldName);
+            if (!field) {
+              throw new Error(`Campo customizado '${fieldName}' não encontrado`);
+            }
+            
+            // Processar e validar valor
+            const validatedValue = processAndValidateFieldValue(field, value);
+            validatedCustomFields[fieldName] = validatedValue;
+            
+            // Validar unicidade se necessário
+            if (field.unique) {
+              await validateUniqueField(tenantId, companyEntity.id, field.id, validatedValue);
+            }
           }
         }
         
@@ -509,13 +511,15 @@ export class CompanyService {
           }
         }
         
-        // Salvar em EntityData
-        await EntityDataService.saveEntityData(
-          tenantId,
-          companyEntity.id,
-          company.id,
-          validatedCustomFields
-        );
+        // Salvar em EntityData apenas se houver campos para salvar
+        if (Object.keys(validatedCustomFields).length > 0) {
+          await EntityDataService.saveEntityData(
+            tenantId,
+            companyEntity.id,
+            company.id,
+            validatedCustomFields
+          );
+        }
       } catch (error: any) {
         // Se houver erro ao salvar campos customizados, deletar empresa criada
         await prisma.company.delete({ where: { id: company.id } }).catch(() => {

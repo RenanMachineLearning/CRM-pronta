@@ -13,6 +13,8 @@ import { CompanyService } from '../services/companyService';
 import { ContactService } from '../services/contactService';
 import { CompanySize, ContactStatus } from '@prisma/client';
 import { validateUrl, normalizeUrl } from '../utils/validators';
+import { FieldValidationError } from '../utils/fieldValueValidator';
+import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 
 /**
  * Lista empresas com paginação e filtros
@@ -168,7 +170,7 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
     }
 
     // Extrair dados do body
-    const { name, website, industry, size, status, addresses, tagIds } = req.body;
+    const { name, website, industry, size, status, addresses, tagIds, customFields } = req.body;
 
     // Validar name obrigatório
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -300,6 +302,7 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
         status,
         addresses,
         tagIds,
+        customFields,
       },
       tenantId,
       userId
@@ -308,6 +311,14 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
     res.status(201).json(company);
   } catch (error: any) {
     // Tratar erros específicos do service
+    if (error instanceof FieldValidationError || error instanceof UniqueFieldValidationError) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
     if (
       error.message.includes('não encontrada') ||
       error.message.includes('não encontradas') ||
@@ -363,7 +374,7 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
     }
 
     // Extrair dados do body
-    const { name, website, industry, size, status, addresses, tagIds } = req.body;
+    const { name, website, industry, size, status, addresses, tagIds, customFields } = req.body;
 
     // Validar name se fornecido
     if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
@@ -496,6 +507,7 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
         status,
         addresses,
         tagIds,
+        customFields,
       },
       tenantId,
       userId
@@ -504,6 +516,14 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
     res.status(200).json(company);
   } catch (error: any) {
     // Tratar erros específicos do service
+    if (error instanceof FieldValidationError || error instanceof UniqueFieldValidationError) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
     if (
       error.message.includes('não encontrada') ||
       error.message.includes('não encontradas') ||

@@ -12,6 +12,8 @@ import { Request, Response } from 'express';
 import { ContactService } from '../services/contactService';
 import { ContactStatus } from '@prisma/client';
 import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
+import { FieldValidationError } from '../utils/fieldValueValidator';
+import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 
 /**
  * Lista contatos com paginação e filtros
@@ -185,6 +187,7 @@ export async function createContact(req: Request, res: Response): Promise<void> 
       phones,
       addresses,
       tagIds,
+      customFields,
     } = req.body;
 
     // Validar que pelo menos firstName ou lastName é fornecido
@@ -348,6 +351,7 @@ export async function createContact(req: Request, res: Response): Promise<void> 
         phones,
         addresses,
         tagIds,
+        customFields,
       },
       tenantId,
       req.userId!
@@ -356,6 +360,14 @@ export async function createContact(req: Request, res: Response): Promise<void> 
     res.status(201).json(contact);
   } catch (error: any) {
     // Tratar erros específicos do service
+    if (error instanceof FieldValidationError || error instanceof UniqueFieldValidationError) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
     if (
       error.message.includes('não encontrada') ||
       error.message.includes('não encontradas') ||
@@ -426,6 +438,7 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
       phones,
       addresses,
       tagIds,
+      customFields,
     } = req.body;
 
     // Validar firstName se fornecido
@@ -587,6 +600,7 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
         phones,
         addresses,
         tagIds,
+        customFields,
       },
       tenantId,
       userId
@@ -595,6 +609,14 @@ export async function updateContact(req: Request, res: Response): Promise<void> 
     res.status(200).json(contact);
   } catch (error: any) {
     // Tratar erros específicos do service
+    if (error instanceof FieldValidationError || error instanceof UniqueFieldValidationError) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
     if (error.message.includes('não encontrado')) {
       res.status(404).json({
         error: 'Contato não encontrado',
