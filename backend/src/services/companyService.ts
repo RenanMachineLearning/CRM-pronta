@@ -532,7 +532,7 @@ export class CompanyService {
     }
 
     // Atualizar empresa e relacionamentos em transação
-    const updatedCompany = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Atualizar campos primitivos da empresa
       const company = await tx.company.update({
         where: { id: companyId },

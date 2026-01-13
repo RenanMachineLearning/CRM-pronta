@@ -11,7 +11,7 @@
 import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
 import { ContactService } from '../services/contactService';
-import { CompanySize, CompanyStatus, ContactStatus } from '@prisma/client';
+import { CompanySize, ContactStatus } from '@prisma/client';
 import { validateUrl, normalizeUrl } from '../utils/validators';
 
 /**
@@ -179,7 +179,8 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Validar website se fornecido
+    // Validar e normalizar website se fornecido
+    let normalizedWebsite: string | undefined = website;
     if (website !== undefined && website !== null) {
       if (typeof website !== 'string') {
         res.status(400).json({
@@ -191,10 +192,10 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
 
       if (website.trim().length > 0) {
         // Normalizar primeiro (adicionar http:// se necessário)
-        const normalizedWebsite = normalizeUrl(website);
+        const normalized = normalizeUrl(website);
         
         // Validar formato
-        if (!validateUrl(normalizedWebsite)) {
+        if (!validateUrl(normalized)) {
           res.status(400).json({
             error: 'website inválido',
             message: 'website deve ser uma URL válida',
@@ -203,7 +204,7 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
         }
         
         // Usar website normalizado
-        website = normalizedWebsite;
+        normalizedWebsite = normalized;
       }
     }
 
@@ -293,7 +294,7 @@ export async function createCompany(req: Request, res: Response): Promise<void> 
     const company = await CompanyService.createCompany(
       {
         name,
-        website,
+        website: normalizedWebsite,
         industry,
         size,
         status,
@@ -373,7 +374,8 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Validar website se fornecido
+    // Validar e normalizar website se fornecido
+    let normalizedWebsite: string | undefined = website;
     if (website !== undefined && website !== null) {
       if (typeof website !== 'string') {
         res.status(400).json({
@@ -385,10 +387,10 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
 
       if (website.trim().length > 0) {
         // Normalizar primeiro (adicionar http:// se necessário)
-        const normalizedWebsite = normalizeUrl(website);
+        const normalized = normalizeUrl(website);
         
         // Validar formato
-        if (!validateUrl(normalizedWebsite)) {
+        if (!validateUrl(normalized)) {
           res.status(400).json({
             error: 'website inválido',
             message: 'website deve ser uma URL válida',
@@ -397,7 +399,7 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
         }
         
         // Usar website normalizado
-        website = normalizedWebsite;
+        normalizedWebsite = normalized;
       }
     }
 
@@ -488,7 +490,7 @@ export async function updateCompany(req: Request, res: Response): Promise<void> 
       companyId,
       {
         name,
-        website,
+        website: normalizedWebsite,
         industry,
         size,
         status,

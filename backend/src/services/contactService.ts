@@ -747,12 +747,12 @@ export class ContactService {
       const newContact = await tx.contact.create({
         data: {
           tenantId,
-          firstName: data.firstName.trim(),
-          lastName: data.lastName?.trim(),
-          title: data.title?.trim(),
+          firstName: data.firstName?.trim() || '',
+          lastName: data.lastName?.trim() || null,
+          title: data.title?.trim() || null,
           gender: normalizedGender,
           birthDate,
-          notes: data.notes?.trim(),
+          notes: data.notes?.trim() || null,
           status: data.status || 'ACTIVE',
           companyId: data.companyId || null,
         },
