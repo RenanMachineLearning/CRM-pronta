@@ -1,0 +1,386 @@
+/**
+ * Componente OpportunityList
+ * Exibe tabela de oportunidades com paginação, ordenação e filtros
+ */
+
+import React, { useState, useEffect } from 'react';
+import { useOpportunities } from '../hooks/useOpportunities';
+import { Loading } from './Loading';
+import { ErrorMessage } from './ErrorMessage';
+import { Button } from './Button';
+import { Select } from './Select';
+import type { Opportunity, OpportunityFilters, OpportunityStatus } from '../types/opportunity';
+
+export interface OpportunityListProps {
+  onOpportunityClick?: (opportunityId: string) => void;
+  onNewOpportunity?: () => void;
+}
+
+/**
+ * Formata valor monetário em BRL
+ */
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+/**
+ * Formata data em formato brasileiro
+ */
+function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return '-';
+  
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
+/**
+ * Traduz status para português
+ */
+function translateStatus(status: OpportunityStatus): string {
+  switch (status) {
+    case 'OPEN':
+      return 'Aberta';
+    case 'WON':
+      return 'Ganha';
+    case 'LOST':
+      return 'Perdida';
+    case 'ARCHIVED':
+      return 'Arquivada';
+    default:
+      return status;
+  }
+}
+
+/**
+ * Obtém cor do badge de status
+ */
+function getStatusColor(status: OpportunityStatus): string {
+  switch (status) {
+    case 'OPEN':
+      return 'bg-blue-100 text-blue-800';
+    case 'WON':
+      return 'bg-green-100 text-green-800';
+    case 'LOST':
+      return 'bg-red-100 text-red-800';
+    case 'ARCHIVED':
+      return 'bg-gray-100 text-gray-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
+
+export function OpportunityList({ onOpportunityClick, onNewOpportunity }: OpportunityListProps) {
+  // Estado para filtros
+  const [filters, setFilters] = useState<OpportunityFilters>({});
+  
+  // Estado para ordenação
+  const [orderBy, setOrderBy] = useState<'value' | 'closeDate' | 'createdAt' | 'name'>('createdAt');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Estado para paginação
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  // Hook para buscar oportunidades
+  const {
+    opportunities,
+    loading,
+    error,
+    pagination,
+    refetch,
+    setFilters: updateFilters,
+    setPagination: updatePagination,
+  } = useOpportunities(filters, {
+    limit,
+    offset: (page - 1) * limit,
+    orderBy,
+    order,
+  });
+
+  // Atualizar paginação quando page, orderBy ou order mudarem
+  useEffect(() => {
+    updatePagination({
+      limit,
+      offset: (page - 1) * limit,
+      orderBy,
+      order,
+    });
+  }, [page, orderBy, order, limit, updatePagination]);
+
+  // Handlers
+  const handleSort = (column: 'value' | 'closeDate' | 'createdAt' | 'name') => {
+    if (orderBy === column) {
+      // Se já está ordenando por esta coluna, inverter ordem
+      setOrder(order === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Se é nova coluna, ordenar ascendente
+      setOrderBy(column);
+      setOrder('asc');
+    }
+    setPage(1); // Resetar para primeira página
+  };
+
+  const handleFilterChange = (key: keyof OpportunityFilters, value: string | undefined) => {
+    const newFilters = { ...filters };
+    if (value && value !== '') {
+      newFilters[key] = value as any;
+    } else {
+      delete newFilters[key];
+    }
+    updateFilters(newFilters);
+    setPage(1); // Resetar para primeira página
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    updatePagination({ offset: (newPage - 1) * limit });
+  };
+
+  // Calcular número de páginas
+  const totalPages = Math.ceil(pagination.total / limit);
+
+  // Função para renderizar indicador de ordenação
+  const renderSortIndicator = (column: 'value' | 'closeDate' | 'createdAt' | 'name') => {
+    if (orderBy !== column) return null;
+    return order === 'asc' ? ' ↑' : ' ↓';
+  };
+
+  // Função para renderizar paginação
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages: (number | string)[] = [];
+    const maxVisible = 7;
+
+    if (totalPages <= maxVisible) {
+      // Mostrar todas as páginas
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Lógica de ellipsis
+      if (page <= 3) {
+        // Início
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        // Fim
+        pages.push(1);
+        pages.push('ellipsis');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Meio
+        pages.push(1);
+        pages.push('ellipsis');
+        for (let i = page - 1; i <= page + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
+      }
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <button
+          onClick={() => handlePageChange(page - 1)}
+          disabled={page === 1}
+          className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          Anterior
+        </button>
+        {pages.map((p, index) => {
+          if (p === 'ellipsis') {
+            return (
+              <span key={`ellipsis-${index}`} className="px-2">
+                ...
+              </span>
+            );
+          }
+          return (
+            <button
+              key={p}
+              onClick={() => handlePageChange(p as number)}
+              className={`px-3 py-1 rounded border ${
+                page === p
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {p}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => handlePageChange(page + 1)}
+          disabled={page === totalPages}
+          className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          Próxima
+        </button>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return <Loading message="Carregando oportunidades..." />;
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={refetch} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Barra de ações e filtros */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-wrap gap-2">
+          {/* Filtro de status */}
+          <Select
+            value={filters.status || ''}
+            options={[
+              { value: '', label: 'Todos os status' },
+              { value: 'OPEN', label: 'Aberta' },
+              { value: 'WON', label: 'Ganha' },
+              { value: 'LOST', label: 'Perdida' },
+              { value: 'ARCHIVED', label: 'Arquivada' },
+            ]}
+            onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
+            className="w-48 mb-0"
+          />
+        </div>
+
+        {onNewOpportunity && (
+          <Button onClick={onNewOpportunity} variant="primary">
+            Nova Oportunidade
+          </Button>
+        )}
+      </div>
+
+      {/* Tabela de oportunidades */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('name')}
+                >
+                  Nome{renderSortIndicator('name')}
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('value')}
+                >
+                  Valor{renderSortIndicator('value')}
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('closeDate')}
+                >
+                  Data de Fechamento{renderSortIndicator('closeDate')}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Probabilidade
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contato/Empresa
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  Criado em{renderSortIndicator('createdAt')}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {opportunities.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    Nenhuma oportunidade encontrada
+                  </td>
+                </tr>
+              ) : (
+                opportunities.map((opp) => {
+                  const contactOrCompanyName = opp.contact
+                    ? `${opp.contact.firstName} ${opp.contact.lastName || ''}`.trim()
+                    : opp.company?.name || '-';
+
+                  return (
+                    <tr
+                      key={opp.id}
+                      className={`hover:bg-gray-50 ${
+                        onOpportunityClick ? 'cursor-pointer' : ''
+                      }`}
+                      onClick={() => onOpportunityClick?.(opp.id)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{opp.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(opp.value)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">{formatDate(opp.closeDate)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">
+                          {opp.probability !== null && opp.probability !== undefined
+                            ? `${opp.probability}%`
+                            : '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            opp.status
+                          )}`}
+                        >
+                          {translateStatus(opp.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">{contactOrCompanyName}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">{formatDate(opp.createdAt)}</div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Paginação */}
+      {renderPagination()}
+
+      {/* Informações de paginação */}
+      <div className="text-sm text-gray-600 text-center">
+        Mostrando {opportunities.length > 0 ? (page - 1) * limit + 1 : 0} a{' '}
+        {Math.min(page * limit, pagination.total)} de {pagination.total} oportunidades
+      </div>
+    </div>
+  );
+}
