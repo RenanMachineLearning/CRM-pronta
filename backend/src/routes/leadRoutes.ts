@@ -1,0 +1,162 @@
+/**
+ * Rotas de leads
+ * 
+ * Define endpoints para gestão de leads (CRUD).
+ * Todas as rotas requerem autenticação e permissões ACL apropriadas.
+ */
+
+import express from 'express';
+import {
+  listLeads,
+  getLead,
+  createLead,
+  updateLead,
+  deleteLead,
+} from '../controllers/leadController';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+
+const router = express.Router();
+
+// Aplicar middlewares globais no nível do router
+// Ordem: tenantContextMiddleware → authMiddleware
+router.use(tenantContextMiddleware, authMiddleware);
+
+/**
+ * GET /api/leads
+ * 
+ * Lista leads do tenant atual com paginação e filtros.
+ * 
+ * Requer autenticação e permissão "Lead.list"
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - status: string (opcional: NEW, QUALIFIED, CONVERTED, LOST)
+ * - source: string (opcional: busca parcial case-insensitive)
+ * - converted: boolean (opcional: true ou false)
+ * - orderBy: string (opcional: createdAt, firstName, lastName, default: createdAt)
+ * - order: string (opcional: asc, desc, default: desc)
+ * 
+ * Response 200:
+ * {
+ *   "data": [...],
+ *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ * }
+ * 
+ * Response 400: Parâmetros inválidos
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.get(
+  '/',
+  authorizationMiddleware('Lead', 'list'),
+  listLeads
+);
+
+/**
+ * GET /api/leads/:id
+ * 
+ * Obtém lead específico do tenant atual.
+ * 
+ * Requer autenticação e permissão "Lead.read"
+ * 
+ * Response 200: Lead encontrado (com campos filtrados por permissão)
+ * Response 404: Lead não encontrado ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.get(
+  '/:id',
+  authorizationMiddleware('Lead', 'read'),
+  getLead
+);
+
+/**
+ * POST /api/leads
+ * 
+ * Cria novo lead no tenant atual.
+ * 
+ * Requer autenticação e permissão "Lead.create"
+ * 
+ * Body:
+ * {
+ *   "firstName": "João",
+ *   "lastName": "Silva" (opcional),
+ *   "email": "joao@example.com" (opcional),
+ *   "phone": "+55 11 99999-9999" (opcional),
+ *   "company": "Empresa ABC" (opcional),
+ *   "source": "website" (opcional),
+ *   "status": "NEW" (opcional: NEW, QUALIFIED, CONVERTED, LOST, default: NEW),
+ *   "tagIds": ["uuid-tag-1", "uuid-tag-2"] (opcional),
+ *   "customFields": { ... } (opcional)
+ * }
+ * 
+ * Response 201: Lead criado (com campos filtrados por permissão)
+ * Response 400: Dados inválidos
+ * Response 404: Tag não encontrada (se tagIds fornecidos)
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ */
+router.post(
+  '/',
+  authorizationMiddleware('Lead', 'create'),
+  createLead
+);
+
+/**
+ * PUT /api/leads/:id
+ * 
+ * Atualiza lead existente no tenant atual.
+ * 
+ * Requer autenticação e permissão "Lead.update"
+ * 
+ * Body (todos opcionais):
+ * {
+ *   "firstName": "João",
+ *   "lastName": "Silva",
+ *   "email": "joao@example.com",
+ *   "phone": "+55 11 99999-9999",
+ *   "company": "Empresa ABC",
+ *   "source": "website",
+ *   "status": "QUALIFIED",
+ *   "tagIds": [...] (substitui completamente as tags existentes),
+ *   "customFields": { ... }
+ * }
+ * 
+ * Nota: Arrays de relacionamentos (tagIds) substituem completamente os existentes.
+ * 
+ * Response 200: Lead atualizado (com campos filtrados por permissão)
+ * Response 400: Dados inválidos
+ * Response 403: Sem permissão para atualizar campos específicos
+ * Response 404: Lead ou tag não encontrada
+ * Response 401: Não autenticado
+ */
+router.put(
+  '/:id',
+  authorizationMiddleware('Lead', 'update'),
+  updateLead
+);
+
+/**
+ * DELETE /api/leads/:id
+ * 
+ * Deleta lead (soft delete - marca deletedAt).
+ * 
+ * Requer autenticação e permissão "Lead.delete"
+ * 
+ * Response 200: { "message": "Lead deletado com sucesso", "id": "uuid" }
+ * Response 404: Lead não encontrado ou não pertence ao tenant
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * Nota: LeadTag são deletados automaticamente via cascade.
+ */
+router.delete(
+  '/:id',
+  authorizationMiddleware('Lead', 'delete'),
+  deleteLead
+);
+
+export default router;

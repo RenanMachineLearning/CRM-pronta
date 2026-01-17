@@ -1,0 +1,543 @@
+/**
+ * Controller de leads
+ * 
+ * Handlers para rotas de gestão de leads (CRUD).
+ * Orquestra chamadas ao LeadService.
+ * 
+ * Nota: Verificações de autorização são feitas exclusivamente via middleware.
+ * Controllers não devem conter lógica de autorização.
+ */
+
+import { Request, Response } from 'express';
+import { LeadService } from '../services/leadService';
+import { LeadStatus } from '@prisma/client';
+import { validateEmail, validatePhone } from '../utils/validators';
+import { FieldValidationError } from '../utils/fieldValueValidator';
+import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+
+/**
+ * Lista leads com paginação e filtros
+ * 
+ * @param req - Request com query params (limit, offset, status, source, converted, orderBy, order)
+ * @param res - Response para retornar lista de leads
+ */
+export async function listLeads(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair query params
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+    const status = req.query.status as string | undefined;
+    const source = req.query.source as string | undefined;
+    const converted = req.query.converted as string | undefined;
+    const orderBy = req.query.orderBy as string | undefined;
+    const order = req.query.order as string | undefined;
+
+    // Validar limit
+    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'limit deve ser um número entre 1 e 100',
+      });
+      return;
+    }
+
+    // Validar offset
+    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'offset deve ser um número maior ou igual a 0',
+      });
+      return;
+    }
+
+    // Validar status
+    if (status && !['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'].includes(status)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'status deve ser NEW, QUALIFIED, CONVERTED ou LOST',
+      });
+      return;
+    }
+
+    // Validar converted (boolean)
+    let convertedBool: boolean | undefined = undefined;
+    if (converted !== undefined) {
+      if (converted === 'true') {
+        convertedBool = true;
+      } else if (converted === 'false') {
+        convertedBool = false;
+      } else {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'converted deve ser true ou false',
+        });
+        return;
+      }
+    }
+
+    // Validar orderBy
+    if (orderBy && !['createdAt', 'firstName', 'lastName'].includes(orderBy)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'orderBy deve ser createdAt, firstName ou lastName',
+      });
+      return;
+    }
+
+    // Validar order
+    if (order && !['asc', 'desc'].includes(order)) {
+      res.status(400).json({
+        error: 'Parâmetro inválido',
+        message: 'order deve ser asc ou desc',
+      });
+      return;
+    }
+
+    // Chamar service
+    const result = await LeadService.listLeads(
+      tenantId,
+      {
+        status: status as LeadStatus | undefined,
+        source,
+        converted: convertedBool,
+      },
+      {
+        limit,
+        offset,
+        orderBy: orderBy as 'createdAt' | 'firstName' | 'lastName' | undefined,
+        order: order as 'asc' | 'desc' | undefined,
+      },
+      userId
+    );
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Erro ao listar leads:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao listar leads',
+    });
+  }
+}
+
+/**
+ * Obtém lead específico
+ * 
+ * @param req - Request com id nos params
+ * @param res - Response para retornar lead
+ */
+export async function getLead(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId já validado pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair ID dos params
+    const leadId = req.params.id;
+    if (!leadId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do lead',
+      });
+      return;
+    }
+
+    // Chamar service
+    const lead = await LeadService.getLeadById(leadId, tenantId, userId);
+
+    if (!lead) {
+      res.status(404).json({
+        error: 'Lead não encontrado',
+        message: 'Lead não encontrado ou não pertence ao seu tenant',
+      });
+      return;
+    }
+
+    res.status(200).json(lead);
+  } catch (error: any) {
+    console.error('Erro ao buscar lead:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao buscar lead',
+    });
+  }
+}
+
+/**
+ * Cria novo lead
+ * 
+ * @param req - Request com dados do lead no body
+ * @param res - Response para retornar lead criado
+ */
+export async function createLead(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Validar que id não foi fornecido (gerado automaticamente)
+    if (req.body.id !== undefined) {
+      res.status(400).json({
+        error: 'Campo id não permitido',
+        message: 'O ID é gerado automaticamente e não pode ser fornecido',
+      });
+      return;
+    }
+
+    // Extrair dados do body
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      company,
+      source,
+      status,
+      tagIds,
+      customFields,
+    } = req.body;
+
+    // Validar que pelo menos firstName ou lastName é fornecido
+    const hasFirstName = firstName && typeof firstName === 'string' && firstName.trim().length > 0;
+    const hasLastName = lastName && typeof lastName === 'string' && lastName.trim().length > 0;
+
+    if (!hasFirstName && !hasLastName) {
+      res.status(400).json({
+        error: 'Campos obrigatórios inválidos',
+        message: 'Pelo menos firstName ou lastName deve ser fornecido',
+      });
+      return;
+    }
+
+    // Validar email se fornecido
+    if (email !== undefined && email !== null) {
+      if (typeof email !== 'string') {
+        res.status(400).json({
+          error: 'email inválido',
+          message: 'email deve ser uma string',
+        });
+        return;
+      }
+
+      if (email.trim().length > 0 && !validateEmail(email)) {
+        res.status(400).json({
+          error: 'email inválido',
+          message: 'Formato de email inválido',
+        });
+        return;
+      }
+    }
+
+    // Validar telefone se fornecido
+    if (phone !== undefined && phone !== null) {
+      if (typeof phone !== 'string') {
+        res.status(400).json({
+          error: 'phone inválido',
+          message: 'phone deve ser uma string',
+        });
+        return;
+      }
+
+      if (phone.trim().length > 0 && !validatePhone(phone)) {
+        res.status(400).json({
+          error: 'phone inválido',
+          message: 'Formato de telefone inválido',
+        });
+        return;
+      }
+    }
+
+    // Validar status se fornecido
+    if (status !== undefined && !['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'].includes(status)) {
+      res.status(400).json({
+        error: 'Status inválido',
+        message: 'Status deve ser NEW, QUALIFIED, CONVERTED ou LOST',
+      });
+      return;
+    }
+
+    // Validar tagIds se fornecido
+    if (tagIds !== undefined && !Array.isArray(tagIds)) {
+      res.status(400).json({
+        error: 'tagIds inválido',
+        message: 'tagIds deve ser um array',
+      });
+      return;
+    }
+
+    // Criar lead
+    const lead = await LeadService.createLead(
+      {
+        firstName,
+        lastName,
+        email,
+        phone,
+        company,
+        source,
+        status,
+        tagIds,
+        customFields,
+      },
+      tenantId,
+      userId
+    );
+
+    res.status(201).json(lead);
+  } catch (error: any) {
+    // Tratar erros específicos do service
+    if (error instanceof FieldValidationError || error instanceof UniqueFieldValidationError) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (
+      error.message.includes('não encontrada') ||
+      error.message.includes('não encontradas') ||
+      error.message.includes('não pertence') ||
+      error.message.includes('foi deletada')
+    ) {
+      res.status(404).json({
+        error: 'Recurso não encontrado',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (
+      error.message.includes('inválido') ||
+      error.message.includes('obrigatório') ||
+      error.message.includes('UUID')
+    ) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
+    console.error('Erro ao criar lead:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message || 'Falha ao criar lead',
+    });
+  }
+}
+
+/**
+ * Atualiza lead existente
+ * 
+ * @param req - Request com id nos params e dados no body
+ * @param res - Response para retornar lead atualizado
+ */
+export async function updateLead(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair ID dos params
+    const leadId = req.params.id;
+    if (!leadId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do lead',
+      });
+      return;
+    }
+
+    // Extrair dados do body
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      company,
+      source,
+      status,
+      tagIds,
+      customFields,
+    } = req.body;
+
+    // Validar email se fornecido
+    if (email !== undefined && email !== null) {
+      if (typeof email !== 'string') {
+        res.status(400).json({
+          error: 'email inválido',
+          message: 'email deve ser uma string',
+        });
+        return;
+      }
+
+      if (email.trim().length > 0 && !validateEmail(email)) {
+        res.status(400).json({
+          error: 'email inválido',
+          message: 'Formato de email inválido',
+        });
+        return;
+      }
+    }
+
+    // Validar telefone se fornecido
+    if (phone !== undefined && phone !== null) {
+      if (typeof phone !== 'string') {
+        res.status(400).json({
+          error: 'phone inválido',
+          message: 'phone deve ser uma string',
+        });
+        return;
+      }
+
+      if (phone.trim().length > 0 && !validatePhone(phone)) {
+        res.status(400).json({
+          error: 'phone inválido',
+          message: 'Formato de telefone inválido',
+        });
+        return;
+      }
+    }
+
+    // Validar status se fornecido
+    if (status !== undefined && !['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'].includes(status)) {
+      res.status(400).json({
+        error: 'Status inválido',
+        message: 'Status deve ser NEW, QUALIFIED, CONVERTED ou LOST',
+      });
+      return;
+    }
+
+    // Validar tagIds se fornecido
+    if (tagIds !== undefined && !Array.isArray(tagIds)) {
+      res.status(400).json({
+        error: 'tagIds inválido',
+        message: 'tagIds deve ser um array',
+      });
+      return;
+    }
+
+    // Atualizar lead
+    const lead = await LeadService.updateLead(
+      leadId,
+      {
+        firstName,
+        lastName,
+        email,
+        phone,
+        company,
+        source,
+        status,
+        tagIds,
+        customFields,
+      },
+      tenantId,
+      userId
+    );
+
+    res.status(200).json(lead);
+  } catch (error: any) {
+    // Tratar erros específicos
+    if (error.message?.includes('não encontrado')) {
+      res.status(404).json({
+        error: 'Lead não encontrado',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error.message?.includes('permissão')) {
+      res.status(403).json({
+        error: 'Sem permissão',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error instanceof FieldValidationError) {
+      res.status(400).json({
+        error: 'Validação de campo falhou',
+        message: error.message,
+        field: error.fieldName,
+      });
+      return;
+    }
+
+    if (error instanceof UniqueFieldValidationError) {
+      res.status(409).json({
+        error: 'Campo único duplicado',
+        message: error.message,
+        field: error.fieldName,
+      });
+      return;
+    }
+
+    if (
+      error.message.includes('inválido') ||
+      error.message.includes('obrigatório') ||
+      error.message.includes('UUID')
+    ) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: error.message,
+      });
+      return;
+    }
+
+    console.error('Erro ao atualizar lead:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message || 'Falha ao atualizar lead',
+    });
+  }
+}
+
+/**
+ * Deleta lead (soft delete)
+ * 
+ * @param req - Request com id nos params
+ * @param res - Response para retornar sucesso
+ */
+export async function deleteLead(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair ID dos params
+    const leadId = req.params.id;
+    if (!leadId) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do lead',
+      });
+      return;
+    }
+
+    // Deletar lead
+    await LeadService.deleteLead(leadId, tenantId, userId);
+
+    res.status(200).json({
+      message: 'Lead deletado com sucesso',
+      id: leadId,
+    });
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado')) {
+      res.status(404).json({
+        error: 'Lead não encontrado',
+        message: error.message,
+      });
+      return;
+    }
+
+    console.error('Erro ao deletar lead:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message || 'Falha ao deletar lead',
+    });
+  }
+}
