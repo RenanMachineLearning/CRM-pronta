@@ -9,6 +9,7 @@ import { PrismaClient, OpportunityStatus, Prisma } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validatePositiveNumber, validateDateNotPast, validateProbability } from '../utils/validators';
+import { validateOpportunityStatusTransition } from '../utils/statusTransitions';
 import { processAndValidateFieldValue } from '../utils/fieldValueValidator';
 import { validateUniqueField } from '../utils/uniqueFieldValidator';
 import { EntityService } from './entityService';
@@ -900,6 +901,33 @@ export class OpportunityService {
       }
     }
 
+    // Validar transição de status se status está sendo alterado
+    let actualCloseDateToUpdate: Date | undefined = undefined;
+    if (data.status && data.status !== existingOpportunity.status) {
+      // Validar transição de status
+      validateOpportunityStatusTransition(existingOpportunity.status, data.status);
+      
+      // Se mudando para WON ou LOST, atualizar actualCloseDate se não estiver definida
+      if ((data.status === 'WON' || data.status === 'LOST') && !existingOpportunity.actualCloseDate) {
+        // Se usuário forneceu actualCloseDate explicitamente, usar valor fornecido
+        // Caso contrário, usar data atual
+        if (data.actualCloseDate !== undefined) {
+          actualCloseDateToUpdate = data.actualCloseDate instanceof Date 
+            ? data.actualCloseDate 
+            : new Date(data.actualCloseDate);
+        } else {
+          actualCloseDateToUpdate = new Date();
+        }
+      }
+    }
+
+    // Se usuário forneceu actualCloseDate explicitamente (independente de status), usar valor fornecido
+    if (data.actualCloseDate !== undefined && actualCloseDateToUpdate === undefined) {
+      actualCloseDateToUpdate = data.actualCloseDate instanceof Date 
+        ? data.actualCloseDate 
+        : new Date(data.actualCloseDate);
+    }
+
     // Atualizar em transação
     await prisma.$transaction(async (tx) => {
       // Atualizar campos primitivos
@@ -912,6 +940,7 @@ export class OpportunityService {
           ...(data.stageId !== undefined && { stageId: data.stageId }),
           ...(data.status !== undefined && { status: data.status }),
           ...(closeDate !== undefined && { closeDate }),
+          ...(actualCloseDateToUpdate !== undefined && { actualCloseDate: actualCloseDateToUpdate }),
           ...(probability !== undefined && { probability }),
           ...(data.contactId !== undefined && { contactId: data.contactId }),
           ...(data.companyId !== undefined && { companyId: data.companyId }),

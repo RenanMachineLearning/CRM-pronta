@@ -477,6 +477,17 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Transição de status inválida
+    if (error.message?.includes('Transição de status inválida') || 
+        error.message?.includes('Status CONVERTED só pode ser definido') ||
+        error.message?.includes('Lead convertido não pode ter seu status alterado')) {
+      res.status(400).json({
+        error: 'Transição de status inválida',
+        message: error.message,
+      });
+      return;
+    }
+
     if (
       error.message.includes('inválido') ||
       error.message.includes('obrigatório') ||

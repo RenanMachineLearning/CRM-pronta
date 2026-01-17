@@ -11,6 +11,7 @@ import { logAudit } from '../utils/auditLog';
 import { validateEmail, validatePhone } from '../utils/validators';
 import { processAndValidateFieldValue } from '../utils/fieldValueValidator';
 import { validateUniqueField } from '../utils/uniqueFieldValidator';
+import { validateLeadStatusTransition } from '../utils/statusTransitions';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
@@ -660,6 +661,17 @@ export class LeadService {
     // Validar status (enum)
     if (data.status && !['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'].includes(data.status)) {
       throw new Error('Status inválido. Deve ser NEW, QUALIFIED, CONVERTED ou LOST');
+    }
+
+    // Validar transição de status se status está sendo alterado
+    if (data.status && data.status !== existingLead.status) {
+      // Validação adicional: Lead convertido não pode mudar de status
+      if (existingLead.converted) {
+        throw new Error('Lead convertido não pode ter seu status alterado');
+      }
+      
+      // Validar transição de status
+      validateLeadStatusTransition(existingLead.status, data.status, false);
     }
 
     // Validar tagIds se fornecidos

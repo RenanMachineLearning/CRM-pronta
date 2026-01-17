@@ -512,6 +512,15 @@ export async function updateOpportunity(req: Request, res: Response): Promise<vo
         return;
       }
 
+      // Transição de status inválida
+      if (error.message?.includes('Transição de status inválida')) {
+        res.status(400).json({
+          error: 'Transição de status inválida',
+          message: error.message,
+        });
+        return;
+      }
+
       console.error('Erro ao atualizar oportunidade:', error);
       res.status(500).json({
         error: 'Erro interno do servidor',
