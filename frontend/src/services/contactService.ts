@@ -9,6 +9,7 @@ import type {
   ContactFilters,
   PaginationParams,
   ContactFormData,
+  ContactLookup,
 } from '../types/contact';
 
 /**
@@ -104,3 +105,47 @@ export async function updateContact(id: string, data: Partial<ContactFormData>):
   });
 }
 
+/**
+ * Lista contatos para lookup (busca por nome)
+ * 
+ * Nota: O backend não suporta filtro por nome, então buscamos contatos
+ * e filtramos no frontend. Limitamos a 100 resultados para performance.
+ * 
+ * @param query - Query de busca (mínimo 2 caracteres)
+ * @returns Promise com lista de contatos (id, firstName, lastName) filtrados por nome
+ */
+export async function listContactsForLookup(query: string): Promise<ContactLookup[]> {
+  if (query.length < 2) {
+    return [];
+  }
+  
+  const params = new URLSearchParams();
+  params.append('limit', '100');
+  params.append('orderBy', 'firstName');
+  params.append('order', 'asc');
+  
+  const response = await apiRequest<ContactListResponse>(`/api/contacts?${params.toString()}`);
+  
+  // Filtrar no frontend por firstName ou lastName (case-insensitive, parcial)
+  const queryLower = query.toLowerCase();
+  const filtered = response.data.filter((contact) => {
+    const firstName = (contact.firstName || '').toLowerCase();
+    const lastName = (contact.lastName || '').toLowerCase();
+    const fullName = `${firstName} ${lastName}`.trim();
+    return (
+      firstName.includes(queryLower) ||
+      lastName.includes(queryLower) ||
+      fullName.includes(queryLower)
+    );
+  });
+  
+  // Limitar a 20 resultados após filtro
+  const limited = filtered.slice(0, 20);
+  
+  // Converter para ContactLookup format
+  return limited.map((contact) => ({
+    id: contact.id,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+  }));
+}

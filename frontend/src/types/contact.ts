@@ -126,3 +126,9 @@ export interface ContactFormErrors {
   tagIds?: string;
 }
 
+// Contato para lookup (busca e seleção)
+export interface ContactLookup {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+}
