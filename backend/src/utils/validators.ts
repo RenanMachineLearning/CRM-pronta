@@ -179,3 +179,77 @@ export function normalizeUrl(url: string): string {
   return `http://${trimmedUrl}`;
 }
 
+/**
+ * Valida se um valor numérico é positivo (maior que zero)
+ * @param value - Valor a ser validado (number ou string)
+ * @throws Error se valor não for positivo
+ */
+export function validatePositiveNumber(value: number | string): void {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue) || numValue <= 0) {
+    throw new Error('Valor deve ser um número positivo maior que zero');
+  }
+}
+
+/**
+ * Valida se um valor numérico é positivo (maior que zero) - versão que retorna boolean
+ * @param value - Valor a ser validado (number ou string)
+ * @returns true se válido (maior que 0), false caso contrário
+ */
+export function isValidPositiveNumber(value: number | string): boolean {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  return !isNaN(numValue) && numValue > 0;
+}
+
+/**
+ * Valida se uma data é futura ou presente (não pode ser passada)
+ * @param date - Data a ser validada
+ * @throws Error se data é inválida ou passada
+ */
+export function validateDateNotPast(date: Date | string): void {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    throw new Error('Data inválida');
+  }
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Zerar horas para comparar apenas datas
+  const dateToCheck = new Date(dateObj);
+  dateToCheck.setHours(0, 0, 0, 0);
+  if (dateToCheck < now) {
+    throw new Error('Data deve ser futura ou presente (não pode ser passada)');
+  }
+}
+
+/**
+ * Valida se uma data é futura ou presente (não pode ser passada) - versão que retorna boolean
+ * @param date - Data a ser validada
+ * @returns true se data é válida e é futura ou presente, false caso contrário
+ */
+export function isValidDateNotPast(date: Date | string): boolean {
+  try {
+    validateDateNotPast(date);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Valida se probabilidade está no range 0-100
+ * @param probability - Probabilidade a ser validada
+ * @throws Error se probabilidade está fora do range
+ */
+export function validateProbability(probability: number): void {
+  if (isNaN(probability) || probability < 0 || probability > 100) {
+    throw new Error('Probabilidade deve estar entre 0 e 100');
+  }
+}
+
+/**
+ * Valida se probabilidade está no range 0-100 - versão que retorna boolean
+ * @param probability - Probabilidade a ser validada
+ * @returns true se válido (0-100), false caso contrário
+ */
+export function isValidProbability(probability: number): boolean {
+  return !isNaN(probability) && probability >= 0 && probability <= 100;
+}

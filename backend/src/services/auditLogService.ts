@@ -30,6 +30,7 @@ export enum AuditEntityEnum {
   Address = 'Address',
   Tag = 'Tag',
   Lead = 'Lead',
+  Opportunity = 'Opportunity',
 }
 
 /**
