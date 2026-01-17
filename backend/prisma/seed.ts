@@ -101,6 +101,31 @@ async function createPermissions(tenantId: string): Promise<Permission[]> {
     }
   }
 
+  // Criar permissões especiais (ações além das padrão)
+  // Lead.convert - Converter lead em contato e/ou oportunidade
+  const leadConvertExisting = await prisma.permission.findFirst({
+    where: {
+      tenantId,
+      entity: 'Lead',
+      action: 'convert',
+      field: null,
+    },
+  });
+
+  if (!leadConvertExisting) {
+    const leadConvertPermission = await prisma.permission.create({
+      data: {
+        tenantId,
+        entity: 'Lead',
+        action: 'convert',
+        field: null,
+      },
+    });
+    permissions.push(leadConvertPermission);
+  } else {
+    permissions.push(leadConvertExisting);
+  }
+
   console.log(`   ✅ ${permissions.length} permissões criadas/encontradas`);
   return permissions;
 }
@@ -233,6 +258,10 @@ async function associatePermissionsToRoles(
   const oppValueUpdate = findPermission('Opportunity', 'update', 'value');
   if (oppValueRead) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: oppValueRead.id });
   if (oppValueUpdate) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: oppValueUpdate.id });
+
+  // Lead.convert: permissão especial para converter leads
+  const leadConvert = findPermission('Lead', 'convert');
+  if (leadConvert) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: leadConvert.id });
 
   // User e Role: apenas read e list (visualização)
   for (const entity of ['User', 'Role']) {

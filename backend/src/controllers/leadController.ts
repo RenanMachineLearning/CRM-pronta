@@ -10,8 +10,9 @@
 
 import { Request, Response } from 'express';
 import { LeadService } from '../services/leadService';
+import { LeadConversionService } from '../services/leadConversionService';
 import { LeadStatus } from '@prisma/client';
-import { validateEmail, validatePhone } from '../utils/validators';
+import { validateEmail, validatePhone, validatePositiveNumber, validateProbability, validateDateNotPast } from '../utils/validators';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 
@@ -538,6 +539,185 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: error.message || 'Falha ao deletar lead',
+    });
+  }
+}
+
+/**
+ * Converte lead em contato e/ou oportunidade
+ * 
+ * @param req - Request com id nos params e body (createContact, createOpportunity, opportunityData)
+ * @param res - Response para retornar resultado da conversão
+ */
+export async function convertLead(req: Request, res: Response): Promise<void> {
+  try {
+    // tenantId e userId já validados pelo middleware
+    const tenantId = req.tenantId!;
+    const userId = req.userId!;
+
+    // Extrair id dos params e validar formato UUID
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({
+        error: 'ID não fornecido',
+        message: 'Forneça o ID do lead',
+      });
+      return;
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      res.status(400).json({
+        error: 'ID inválido',
+        message: 'ID deve ser um UUID válido',
+      });
+      return;
+    }
+
+    // Extrair dados do body
+    const { createContact, createOpportunity, opportunityData } = req.body;
+
+    // Validar que pelo menos uma opção está marcada
+    if (!createContact && !createOpportunity) {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: 'Deve criar pelo menos contato ou oportunidade',
+      });
+      return;
+    }
+
+    // Validar createContact e createOpportunity são boolean
+    if (typeof createContact !== 'boolean') {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: 'createContact deve ser um boolean',
+      });
+      return;
+    }
+
+    if (typeof createOpportunity !== 'boolean') {
+      res.status(400).json({
+        error: 'Dados inválidos',
+        message: 'createOpportunity deve ser um boolean',
+      });
+      return;
+    }
+
+    // Se createOpportunity = true, validar opportunityData.value obrigatório
+    if (createOpportunity) {
+      if (!opportunityData || !opportunityData.value) {
+        res.status(400).json({
+          error: 'Dados inválidos',
+          message: 'opportunityData.value é obrigatório quando createOpportunity é true',
+        });
+        return;
+      }
+
+      // Validar value > 0
+      try {
+        validatePositiveNumber(opportunityData.value);
+      } catch (error) {
+        res.status(400).json({
+          error: 'Dados inválidos',
+          message: error instanceof Error ? error.message : 'value deve ser um número positivo',
+        });
+        return;
+      }
+
+      // Validar probability se fornecida
+      if (opportunityData.probability !== undefined && opportunityData.probability !== null) {
+        try {
+          validateProbability(opportunityData.probability);
+        } catch (error) {
+          res.status(400).json({
+            error: 'Dados inválidos',
+            message: error instanceof Error ? error.message : 'probability deve estar entre 0 e 100',
+          });
+          return;
+        }
+      }
+
+      // Validar closeDate se fornecida
+      if (opportunityData.closeDate) {
+        try {
+          validateDateNotPast(opportunityData.closeDate);
+        } catch (error) {
+          res.status(400).json({
+            error: 'Dados inválidos',
+            message: error instanceof Error ? error.message : 'closeDate deve ser futura ou presente',
+          });
+          return;
+        }
+      }
+
+      // Validar stageId se fornecido (formato UUID)
+      if (opportunityData.stageId) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opportunityData.stageId)) {
+          res.status(400).json({
+            error: 'Dados inválidos',
+            message: 'stageId deve ser um UUID válido',
+          });
+          return;
+        }
+      }
+    }
+
+    // Chamar LeadConversionService.convertLead
+    const result = await LeadConversionService.convertLead(
+      id,
+      {
+        createContact,
+        createOpportunity,
+        opportunityData: createOpportunity ? opportunityData : undefined,
+      },
+      tenantId,
+      userId
+    );
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    if (error instanceof Error) {
+      // Lead já convertido
+      if (error.message.includes('já foi convertido') || error.message.includes('já convertido')) {
+        res.status(409).json({
+          error: 'Lead já convertido',
+          message: error.message,
+        });
+        return;
+      }
+
+      // Lead não encontrado
+      if (error.message.includes('não encontrado') || error.message.includes('não pertence')) {
+        res.status(404).json({
+          error: 'Lead não encontrado',
+          message: error.message,
+        });
+        return;
+      }
+
+      // Pipeline padrão não encontrado
+      if (error.message.includes('pipeline padrão') || error.message.includes('Pipeline padrão')) {
+        res.status(400).json({
+          error: 'Pipeline padrão não encontrado',
+          message: error.message,
+        });
+        return;
+      }
+
+      // Dados inválidos
+      if (error.message.includes('obrigatório') || error.message.includes('inválido') || error.message.includes('deve')) {
+        res.status(400).json({
+          error: 'Dados inválidos',
+          message: error.message,
+        });
+        return;
+      }
+    }
+
+    // Erro genérico
+    console.error('Erro ao converter lead:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Ocorreu um erro ao converter o lead',
     });
   }
 }

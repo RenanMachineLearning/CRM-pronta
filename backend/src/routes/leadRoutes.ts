@@ -12,6 +12,7 @@ import {
   createLead,
   updateLead,
   deleteLead,
+  convertLead,
 } from '../controllers/leadController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -53,6 +54,42 @@ router.get(
   '/',
   authorizationMiddleware('Lead', 'list'),
   listLeads
+);
+
+/**
+ * POST /api/leads/:id/convert
+ * 
+ * Converte lead em contato e/ou oportunidade.
+ * 
+ * Requer autenticação e permissão "Lead.convert"
+ * 
+ * Body:
+ * {
+ *   "createContact": true,
+ *   "createOpportunity": true,
+ *   "opportunityData": {
+ *     "name": "Negócio ABC" (opcional),
+ *     "value": 50000.00 (obrigatório se createOpportunity = true),
+ *     "currency": "BRL" (opcional, default: "BRL"),
+ *     "stageId": "uuid-stage" (opcional, usa primeiro estágio do pipeline padrão se não fornecido),
+ *     "closeDate": "2024-12-31T00:00:00Z" (opcional),
+ *     "probability": 60 (opcional, 0-100, usa do estágio se não fornecido)
+ *   }
+ * }
+ * 
+ * Response 200: Resultado da conversão (lead atualizado, contato e oportunidade criados)
+ * Response 400: Dados inválidos
+ * Response 404: Lead não encontrado
+ * Response 409: Lead já convertido
+ * Response 401: Não autenticado
+ * Response 403: Sem permissão
+ * 
+ * IMPORTANTE: Esta rota deve vir ANTES da rota /:id para evitar conflito de roteamento
+ */
+router.post(
+  '/:id/convert',
+  authorizationMiddleware('Lead', 'convert'),
+  convertLead
 );
 
 /**
