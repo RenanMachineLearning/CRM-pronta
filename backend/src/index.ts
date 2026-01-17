@@ -21,6 +21,7 @@ import addressRoutes from './routes/addressRoutes';
 import tagRoutes from './routes/tagRoutes';
 import leadRoutes from './routes/leadRoutes';
 import opportunityRoutes from './routes/opportunityRoutes';
+import pipelineRoutes from './routes/pipelineRoutes';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -90,6 +91,9 @@ app.use('/api/leads', leadRoutes);
 
 // Rotas de oportunidades (protegidas - requerem tenant context + autenticação)
 app.use('/api/opportunities', opportunityRoutes);
+
+// Rotas de pipelines (protegidas - requerem tenant context + autenticação)
+app.use('/api/pipelines', pipelineRoutes);
 
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {

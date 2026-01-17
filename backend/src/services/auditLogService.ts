@@ -31,6 +31,8 @@ export enum AuditEntityEnum {
   Tag = 'Tag',
   Lead = 'Lead',
   Opportunity = 'Opportunity',
+  Pipeline = 'Pipeline',
+  PipelineStage = 'PipelineStage',
 }
 
 /**
