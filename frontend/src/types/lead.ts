@@ -109,3 +109,27 @@ export interface ConvertLeadResponse {
     value: number;
   } | null;
 }
+
+// Dados do formulário de lead (para criação/atualização)
+export interface LeadFormData {
+  firstName: string; // Obrigatório (pelo menos firstName ou lastName)
+  lastName?: string;
+  email?: string; // Formato válido se fornecido
+  phone?: string; // Formato válido (10-15 dígitos) se fornecido
+  company?: string; // String livre (nome da empresa)
+  source?: string; // String livre (origem do lead)
+  status?: LeadStatus; // Default: NEW
+  tagIds?: string[]; // Array de UUIDs válidos
+}
+
+// Erros de validação do formulário
+export interface LeadFormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  source?: string;
+  status?: string;
+  tagIds?: string;
+}
