@@ -13,13 +13,14 @@ import { Select } from './Select';
 import type { Lead, LeadFilters, LeadStatus } from '../types/lead';
 
 export interface LeadListProps {
+  leads?: Lead[]; // Opcional: se fornecido, usar em vez de buscar
   onLeadClick?: (leadId: string) => void;
   onNewLead?: () => void;
   onConvertLead?: (leadId: string) => void;
 }
 
-export function LeadList({ onLeadClick, onNewLead, onConvertLead }: LeadListProps) {
-  // Estado para filtros
+export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead }: LeadListProps) {
+  // Estado para filtros, ordenação e paginação (sempre necessário)
   const [filters, setFilters] = useState<LeadFilters>({});
   
   // Estado para ordenação
@@ -30,9 +31,9 @@ export function LeadList({ onLeadClick, onNewLead, onConvertLead }: LeadListProp
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  // Hook para buscar leads
+  // Se leads fornecido como prop, usar; senão, buscar com hook
   const {
-    leads,
+    leads: leadsFromHook,
     loading,
     error,
     pagination,
@@ -45,6 +46,13 @@ export function LeadList({ onLeadClick, onNewLead, onConvertLead }: LeadListProp
     orderBy,
     order,
   });
+  
+  // Usar leads da prop se fornecido, senão usar do hook
+  const leads = leadsProp || leadsFromHook;
+  
+  // Se leads vem da prop, não mostrar loading/error do hook
+  const showLoading = leadsProp ? false : loading;
+  const showError = leadsProp ? null : error;
 
   // Atualizar paginação quando page, orderBy ou order mudarem
   useEffect(() => {
@@ -140,13 +148,13 @@ export function LeadList({ onLeadClick, onNewLead, onConvertLead }: LeadListProp
   };
 
   // Renderizar loading
-  if (loading && leads.length === 0) {
+  if (showLoading && leads.length === 0) {
     return <Loading message="Carregando leads..." />;
   }
 
   // Renderizar erro
-  if (error && leads.length === 0) {
-    return <ErrorMessage message={error} onRetry={refetch} />;
+  if (showError && leads.length === 0) {
+    return <ErrorMessage message={showError} onRetry={refetch} />;
   }
 
   return (
@@ -261,16 +269,15 @@ export function LeadList({ onLeadClick, onNewLead, onConvertLead }: LeadListProp
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                     {!lead.converted && onConvertLead && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
+                      <button
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // Prevenir trigger do onClick da linha
                           onConvertLead(lead.id);
                         }}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         Converter
-                      </Button>
+                      </button>
                     )}
                     {lead.converted && (
                       <span className="text-xs text-gray-400">-</span>
