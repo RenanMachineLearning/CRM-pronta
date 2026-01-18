@@ -10,6 +10,8 @@ import { OpportunitiesPage } from './pages/OpportunitiesPage';
 import { OpportunityFormPage } from './pages/OpportunityFormPage';
 import { TasksPage } from './pages/TasksPage';
 import { TaskFormPage } from './pages/TaskFormPage';
+import { NotesPage } from './pages/NotesPage';
+import { NoteFormPage } from './pages/NoteFormPage';
 import './index.css';
 
 function App() {
@@ -38,6 +40,10 @@ function App() {
         <Route path="/tasks/new" element={<TaskFormPage />} />
         <Route path="/tasks/:id/edit" element={<TaskFormPage />} />
         <Route path="/tasks/:id" element={<div>Detalhes da Tarefa (a implementar)</div>} />
+        <Route path="/notes" element={<NotesPage />} />
+        <Route path="/notes/new" element={<NoteFormPage />} />
+        <Route path="/notes/:id/edit" element={<NoteFormPage />} />
+        <Route path="/notes/:id" element={<div>Detalhes da Nota (a implementar)</div>} />
       </Routes>
     </BrowserRouter>
   );
