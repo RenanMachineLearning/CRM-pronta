@@ -129,7 +129,7 @@ export class LeadConversionService {
     return {
       id: createdContact.id,
       firstName: createdContact.firstName,
-      lastName: createdContact.lastName,
+      lastName: createdContact.lastName ?? null,
       email: createdContact.emails?.[0]?.email || null,
     };
   }

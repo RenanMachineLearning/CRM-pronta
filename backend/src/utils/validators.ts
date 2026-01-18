@@ -186,7 +186,7 @@ export function normalizeUrl(url: string): string {
  */
 export function validatePositiveNumber(value: number | string): void {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(numValue) || numValue <= 0) {
+  if (isNaN(numValue) || !isFinite(numValue) || numValue <= 0) {
     throw new Error('Valor deve ser um número positivo maior que zero');
   }
 }
@@ -198,7 +198,7 @@ export function validatePositiveNumber(value: number | string): void {
  */
 export function isValidPositiveNumber(value: number | string): boolean {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  return !isNaN(numValue) && numValue > 0;
+  return !isNaN(numValue) && isFinite(numValue) && numValue > 0;
 }
 
 /**
@@ -240,7 +240,7 @@ export function isValidDateNotPast(date: Date | string): boolean {
  * @throws Error se probabilidade está fora do range
  */
 export function validateProbability(probability: number): void {
-  if (isNaN(probability) || probability < 0 || probability > 100) {
+  if (isNaN(probability) || !isFinite(probability) || probability < 0 || probability > 100) {
     throw new Error('Probabilidade deve estar entre 0 e 100');
   }
 }
@@ -251,5 +251,5 @@ export function validateProbability(probability: number): void {
  * @returns true se válido (0-100), false caso contrário
  */
 export function isValidProbability(probability: number): boolean {
-  return !isNaN(probability) && probability >= 0 && probability <= 100;
+  return !isNaN(probability) && isFinite(probability) && probability >= 0 && probability <= 100;
 }
