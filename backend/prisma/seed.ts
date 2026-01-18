@@ -550,17 +550,31 @@ async function createTaskFields(entityId: string, tenantId: string): Promise<voi
     { name: 'description', label: 'Descrição', type: 'text', required: false, unique: false, order: 2 },
     { name: 'dueDate', label: 'Data de Vencimento', type: 'date', required: false, unique: false, order: 3 },
     {
-      name: 'status',
-      label: 'Status',
+      name: 'type',
+      label: 'Tipo',
       type: 'select',
       required: false,
       unique: false,
       order: 4,
       options: [
-        { value: 'pending', label: 'Pendente' },
-        { value: 'in_progress', label: 'Em Progresso' },
-        { value: 'completed', label: 'Concluída' },
-        { value: 'cancelled', label: 'Cancelada' },
+        { value: 'CALL', label: 'Ligação' },
+        { value: 'EMAIL', label: 'Email' },
+        { value: 'MEETING', label: 'Reunião' },
+        { value: 'OTHER', label: 'Outro' },
+      ],
+    },
+    {
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      required: false,
+      unique: false,
+      order: 5,
+      options: [
+        { value: 'PENDING', label: 'Pendente' },
+        { value: 'IN_PROGRESS', label: 'Em Andamento' },
+        { value: 'COMPLETED', label: 'Concluída' },
+        { value: 'CANCELLED', label: 'Cancelada' },
       ],
     },
     {
@@ -569,12 +583,11 @@ async function createTaskFields(entityId: string, tenantId: string): Promise<voi
       type: 'select',
       required: false,
       unique: false,
-      order: 5,
+      order: 6,
       options: [
-        { value: 'low', label: 'Baixa' },
-        { value: 'medium', label: 'Média' },
-        { value: 'high', label: 'Alta' },
-        { value: 'urgent', label: 'Urgente' },
+        { value: 'LOW', label: 'Baixa' },
+        { value: 'MEDIUM', label: 'Média' },
+        { value: 'HIGH', label: 'Alta' },
       ],
     },
   ];
@@ -596,11 +609,9 @@ async function createNoteFields(entityId: string, tenantId: string): Promise<voi
       unique: false,
       order: 2,
       options: [
-        { value: 'general', label: 'Geral' },
-        { value: 'call', label: 'Chamada' },
-        { value: 'meeting', label: 'Reunião' },
-        { value: 'email', label: 'Email' },
-        { value: 'other', label: 'Outro' },
+        { value: 'NOTE', label: 'Nota' },
+        { value: 'COMMENT', label: 'Comentário' },
+        { value: 'ANNOTATION', label: 'Anotação' },
       ],
     },
   ];
@@ -610,6 +621,7 @@ async function createNoteFields(entityId: string, tenantId: string): Promise<voi
 
 /**
  * Helper para criar campos de uma entidade (idempotente)
+ * Atualiza campos existentes se valores mudarem
  */
 async function createFieldsForEntity(
   entityId: string,
@@ -625,7 +637,10 @@ async function createFieldsForEntity(
   }>,
   entityName: string
 ): Promise<void> {
-  const fieldsToCreate = fields.map((field) => {
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const field of fields) {
     const fieldData: any = {
       entityId,
       name: field.name,
@@ -642,27 +657,49 @@ async function createFieldsForEntity(
       fieldData.options = field.options;
     }
 
-    return fieldData;
-  });
-
-  // Criar campos usando createMany com skipDuplicates
-  // Mas primeiro verificar quais já existem para evitar erros
-  for (const fieldData of fieldsToCreate) {
     const existing = await prisma.field.findFirst({
       where: {
         entityId,
-        name: fieldData.name,
+        name: field.name,
       },
     });
 
     if (!existing) {
+      // Criar campo se não existir
       await prisma.field.create({
         data: fieldData,
       });
+      createdCount++;
+    } else {
+      // Verificar se precisa atualizar
+      const existingOptions = existing.options as Array<{ value: string; label: string }> | null;
+      const newOptions = field.type === 'select' && field.options ? field.options : null;
+      
+      const needsUpdate =
+        existing.label !== fieldData.label ||
+        existing.type !== fieldData.type ||
+        existing.required !== fieldData.required ||
+        existing.unique !== fieldData.unique ||
+        existing.order !== fieldData.order ||
+        (field.type === 'select' && 
+         JSON.stringify(existingOptions) !== JSON.stringify(newOptions));
+
+      if (needsUpdate) {
+        await prisma.field.update({
+          where: { id: existing.id },
+          data: fieldData,
+        });
+        updatedCount++;
+        console.log(`   🔄 Campo ${field.name} atualizado`);
+      }
     }
   }
 
-  console.log(`   ✅ Campos de ${entityName} criados/verificados`);
+  if (createdCount > 0 || updatedCount > 0) {
+    console.log(`   ✅ Campos de ${entityName}: ${createdCount} criados, ${updatedCount} atualizados`);
+  } else {
+    console.log(`   ✅ Campos de ${entityName} já estão atualizados`);
+  }
 }
 
 /**
