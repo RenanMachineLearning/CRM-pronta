@@ -8,6 +8,7 @@ import { LeadsPage } from './pages/LeadsPage';
 import { LeadFormPage } from './pages/LeadFormPage';
 import { OpportunitiesPage } from './pages/OpportunitiesPage';
 import { OpportunityFormPage } from './pages/OpportunityFormPage';
+import { TasksPage } from './pages/TasksPage';
 import './index.css';
 
 function App() {
@@ -32,6 +33,9 @@ function App() {
         <Route path="/opportunities/new" element={<OpportunityFormPage />} />
         <Route path="/opportunities/:id" element={<div>Detalhes da Oportunidade (a implementar)</div>} />
         <Route path="/opportunities/:id/edit" element={<OpportunityFormPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/tasks/new" element={<div>Formulário de Tarefa (a implementar)</div>} />
+        <Route path="/tasks/:id" element={<div>Detalhes da Tarefa (a implementar)</div>} />
       </Routes>
     </BrowserRouter>
   );
