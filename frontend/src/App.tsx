@@ -4,6 +4,10 @@ import { ContactsPage } from './pages/ContactsPage';
 import { ContactFormPage } from './pages/ContactFormPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyFormPage } from './pages/CompanyFormPage';
+import { LeadsPage } from './pages/LeadsPage';
+import { LeadFormPage } from './pages/LeadFormPage';
+import { OpportunitiesPage } from './pages/OpportunitiesPage';
+import { OpportunityFormPage } from './pages/OpportunityFormPage';
 import './index.css';
 
 function App() {
@@ -19,6 +23,15 @@ function App() {
         <Route path="/companies/new" element={<CompanyFormPage />} />
         <Route path="/companies/:id/edit" element={<CompanyFormPage />} />
         <Route path="/companies/:id" element={<div>Detalhes da Empresa (a implementar)</div>} />
+        <Route path="/leads" element={<LeadsPage />} />
+        <Route path="/leads/new" element={<LeadFormPage />} />
+        <Route path="/leads/:id" element={<div>Detalhes do Lead (a implementar)</div>} />
+        <Route path="/leads/:id/edit" element={<LeadFormPage />} />
+        <Route path="/leads/:id/convert" element={<div>Conversão de Lead (a implementar)</div>} />
+        <Route path="/opportunities" element={<OpportunitiesPage />} />
+        <Route path="/opportunities/new" element={<OpportunityFormPage />} />
+        <Route path="/opportunities/:id" element={<div>Detalhes da Oportunidade (a implementar)</div>} />
+        <Route path="/opportunities/:id/edit" element={<OpportunityFormPage />} />
       </Routes>
     </BrowserRouter>
   );

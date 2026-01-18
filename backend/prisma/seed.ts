@@ -101,6 +101,31 @@ async function createPermissions(tenantId: string): Promise<Permission[]> {
     }
   }
 
+  // Criar permissões especiais (ações além das padrão)
+  // Lead.convert - Converter lead em contato e/ou oportunidade
+  const leadConvertExisting = await prisma.permission.findFirst({
+    where: {
+      tenantId,
+      entity: 'Lead',
+      action: 'convert',
+      field: null,
+    },
+  });
+
+  if (!leadConvertExisting) {
+    const leadConvertPermission = await prisma.permission.create({
+      data: {
+        tenantId,
+        entity: 'Lead',
+        action: 'convert',
+        field: null,
+      },
+    });
+    permissions.push(leadConvertPermission);
+  } else {
+    permissions.push(leadConvertExisting);
+  }
+
   console.log(`   ✅ ${permissions.length} permissões criadas/encontradas`);
   return permissions;
 }
@@ -233,6 +258,10 @@ async function associatePermissionsToRoles(
   const oppValueUpdate = findPermission('Opportunity', 'update', 'value');
   if (oppValueRead) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: oppValueRead.id });
   if (oppValueUpdate) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: oppValueUpdate.id });
+
+  // Lead.convert: permissão especial para converter leads
+  const leadConvert = findPermission('Lead', 'convert');
+  if (leadConvert) vendedorPermissions.push({ roleId: roles.vendedor.id, permissionId: leadConvert.id });
 
   // User e Role: apenas read e list (visualização)
   for (const entity of ['User', 'Role']) {
@@ -636,6 +665,176 @@ async function createFieldsForEntity(
   console.log(`   ✅ Campos de ${entityName} criados/verificados`);
 }
 
+/**
+ * Cria pipeline padrão "Pipeline de Vendas" com estágios padrão
+ * 
+ * Etapa 6 (Leads/Oportunidades): Cria pipeline padrão com 4 estágios:
+ * - Qualificação (order: 1, probability: 10%)
+ * - Proposta (order: 2, probability: 30%)
+ * - Negociação (order: 3, probability: 60%)
+ * - Fechamento (order: 4, probability: 90%)
+ * 
+ * A função é idempotente - verifica se pipeline padrão já existe antes de criar.
+ * 
+ * @param tenantId - ID do tenant
+ */
+async function createDefaultPipeline(tenantId: string): Promise<void> {
+  console.log('📊 Criando pipeline padrão...');
+
+  // Verificar se já existe pipeline padrão para este tenant
+  const existingPipeline = await prisma.pipeline.findFirst({
+    where: {
+      tenantId,
+      isDefault: true,
+    },
+    include: {
+      stages: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  });
+
+  // Configuração dos estágios padrão (centralizada para reutilização)
+  const defaultStagesConfig = [
+    { name: 'Qualificação', order: 1, probability: 10, color: '#3B82F6' }, // Azul
+    { name: 'Proposta', order: 2, probability: 30, color: '#10B981' }, // Verde
+    { name: 'Negociação', order: 3, probability: 60, color: '#F59E0B' }, // Amarelo/Laranja
+    { name: 'Fechamento', order: 4, probability: 90, color: '#8B5CF6' }, // Roxo
+  ];
+
+  if (existingPipeline) {
+    console.log(`   ✅ Pipeline padrão já existe: ${existingPipeline.name}`);
+    console.log(`   ✅ Estágios existentes: ${existingPipeline.stages.length}`);
+    
+    // Verificar se todos os estágios padrão existem
+    const requiredStageNames = defaultStagesConfig.map(s => s.name);
+    const existingStageNames = existingPipeline.stages.map(s => s.name);
+    const missingStages = requiredStageNames.filter(name => !existingStageNames.includes(name));
+    
+    if (missingStages.length > 0) {
+      console.log(`   ⚠️  Estágios faltando: ${missingStages.join(', ')}`);
+      console.log(`   ℹ️  Criando estágios faltantes...`);
+      
+      // Criar apenas estágios faltantes
+      for (const config of defaultStagesConfig) {
+        if (missingStages.includes(config.name)) {
+          // Verificar se estágio já existe (por nome) para evitar duplicatas
+          const existingStage = await prisma.pipelineStage.findFirst({
+            where: {
+              pipelineId: existingPipeline.id,
+              tenantId,
+              name: config.name,
+            },
+          });
+
+          if (!existingStage) {
+            await prisma.pipelineStage.create({
+              data: {
+                pipelineId: existingPipeline.id,
+                tenantId,
+                name: config.name,
+                order: config.order,
+                probability: config.probability,
+                color: config.color,
+              },
+            });
+            console.log(`   ✅ Estágio "${config.name}" criado (order: ${config.order}, probability: ${config.probability}%)`);
+          } else {
+            console.log(`   ℹ️  Estágio "${config.name}" já existe`);
+          }
+        }
+      }
+    } else {
+      console.log(`   ✅ Todos os estágios padrão já existem`);
+    }
+    
+    return;
+  }
+
+  // Verificar se há múltiplos pipelines padrão (caso de inconsistência)
+  const allDefaultPipelines = await prisma.pipeline.findMany({
+    where: {
+      tenantId,
+      isDefault: true,
+    },
+  });
+
+  if (allDefaultPipelines.length > 0) {
+    console.log(`   ⚠️  Encontrados ${allDefaultPipelines.length} pipelines marcados como padrão`);
+    console.log(`   ℹ️  Usando o primeiro pipeline encontrado`);
+    // Usar o primeiro pipeline encontrado
+    const firstPipeline = await prisma.pipeline.findFirst({
+      where: {
+        tenantId,
+        isDefault: true,
+      },
+      include: {
+        stages: {
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+    
+    if (firstPipeline) {
+      // Verificar e criar estágios faltantes
+      const requiredStageNames = defaultStagesConfig.map(s => s.name);
+      const existingStageNames = firstPipeline.stages.map(s => s.name);
+      const missingStages = requiredStageNames.filter(name => !existingStageNames.includes(name));
+      
+      if (missingStages.length > 0) {
+        for (const config of defaultStagesConfig) {
+          if (missingStages.includes(config.name)) {
+            await prisma.pipelineStage.create({
+              data: {
+                pipelineId: firstPipeline.id,
+                tenantId,
+                name: config.name,
+                order: config.order,
+                probability: config.probability,
+                color: config.color,
+              },
+            });
+            console.log(`   ✅ Estágio "${config.name}" criado`);
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  // Criar pipeline padrão
+  const pipeline = await prisma.pipeline.create({
+    data: {
+      tenantId,
+      name: 'Pipeline de Vendas',
+      isDefault: true,
+    },
+  });
+
+  console.log(`   ✅ Pipeline "${pipeline.name}" criado: ${pipeline.id}`);
+
+  // Criar estágios padrão
+  for (const stageConfig of defaultStagesConfig) {
+    await prisma.pipelineStage.create({
+      data: {
+        pipelineId: pipeline.id,
+        tenantId,
+        name: stageConfig.name,
+        order: stageConfig.order,
+        probability: stageConfig.probability,
+        color: stageConfig.color,
+      },
+    });
+    console.log(`   ✅ Estágio "${stageConfig.name}" criado (order: ${stageConfig.order}, probability: ${stageConfig.probability}%)`);
+  }
+
+  console.log('✅ Pipeline padrão e estágios criados com sucesso!\n');
+}
+
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
 
@@ -646,6 +845,7 @@ async function main() {
   // 3. Criar roles (depende do tenant)
   // 4. Associar permissões às roles (depende de permissões e roles)
   // 5. Criar entidades core e campos (depende do tenant) - Etapa 4
+  // 6. Criar pipeline padrão e estágios (depende do tenant) - Etapa 6
   // ============================================================================
 
   // 1. Criar ou obter tenant demo
@@ -699,6 +899,9 @@ async function main() {
   // 5. Criar entidades core e campos (Etapa 4)
   await createCoreEntities(demoTenant.id);
 
+  // 6. Criar pipeline padrão e estágios (Etapa 6)
+  await createDefaultPipeline(demoTenant.id);
+
   console.log('✨ Seed concluído com sucesso!');
   console.log(`\n📊 Resumo:`);
   console.log(`   - Permissões criadas: ${permissions.length}`);
@@ -716,6 +919,29 @@ async function main() {
     where: { roleId: roles.visualizador.id },
   });
   console.log(`   - Visualizador: ${visualizadorCount} permissões (apenas read/list)`);
+  
+  // Verificar pipeline padrão criado
+  const defaultPipeline = await prisma.pipeline.findFirst({
+    where: {
+      tenantId: demoTenant.id,
+      isDefault: true,
+    },
+    include: {
+      stages: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  });
+  
+  if (defaultPipeline) {
+    console.log(`   - Pipeline padrão: "${defaultPipeline.name}" com ${defaultPipeline.stages.length} estágios`);
+    const stagesList = defaultPipeline.stages.map(s => `${s.name} (${s.probability}%)`).join(', ');
+    console.log(`     Estágios: ${stagesList}`);
+  } else {
+    console.log(`   ⚠️  Pipeline padrão não encontrado`);
+  }
 }
 
 main()

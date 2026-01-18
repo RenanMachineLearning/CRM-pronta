@@ -102,6 +102,26 @@ enum AddressType {
   OTHER
 }
 
+// ============================================================================
+// ETAPA 6 - ENUMS PARA LEADS E OPORTUNIDADES
+// ============================================================================
+
+// Enum para status de lead
+enum LeadStatus {
+  NEW // Novo
+  QUALIFIED // Qualificado
+  CONVERTED // Convertido
+  LOST // Perdido
+}
+
+// Enum para status de oportunidade
+enum OpportunityStatus {
+  OPEN // Aberto
+  WON // Ganho
+  LOST // Perdido
+  ARCHIVED // Arquivado
+}
+
 // Modelo de Tenant (base do multi-tenant)
 // Implementado na Etapa 1 (Multi-tenant)
 model Tenant {
@@ -130,11 +150,10 @@ model Tenant {
   contactPhones       ContactPhone[] // Etapa 5 (Contatos/Empresas)
   addresses           Address[] // Etapa 5 (Contatos/Empresas)
   tags                Tag[] // Etapa 5 (Contatos/Empresas)
-  // Relacionamentos futuros seguirão a convenção multi-tenant documentada acima
-  // Cada relacionamento terá `tenantId` obrigatório e índice composto (tenantId, id)
-  // Exemplos de relacionamentos futuros (conforme etapas do roadmap):
-  // leads       Lead[]       // Etapa 6 (Leads/Oportunidades)
-  // opportunities Opportunity[] // Etapa 6 (Leads/Oportunidades)
+  leads               Lead[] // Etapa 6 (Leads/Oportunidades)
+  opportunities       Opportunity[] // Etapa 6 (Leads/Oportunidades)
+  pipelines           Pipeline[] // Etapa 6 (Leads/Oportunidades)
+  pipelineStages      PipelineStage[] // Etapa 6 (Leads/Oportunidades)
 
   @@map("tenants")
 }
@@ -275,12 +294,12 @@ model UserRole {
 // Registra todas as alterações (create, update, delete) em entidades do sistema
 model AuditLog {
   id         String   @id @default(uuid())
-  entityType String   // Tipo de entidade (ex: "User", "Role")
-  entityId   String   // ID do registro alterado
-  action     String   // Ação: "create", "update", "delete"
-  userId     String   // Quem fez a alteração
-  tenantId   String   // Foreign key para Tenant (isolamento multi-tenant)
-  changes    Json?    // JSON com campos alterados: { field: { old, new } }
+  entityType String // Tipo de entidade (ex: "User", "Role")
+  entityId   String // ID do registro alterado
+  action     String // Ação: "create", "update", "delete"
+  userId     String // Quem fez a alteração
+  tenantId   String // Foreign key para Tenant (isolamento multi-tenant)
+  changes    Json? // JSON com campos alterados: { field: { old, new } }
   timestamp  DateTime @default(now()) @map("timestamp")
 
   // Relacionamentos
@@ -309,12 +328,12 @@ model Entity {
   name      String // Nome técnico da entidade (ex: "Contact", "Company", "Lead")
   label     String // Nome amigável (ex: "Contato", "Empresa", "Lead")
   tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
-  isSystem Boolean  @default(false) // true = entidade do sistema, false = customizada
+  isSystem  Boolean  @default(false) // true = entidade do sistema, false = customizada
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fields              Field[] // Campos da entidade
   sourceRelationships Relationship[] @relation("SourceEntity") // Relacionamentos onde esta entidade é origem
   targetRelationships Relationship[] @relation("TargetEntity") // Relacionamentos onde esta entidade é destino
@@ -330,20 +349,20 @@ model Entity {
 // Modelo de Field (definição de campos)
 // Define os campos de uma entidade (firstName, email, etc.)
 model Field {
-  id          String   @id @default(uuid())
-  entityId    String // Foreign key para Entity
-  name        String // Nome técnico do campo (ex: "firstName", "email")
-  label       String // Nome amigável (ex: "Nome", "Email")
-  type        String // Tipo do campo: "text", "number", "date", "boolean", "lookup", "select"
-  required    Boolean  @default(false) // Campo obrigatório
-  unique      Boolean  @default(false) // Campo único
-  defaultValue Json?   // Valor padrão (JSON para flexibilidade)
-  options     Json?    // Opções para campos select/lookup (JSON)
-  tenantId    String // Foreign key para Tenant (isolamento multi-tenant)
-  order       Int      @default(0) // Ordem de exibição
-  isDeleted   Boolean  @default(false) // Soft delete - não apaga dados históricos
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  entityId     String // Foreign key para Entity
+  name         String // Nome técnico do campo (ex: "firstName", "email")
+  label        String // Nome amigável (ex: "Nome", "Email")
+  type         String // Tipo do campo: "text", "number", "date", "boolean", "lookup", "select"
+  required     Boolean  @default(false) // Campo obrigatório
+  unique       Boolean  @default(false) // Campo único
+  defaultValue Json? // Valor padrão (JSON para flexibilidade)
+  options      Json? // Opções para campos select/lookup (JSON)
+  tenantId     String // Foreign key para Tenant (isolamento multi-tenant)
+  order        Int      @default(0) // Ordem de exibição
+  isDeleted    Boolean  @default(false) // Soft delete - não apaga dados históricos
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
   entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
@@ -372,9 +391,9 @@ model Relationship {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  sourceEntity Entity @relation("SourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
-  targetEntity Entity @relation("TargetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
-  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceEntity Entity               @relation("SourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntity Entity               @relation("TargetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   relationData EntityRelationData[] // Links entre registros via este relacionamento
 
   // Índice composto obrigatório para performance (convenção multi-tenant)
@@ -386,13 +405,13 @@ model Relationship {
 // Armazena os links entre registros de entidades relacionadas
 // Usado para relacionamentos definidos via metadados (não FKs explícitas)
 model EntityRelationData {
-  id              String   @id @default(uuid())
-  tenantId        String // Foreign key para Tenant (isolamento multi-tenant)
-  relationshipId  String // Foreign key para Relationship
-  sourceRecordId  String // ID do registro origem (UUID/string)
-  targetRecordId  String // ID do registro destino (UUID/string)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  tenantId       String // Foreign key para Tenant (isolamento multi-tenant)
+  relationshipId String // Foreign key para Relationship
+  sourceRecordId String // ID do registro origem (UUID/string)
+  targetRecordId String // ID do registro destino (UUID/string)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
   relationship Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
@@ -455,10 +474,11 @@ model Company {
   updatedAt DateTime      @updatedAt @map("updated_at")
 
   // Relacionamentos
-  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  contacts  Contact[] // 1:N - Uma empresa tem muitos contatos
-  addresses Address[] // 1:N - Uma empresa tem múltiplos endereços
-  tags      CompanyTag[] // N:N - Uma empresa pode ter múltiplas tags
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts      Contact[] // 1:N - Uma empresa tem muitos contatos
+  addresses     Address[] // 1:N - Uma empresa tem múltiplos endereços
+  tags          CompanyTag[] // N:N - Uma empresa pode ter múltiplas tags
+  opportunities Opportunity[] // 1:N - Oportunidades vinculadas à empresa
 
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
@@ -486,12 +506,14 @@ model Contact {
   updatedAt DateTime      @updatedAt @map("updated_at")
 
   // Relacionamentos
-  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company   Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  emails    ContactEmail[] // 1:N - Um contato tem múltiplos emails
-  phones    ContactPhone[] // 1:N - Um contato tem múltiplos telefones
-  addresses Address[] // 1:N - Um contato tem múltiplos endereços
-  tags      ContactTag[] // N:N - Um contato pode ter múltiplas tags
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  emails        ContactEmail[] // 1:N - Um contato tem múltiplos emails
+  phones        ContactPhone[] // 1:N - Um contato tem múltiplos telefones
+  addresses     Address[] // 1:N - Um contato tem múltiplos endereços
+  tags          ContactTag[] // N:N - Um contato pode ter múltiplas tags
+  leads         Lead[]         @relation("LeadContact") // 1:N - Leads convertidos em contato
+  opportunities Opportunity[] // 1:N - Oportunidades vinculadas ao contato
 
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
@@ -586,9 +608,11 @@ model Tag {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  contacts  ContactTag[] // N:N com Contact
-  companies CompanyTag[] // N:N com Company
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts      ContactTag[] // N:N com Contact
+  companies     CompanyTag[] // N:N com Company
+  leads         LeadTag[] // N:N com Lead
+  opportunities OpportunityTag[] // N:N com Opportunity
 
   // Nome único por tenant
   @@unique([tenantId, name])
@@ -625,6 +649,164 @@ model CompanyTag {
   // Primary key composta
   @@id([companyId, tagId])
   @@map("company_tags")
+}
+
+// ============================================================================
+// ETAPA 6 - LEADS E OPORTUNIDADES
+// ============================================================================
+// Modelos para gestão de leads, oportunidades e pipeline de vendas
+// Implementado na Etapa 6 (Leads/Oportunidades)
+
+// Modelo de Lead (leads/prospectos)
+// Um lead pode ser convertido em Contato e/ou Oportunidade
+// Suporta Tags para categorização (seguindo padrão de Contact/Company)
+model Lead {
+  id                       String     @id @default(uuid())
+  tenantId                 String // Foreign key para Tenant (isolamento multi-tenant)
+  firstName                String // Primeiro nome
+  lastName                 String? // Sobrenome (opcional)
+  email                    String? // Email (opcional)
+  phone                    String? // Telefone (opcional)
+  company                  String? // Nome da empresa (string livre, opcional)
+  source                   String? // Origem do lead (ex: "website", "referência")
+  status                   LeadStatus @default(NEW) // Status do lead
+  converted                Boolean    @default(false) // Se foi convertido
+  convertedAt              DateTime? // Data/hora da conversão
+  convertedToContactId     String? // FK opcional para Contact (se convertido em contato)
+  convertedToOpportunityId String?    @unique // FK opcional para Opportunity (se convertido em oportunidade) - único para relação 1:1
+  deletedAt                DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt                DateTime   @default(now()) @map("created_at")
+  updatedAt                DateTime   @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant                 Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  convertedToContact     Contact?      @relation("LeadContact", fields: [convertedToContactId], references: [id], onDelete: SetNull)
+  convertedToOpportunity Opportunity?  @relation("LeadConvertedToOpportunity", fields: [convertedToOpportunityId], references: [id], onDelete: SetNull)
+  opportunitiesFromLead  Opportunity[] @relation("OpportunityFromLead") // N:1 - Oportunidades originadas deste lead
+  tags                   LeadTag[] // N:N - Um lead pode ter múltiplas tags
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por status (conforme checklist)
+  @@index([tenantId, status])
+  @@map("leads")
+}
+
+// Modelo de Pipeline (pipeline configurável)
+// Cada tenant pode ter múltiplos pipelines, mas um é marcado como padrão
+model Pipeline {
+  id        String   @id @default(uuid())
+  tenantId  String // Foreign key para Tenant (isolamento multi-tenant)
+  name      String // Nome do pipeline (ex: "Pipeline de Vendas")
+  isDefault Boolean  @default(false) // Se é o pipeline padrão do tenant
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages        PipelineStage[] // 1:N - Um pipeline tem múltiplos estágios
+  opportunities Opportunity[] // 1:N - Oportunidades podem usar estágios deste pipeline
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  @@map("pipelines")
+}
+
+// Modelo de PipelineStage (estágios do pipeline)
+// Cada estágio pertence a um pipeline e tem ordem definida
+model PipelineStage {
+  id          String   @id @default(uuid())
+  pipelineId  String // Foreign key para Pipeline
+  tenantId    String // Foreign key para Tenant (isolamento multi-tenant)
+  name        String // Nome do estágio (ex: "Qualificação", "Proposta", "Negociação")
+  order       Int // Ordem no pipeline (1, 2, 3, ...)
+  probability Int?     @default(0) // Probabilidade padrão do estágio (0-100)
+  color       String? // Cor para visualização (hex, ex: "#3B82F6")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[] // 1:N - Oportunidades neste estágio
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para ordenação de estágios (conforme checklist)
+  @@index([pipelineId, order])
+  @@map("pipeline_stages")
+}
+
+// Modelo de Opportunity (oportunidade/negócio)
+// Representa uma oportunidade de negócio no pipeline de vendas
+// Suporta Tags para categorização (seguindo padrão de Contact/Company)
+model Opportunity {
+  id              String            @id @default(uuid())
+  tenantId        String // Foreign key para Tenant (isolamento multi-tenant)
+  name            String // Nome do negócio (obrigatório)
+  value           Decimal           @db.Decimal(15, 2) // Valor do negócio (decimal para precisão)
+  currency        String            @default("BRL") // Moeda (ex: "BRL", "USD")
+  stageId         String // FK para PipelineStage (estágio atual)
+  status          OpportunityStatus @default(OPEN) // Status da oportunidade
+  closeDate       DateTime? // Data de fechamento esperada
+  actualCloseDate DateTime? // Data de fechamento real (se ganho/perdido)
+  probability     Int?              @default(0) // Probabilidade de fechamento (0-100)
+  contactId       String? // FK opcional para Contact
+  companyId       String? // FK opcional para Company
+  leadId          String? // FK opcional para Lead (origem, se convertido de lead)
+  deletedAt       DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stage             PipelineStage    @relation(fields: [stageId], references: [id], onDelete: Restrict) // Restrict para evitar deletar estágio em uso
+  contact           Contact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company           Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  lead              Lead?            @relation("OpportunityFromLead", fields: [leadId], references: [id], onDelete: SetNull)
+  convertedFromLead Lead?            @relation("LeadConvertedToOpportunity")
+  tags              OpportunityTag[] // N:N - Uma oportunidade pode ter múltiplas tags
+  pipeline          Pipeline?        @relation(fields: [pipelineId], references: [id])
+  pipelineId        String?
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por estágio e status (conforme checklist)
+  @@index([tenantId, stageId, status])
+  // Índices adicionais para performance em filtros
+  @@index([tenantId, contactId])
+  @@index([tenantId, companyId])
+  @@map("opportunities")
+}
+
+// Modelo de LeadTag (relação N:N entre Lead e Tag)
+// Permite associar múltiplas tags a um lead
+model LeadTag {
+  leadId String
+  tagId  String
+
+  // Relacionamentos
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // Primary key composta
+  @@id([leadId, tagId])
+  @@map("lead_tags")
+}
+
+// Modelo de OpportunityTag (relação N:N entre Opportunity e Tag)
+// Permite associar múltiplas tags a uma oportunidade
+model OpportunityTag {
+  opportunityId String
+  tagId         String
+
+  // Relacionamentos
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // Primary key composta
+  @@id([opportunityId, tagId])
+  @@map("opportunity_tags")
 }
 
 // ============================================================================
