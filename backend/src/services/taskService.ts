@@ -16,7 +16,7 @@
 import { PrismaClient, TaskType, TaskStatus, TaskPriority } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
-import { validateDateNotFuture } from '../utils/validators';
+import { isValidDateNotPast } from '../utils/validators';
 
 const prisma = new PrismaClient();
 
@@ -621,13 +621,13 @@ export class TaskService {
       throw new Error(`Prioridade inválida. Valores permitidos: ${Object.values(TaskPriority).join(', ')}`);
     }
 
-    // Validar dueDate (não pode ser passada)
+    // Validar dueDate (não pode ser passada, mas pode ser futura)
     if (data.dueDate) {
       const dueDate = normalizeDate(data.dueDate);
       if (!dueDate) {
         throw new Error('Data de vencimento inválida');
       }
-      if (!validateDateNotFuture(dueDate)) {
+      if (!isValidDateNotPast(dueDate)) {
         throw new Error('Data de vencimento não pode ser passada');
       }
     }
@@ -817,13 +817,13 @@ export class TaskService {
       throw new Error(`Prioridade inválida. Valores permitidos: ${Object.values(TaskPriority).join(', ')}`);
     }
 
-    // Validar dueDate se fornecida (não pode ser passada)
+    // Validar dueDate se fornecida (não pode ser passada, mas pode ser futura)
     if (data.dueDate !== undefined && data.dueDate !== null) {
       const dueDate = normalizeDate(data.dueDate);
       if (!dueDate) {
         throw new Error('Data de vencimento inválida');
       }
-      if (!validateDateNotFuture(dueDate)) {
+      if (!isValidDateNotPast(dueDate)) {
         throw new Error('Data de vencimento não pode ser passada');
       }
     }
