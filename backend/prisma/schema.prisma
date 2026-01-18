@@ -122,6 +122,40 @@ enum OpportunityStatus {
   ARCHIVED // Arquivado
 }
 
+// ============================================================================
+// ETAPA 7 - ENUMS PARA TAREFAS E NOTAS
+// ============================================================================
+
+// Enum para tipo de tarefa
+enum TaskType {
+  CALL    // Ligação
+  EMAIL   // Email
+  MEETING // Reunião
+  OTHER   // Outro
+}
+
+// Enum para status de tarefa
+enum TaskStatus {
+  PENDING     // Pendente
+  IN_PROGRESS // Em Andamento
+  COMPLETED   // Concluída
+  CANCELLED   // Cancelada
+}
+
+// Enum para prioridade de tarefa
+enum TaskPriority {
+  LOW    // Baixa
+  MEDIUM // Média
+  HIGH   // Alta
+}
+
+// Enum para tipo de nota
+enum NoteType {
+  NOTE       // Nota
+  COMMENT    // Comentário
+  ANNOTATION // Anotação
+}
+
 // Modelo de Tenant (base do multi-tenant)
 // Implementado na Etapa 1 (Multi-tenant)
 model Tenant {
@@ -154,6 +188,8 @@ model Tenant {
   opportunities       Opportunity[] // Etapa 6 (Leads/Oportunidades)
   pipelines           Pipeline[] // Etapa 6 (Leads/Oportunidades)
   pipelineStages      PipelineStage[] // Etapa 6 (Leads/Oportunidades)
+  tasks               Task[] // Etapa 7 (Tarefas/Notas)
+  notes               Note[] // Etapa 7 (Tarefas/Notas)
 
   @@map("tenants")
 }
@@ -175,6 +211,9 @@ model User {
   passwordResetTokens PasswordResetToken[] // Etapa 2 (Recuperação de Senha)
   userRoles           UserRole[] // Etapa 3 (ACL)
   auditLogs           AuditLog[] // Etapa 3 (ACL - Auditoria)
+  tasksCreated        Task[] @relation("TaskCreatedBy") // Etapa 7 (Tarefas criadas pelo usuário)
+  tasksAssigned       Task[] @relation("TaskAssignedTo") // Etapa 7 (Tarefas atribuídas ao usuário)
+  notesCreated        Note[] // Etapa 7 (Notas criadas pelo usuário)
 
   // Índice único composto: email único por tenant
   @@unique([tenantId, email])
@@ -807,6 +846,91 @@ model OpportunityTag {
   // Primary key composta
   @@id([opportunityId, tagId])
   @@map("opportunity_tags")
+}
+
+// ============================================================================
+// ETAPA 7 - TAREFAS E NOTAS
+// ============================================================================
+// Modelos para gestão de tarefas, notas e histórico de atividades
+// Implementado na Etapa 7 (Tarefas/Notas)
+
+// Modelo de Task (tarefa/atividade)
+// Representa uma tarefa vinculada a um registro (Contact, Company, Lead, Opportunity)
+// Suporta relacionamento polimórfico via relatedEntityType/Id
+// 
+// Regras de negócio:
+// - title é obrigatório (validado na camada de aplicação)
+// - createdById é obrigatório (capturado do token de autenticação)
+// - assignedToId é opcional (pode ser atribuída depois)
+// - completedAt só pode ser preenchido quando status = COMPLETED
+// - dueDate não pode ser passada (validado na camada de aplicação)
+// - relatedEntityType/Id devem existir e pertencer ao tenant (validado na camada)
+model Task {
+  id              String       @id @default(uuid())
+  tenantId        String // Foreign key para Tenant (isolamento multi-tenant)
+  title           String // Título da tarefa (obrigatório)
+  description     String?      @db.Text // Descrição (opcional, texto)
+  type            TaskType     @default(OTHER) // Tipo da tarefa
+  status          TaskStatus   @default(PENDING) // Status da tarefa
+  dueDate         DateTime? // Data de vencimento (opcional)
+  completedAt     DateTime? // Timestamp de conclusão (opcional, preenchido quando status = COMPLETED)
+  priority        TaskPriority @default(MEDIUM) // Prioridade da tarefa
+  assignedToId    String? // FK opcional para User (usuário atribuído)
+  createdById     String // FK obrigatória para User (criador)
+  relatedEntityType String // Tipo de entidade relacionada (Contact, Company, Lead, Opportunity)
+  relatedEntityId   String // ID do registro relacionado (UUID)
+  deletedAt       DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy     User    @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict) // Restrict para preservar histórico
+  assignedTo    User?   @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull) // SetNull se usuário for deletado
+  // Nota: Relacionamento com Note é polimórfico via relatedEntityType/Id (não há FK direta)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por entidade relacionada (conforme checklist)
+  // Otimiza queries: SELECT * FROM tasks WHERE tenantId = ? AND relatedEntityType = ? AND relatedEntityId = ?
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  // Índice para busca por usuário atribuído e status (conforme checklist)
+  // Otimiza queries: SELECT * FROM tasks WHERE tenantId = ? AND assignedToId = ? AND status = ?
+  @@index([tenantId, assignedToId, status])
+  @@map("tasks")
+}
+
+// Modelo de Note (nota/anotação)
+// Representa uma nota vinculada a um registro (Contact, Company, Lead, Opportunity, Task)
+// Suporta relacionamento polimórfico via relatedEntityType/Id
+//
+// Regras de negócio:
+// - content é obrigatório e não pode ser vazio (validado na camada de aplicação)
+// - content tem limite de 10.000 caracteres (validado na camada de aplicação)
+// - createdById é obrigatório (capturado do token de autenticação)
+// - relatedEntityType/Id devem existir e pertencer ao tenant (validado na camada)
+model Note {
+  id              String   @id @default(uuid())
+  tenantId        String // Foreign key para Tenant (isolamento multi-tenant)
+  content         String   @db.Text // Conteúdo da nota (obrigatório, texto ou markdown, máximo 10.000 caracteres)
+  type            NoteType @default(NOTE) // Tipo da nota
+  relatedEntityType String // Tipo de entidade relacionada (Contact, Company, Lead, Opportunity, Task)
+  relatedEntityId   String // ID do registro relacionado (UUID)
+  createdById     String // FK obrigatória para User (criador)
+  deletedAt       DateTime? // Soft delete - null = ativo, preenchido = deletado
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Restrict) // Restrict para preservar histórico
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por entidade relacionada (conforme checklist)
+  // Otimiza queries: SELECT * FROM notes WHERE tenantId = ? AND relatedEntityType = ? AND relatedEntityId = ?
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  @@map("notes")
 }
 
 // ============================================================================
