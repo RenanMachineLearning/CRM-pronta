@@ -624,12 +624,14 @@ if (!validation.allowed) {
 ### 13. Documentação
 
 #### Documentação Técnica
-- [ ] Documentar endpoints de tarefas e notas
-- [ ] Documentar sistema de timeline
-- [ ] Documentar tipos e status
-- [ ] **Documentar integração com auditoria** (como logs são criados)
-- [ ] **Documentar permissões por campo** (como funcionam para Task e Note)
-- [ ] **Documentar validações específicas** (enums, datas, relacionamentos, limites)
+- [x] Documentar endpoints de tarefas e notas
+- [x] Documentar sistema de timeline
+- [x] Documentar tipos e status
+- [x] **Documentar integração com auditoria** (como logs são criados)
+- [x] **Documentar permissões por campo** (como funcionam para Task e Note)
+- [x] **Documentar validações específicas** (enums, datas, relacionamentos, limites)
+
+**Arquivo:** `docs/API-Tarefas-Notas.md`
 
 ---
 
