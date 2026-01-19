@@ -169,3 +169,57 @@ export async function convertLead(
     body: data,
   });
 }
+
+/**
+ * Interface para lookup de leads
+ */
+export interface LeadLookup {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+}
+
+/**
+ * Lista leads para lookup (busca por nome)
+ * 
+ * Nota: O backend não suporta filtro por nome, então buscamos leads
+ * e filtramos no frontend. Limitamos a 100 resultados para performance.
+ * 
+ * @param query - Query de busca (mínimo 2 caracteres)
+ * @returns Promise com lista de leads (id, firstName, lastName) filtrados por nome
+ */
+export async function listLeadsForLookup(query: string): Promise<LeadLookup[]> {
+  if (query.length < 2) {
+    return [];
+  }
+  
+  const params = new URLSearchParams();
+  params.append('limit', '100');
+  params.append('orderBy', 'firstName');
+  params.append('order', 'asc');
+  
+  const response = await apiRequest<LeadListResponse>(`/api/leads?${params.toString()}`);
+  
+  // Filtrar no frontend por firstName ou lastName (case-insensitive, parcial)
+  const queryLower = query.toLowerCase();
+  const filtered = response.data.filter((lead) => {
+    const firstName = (lead.firstName || '').toLowerCase();
+    const lastName = (lead.lastName || '').toLowerCase();
+    const fullName = `${firstName} ${lastName}`.trim();
+    return (
+      firstName.includes(queryLower) ||
+      lastName.includes(queryLower) ||
+      fullName.includes(queryLower)
+    );
+  });
+  
+  // Limitar a 20 resultados após filtro
+  const limited = filtered.slice(0, 20);
+  
+  // Converter para LeadLookup format
+  return limited.map((lead) => ({
+    id: lead.id,
+    firstName: lead.firstName,
+    lastName: lead.lastName || null,
+  }));
+}

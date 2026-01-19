@@ -156,3 +156,48 @@ export async function deleteOpportunity(id: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+/**
+ * Interface para lookup de oportunidades
+ */
+export interface OpportunityLookup {
+  id: string;
+  name: string;
+}
+
+/**
+ * Lista oportunidades para lookup (busca por nome)
+ * 
+ * @param query - Termo de busca (opcional)
+ * @param limit - Limite de resultados (opcional, default: 20)
+ * @returns Promise com lista de oportunidades
+ */
+export async function listOpportunitiesForLookup(
+  query?: string,
+  limit: number = 20
+): Promise<OpportunityLookup[]> {
+  const params = new URLSearchParams();
+  params.append('limit', '100');
+  params.append('orderBy', 'name');
+  params.append('order', 'asc');
+
+  const response = await apiRequest<OpportunityListResponse>(
+    `/api/opportunities?${params.toString()}`
+  );
+  
+  let opportunities = response.data.map((opportunity) => ({
+    id: opportunity.id,
+    name: opportunity.name,
+  }));
+
+  // Filtrar por query no frontend se fornecido
+  if (query && query.trim().length > 0) {
+    const queryLower = query.toLowerCase();
+    opportunities = opportunities.filter((opportunity) =>
+      opportunity.name.toLowerCase().includes(queryLower)
+    );
+  }
+  
+  // Limitar a 20 resultados após filtro
+  return opportunities.slice(0, limit);
+}

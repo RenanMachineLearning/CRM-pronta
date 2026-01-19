@@ -381,7 +381,12 @@ describe('Tag CRUD - E2E Tests', () => {
       const tagId = createResponse.body.id;
 
       // Aguardar auditoria ser registrada
-      await waitForAuditLog();
+      await waitForAuditLog({
+        tenantId: tenant1.id,
+        entityType: 'Tag',
+        entityId: tagId,
+        action: 'create',
+      });
 
       // Verificar audit log
       const auditLogs = await prisma.auditLog.findMany({

@@ -157,19 +157,42 @@ export async function assignRoleToUser(userId: string, roleId: string) {
 /**
  * Busca logs de auditoria de um tenant
  * 
- * @param tenantId - ID do tenant
- * @param filters - Filtros opcionais (entityType, entityId, action, userId)
+ * Aceita duas assinaturas:
+ * 1. getAuditLogs(tenantId, filters?) - nova assinatura
+ * 2. getAuditLogs(entityId, tenantId) - assinatura legada (para compatibilidade)
+ * 
+ * @param tenantIdOrEntityId - tenantId (nova) OU entityId (legada)
+ * @param filtersOrTenantId - filters (nova) OU tenantId (legada)
  * @returns Array de logs de auditoria
  */
 export async function getAuditLogs(
-  tenantId: string,
-  filters?: {
+  tenantIdOrEntityId: string,
+  filtersOrTenantId?: {
     entityType?: string;
     entityId?: string;
     action?: string;
     userId?: string;
-  }
+  } | string
 ) {
+  let tenantId: string;
+  let filters: {
+    entityType?: string;
+    entityId?: string;
+    action?: string;
+    userId?: string;
+  } = {};
+
+  // Detectar assinatura: se o segundo arg é string, é a assinatura legada
+  if (typeof filtersOrTenantId === 'string') {
+    // Assinatura legada: getAuditLogs(entityId, tenantId)
+    tenantId = filtersOrTenantId;
+    filters = { entityId: tenantIdOrEntityId };
+  } else {
+    // Nova assinatura: getAuditLogs(tenantId, filters?)
+    tenantId = tenantIdOrEntityId;
+    filters = filtersOrTenantId || {};
+  }
+
   const where: any = { tenantId };
 
   if (filters?.entityType) {
@@ -333,7 +356,7 @@ export async function createStandardRoles(tenantId: string) {
     skipDuplicates: true,
   });
 
-  return { admin, vendedor, visualizador };
+  return { admin, vendedor, visualizador, user: vendedor };
 }
 
 /**
@@ -342,33 +365,88 @@ export async function createStandardRoles(tenantId: string) {
  * Útil para testes E2E onde logAudit é assíncrono e não bloqueia.
  * Faz polling a cada 50ms até encontrar o log ou atingir timeout.
  * 
- * @param tenantId - ID do tenant
- * @param filters - Filtros para buscar o log (entityType, entityId, action, userId)
- * @param timeoutMs - Timeout em milissegundos (padrão: 2000ms)
- * @returns Promise<boolean> - true se log foi encontrado, false se timeout
+ * Aceita três assinaturas:
+ * 1. waitForAuditLog({ tenantId, entityType, entityId, action }) - objeto único
+ * 2. waitForAuditLog(tenantId, { entityType, entityId, action }, timeoutMs) - parâmetros separados
+ * 3. waitForAuditLog(entityId, action, tenantId) - assinatura legada
+ * 
+ * @param filtersOrTenantIdOrEntityId - Filtros completos OU tenantId OU entityId
+ * @param filtersOrTimeoutOrAction - Filtros OU timeout OU action
+ * @param timeoutMsOrTenantId - Timeout OU tenantId
+ * @returns Promise com o log encontrado ou undefined se timeout
  */
 export async function waitForAuditLog(
-  tenantId: string,
-  filters: {
+  filtersOrTenantIdOrEntityId: string | {
+    tenantId: string;
     entityType?: string;
     entityId?: string;
     action?: string;
     userId?: string;
   },
-  timeoutMs: number = 2000
-): Promise<boolean> {
+  filtersOrTimeoutOrAction?: {
+    entityType?: string;
+    entityId?: string;
+    action?: string;
+    userId?: string;
+  } | number | string,
+  timeoutMsOrTenantId: number | string = 2000
+): Promise<{
+  id: string;
+  tenantId: string;
+  userId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  changes: any;
+  timestamp: Date;
+} | undefined> {
+  let tenantId: string;
+  let filters: {
+    entityType?: string;
+    entityId?: string;
+    action?: string;
+    userId?: string;
+  };
+  let timeout: number;
+
+  // Detectar qual assinatura está sendo usada
+  if (typeof filtersOrTenantIdOrEntityId === 'object') {
+    // Assinatura 1: objeto único com tudo
+    tenantId = filtersOrTenantIdOrEntityId.tenantId;
+    filters = {
+      entityType: filtersOrTenantIdOrEntityId.entityType,
+      entityId: filtersOrTenantIdOrEntityId.entityId,
+      action: filtersOrTenantIdOrEntityId.action,
+      userId: filtersOrTenantIdOrEntityId.userId,
+    };
+    timeout = typeof filtersOrTimeoutOrAction === 'number' ? filtersOrTimeoutOrAction : 2000;
+  } else if (typeof filtersOrTimeoutOrAction === 'string' && typeof timeoutMsOrTenantId === 'string') {
+    // Assinatura 3 legada: waitForAuditLog(entityId, action, tenantId)
+    tenantId = timeoutMsOrTenantId;
+    filters = {
+      entityId: filtersOrTenantIdOrEntityId,
+      action: filtersOrTimeoutOrAction,
+    };
+    timeout = 2000;
+  } else {
+    // Assinatura 2: parâmetros separados
+    tenantId = filtersOrTenantIdOrEntityId;
+    filters = typeof filtersOrTimeoutOrAction === 'object' ? filtersOrTimeoutOrAction : {};
+    timeout = typeof timeoutMsOrTenantId === 'number' ? timeoutMsOrTenantId : 2000;
+  }
+
   const startTime = Date.now();
   const pollInterval = 50; // Poll a cada 50ms
 
-  while (Date.now() - startTime < timeoutMs) {
+  while (Date.now() - startTime < timeout) {
     const logs = await getAuditLogs(tenantId, filters);
     if (logs.length > 0) {
-      return true;
+      return logs[0];
     }
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 
-  return false;
+  return undefined;
 }
 
 /**

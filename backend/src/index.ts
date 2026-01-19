@@ -22,6 +22,10 @@ import tagRoutes from './routes/tagRoutes';
 import leadRoutes from './routes/leadRoutes';
 import opportunityRoutes from './routes/opportunityRoutes';
 import pipelineRoutes from './routes/pipelineRoutes';
+import taskRoutes from './routes/taskRoutes';
+import noteRoutes from './routes/noteRoutes';
+import timelineRoutes from './routes/timelineRoutes';
+import { startTaskNotificationJob } from './jobs/taskNotificationJob';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -95,6 +99,15 @@ app.use('/api/opportunities', opportunityRoutes);
 // Rotas de pipelines (protegidas - requerem tenant context + autenticação)
 app.use('/api/pipelines', pipelineRoutes);
 
+// Rotas de tarefas (protegidas - requerem tenant context + autenticação)
+app.use('/api/tasks', taskRoutes);
+
+// Rotas de notas (protegidas - requerem tenant context + autenticação)
+app.use('/api/notes', noteRoutes);
+
+// Rotas de timeline (protegidas - requerem tenant context + autenticação)
+app.use('/api/timeline', timelineRoutes);
+
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {
   res.json({
@@ -113,6 +126,9 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Iniciar job de notificações de tarefas vencidas
+    startTaskNotificationJob();
   });
 }
 

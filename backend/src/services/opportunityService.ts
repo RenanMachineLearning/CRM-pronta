@@ -58,6 +58,7 @@ export interface UpdateOpportunityData {
   stageId?: string;
   status?: OpportunityStatus;
   closeDate?: Date | string | null; // null para remover
+  actualCloseDate?: Date | string | null; // Data de fechamento real (se ganho/perdido)
   probability?: number | null; // null para remover
   contactId?: string | null; // null para remover associação
   companyId?: string | null; // null para remover associação
@@ -902,7 +903,7 @@ export class OpportunityService {
     }
 
     // Validar transição de status se status está sendo alterado
-    let actualCloseDateToUpdate: Date | undefined = undefined;
+    let actualCloseDateToUpdate: Date | null | undefined = undefined;
     if (data.status && data.status !== existingOpportunity.status) {
       // Validar transição de status
       validateOpportunityStatusTransition(existingOpportunity.status, data.status);
@@ -911,11 +912,11 @@ export class OpportunityService {
       if ((data.status === 'WON' || data.status === 'LOST') && !existingOpportunity.actualCloseDate) {
         // Se usuário forneceu actualCloseDate explicitamente, usar valor fornecido
         // Caso contrário, usar data atual
-        if (data.actualCloseDate !== undefined) {
+        if (data.actualCloseDate !== undefined && data.actualCloseDate !== null) {
           actualCloseDateToUpdate = data.actualCloseDate instanceof Date 
             ? data.actualCloseDate 
             : new Date(data.actualCloseDate);
-        } else {
+        } else if (data.actualCloseDate === undefined) {
           actualCloseDateToUpdate = new Date();
         }
       }
@@ -923,9 +924,13 @@ export class OpportunityService {
 
     // Se usuário forneceu actualCloseDate explicitamente (independente de status), usar valor fornecido
     if (data.actualCloseDate !== undefined && actualCloseDateToUpdate === undefined) {
-      actualCloseDateToUpdate = data.actualCloseDate instanceof Date 
-        ? data.actualCloseDate 
-        : new Date(data.actualCloseDate);
+      if (data.actualCloseDate === null) {
+        actualCloseDateToUpdate = null;
+      } else {
+        actualCloseDateToUpdate = data.actualCloseDate instanceof Date 
+          ? data.actualCloseDate 
+          : new Date(data.actualCloseDate);
+      }
     }
 
     // Atualizar em transação

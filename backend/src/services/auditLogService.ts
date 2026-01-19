@@ -33,6 +33,8 @@ export enum AuditEntityEnum {
   Opportunity = 'Opportunity',
   Pipeline = 'Pipeline',
   PipelineStage = 'PipelineStage',
+  Task = 'Task',
+  Note = 'Note',
 }
 
 /**

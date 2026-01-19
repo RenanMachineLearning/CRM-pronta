@@ -105,9 +105,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         },
       };
 
+      const recordId = 'test-record-id-' + Date.now();
       const entityData = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId,
           tenantId: tenant1.id,
           data: data as any,
         },
@@ -136,9 +138,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         },
       };
 
+      const recordId2 = 'test-record-id-types-' + Date.now();
       const entityData = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId2,
           tenantId: tenant1.id,
           data: data as any,
         },
@@ -196,9 +200,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         [booleanField.name]: true,
       };
 
+      const recordId3 = 'test-record-id-fields-' + Date.now();
       const entityData = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId3,
           tenantId: tenant1.id,
           data: data as any,
         },
@@ -230,9 +236,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         [selectField.name]: 'option1',
       };
 
+      const recordId4 = 'test-record-id-select-' + Date.now();
       const entityData = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId4,
           tenantId: tenant1.id,
           data: data as any,
         },
@@ -251,9 +259,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         field1: 'Tenant 1 Value',
       };
 
+      const recordId5 = 'test-record-id-tenant1-' + Date.now();
       const entityData1 = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId5,
           tenantId: tenant1.id,
           data: data1 as any,
         },
@@ -270,9 +280,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         field1: 'Tenant 2 Value',
       };
 
+      const recordId6 = 'test-record-id-tenant2-' + Date.now();
       const entityData2 = await prisma.entityData.create({
         data: {
           entityId: entity2Tenant2.id,
+          recordId: recordId6,
           tenantId: tenant2.id,
           data: data2 as any,
         },
@@ -303,9 +315,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         field1: 'Entity 1 Value',
       };
 
+      const recordId7 = 'test-record-id-entity1-' + Date.now();
       const entityData1 = await prisma.entityData.create({
         data: {
           entityId: entity1.id,
+          recordId: recordId7,
           tenantId: tenant1.id,
           data: data1 as any,
         },
@@ -316,9 +330,11 @@ describe('Custom Fields (EntityData) - Preparatory E2E Tests', () => {
         field1: 'Entity 2 Value',
       };
 
+      const recordId8 = 'test-record-id-entity2-' + Date.now();
       const entityData2 = await prisma.entityData.create({
         data: {
           entityId: entity2.id,
+          recordId: recordId8,
           tenantId: tenant1.id,
           data: data2 as any,
         },

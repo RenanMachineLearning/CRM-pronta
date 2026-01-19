@@ -407,7 +407,7 @@ describe('Lead Status Transitions - E2E Tests', () => {
       const updateLog = auditLogs.find((log) => log.action === 'update' && log.changes);
 
       expect(updateLog).toBeTruthy();
-      expect(updateLog?.entity).toBe('Lead');
+      expect(updateLog?.entityType).toBe('Lead');
       if (updateLog?.changes) {
         const changes = updateLog.changes as any;
         expect(changes.status).toBeTruthy();
