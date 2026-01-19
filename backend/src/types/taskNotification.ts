@@ -27,7 +27,7 @@ export interface OverdueTaskWithRelations {
   id: string;
   title: string;
   description?: string | null;
-  dueDate: Date;
+  dueDate: Date | null; // Pode ser null no schema, mas será filtrado na query
   priority: TaskPriority;
   status: TaskStatus;
   type: TaskType;
@@ -36,7 +36,7 @@ export interface OverdueTaskWithRelations {
   createdById: string;
   lastNotificationSentAt?: Date | null;
   assignedTo?: { id: string; name: string; email: string; status: string } | null;
-  createdBy: { id: string; name: string; email: string; status: string };
+  createdBy?: { id: string; name: string; email: string; status: string } | null;
   relatedEntityType: string;
   relatedEntityId: string;
   tenant?: { id: string; name: string } | null;

@@ -639,7 +639,7 @@ describe('Opportunity Status Transitions - E2E Tests', () => {
       const updateLog = auditLogs.find((log) => log.action === 'update' && log.changes);
 
       expect(updateLog).toBeTruthy();
-      expect(updateLog?.entity).toBe('Opportunity');
+      expect(updateLog?.entityType).toBe('Opportunity');
       if (updateLog?.changes) {
         const changes = updateLog.changes as any;
         expect(changes.status).toBeTruthy();

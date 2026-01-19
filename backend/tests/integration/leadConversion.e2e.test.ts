@@ -673,7 +673,7 @@ describe('Lead Conversion - E2E Tests', () => {
       const updateLog = auditLogs.find((log) => log.action === 'update' && log.changes);
 
       expect(updateLog).toBeTruthy();
-      expect(updateLog?.entity).toBe('Lead');
+      expect(updateLog?.entityType).toBe('Lead');
       expect(updateLog?.changes).toBeTruthy();
       if (updateLog?.changes) {
         const changes = updateLog.changes as any;

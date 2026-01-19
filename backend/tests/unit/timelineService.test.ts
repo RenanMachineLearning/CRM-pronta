@@ -8,7 +8,7 @@
 import { TimelineService } from '../../src/services/timelineService';
 import { TaskService } from '../../src/services/taskService';
 import { NoteService } from '../../src/services/noteService';
-import { TaskType, TaskStatus, TaskPriority, NoteType } from '@prisma/client';
+// TaskType, TaskStatus, TaskPriority, NoteType disponíveis se necessário
 import {
   cleanDatabase,
   createTestTenant,
@@ -442,7 +442,11 @@ describe('TimelineService', () => {
       const timeline = await TimelineService.getTimeline('Contact', contact1.id, tenant1.id);
 
       // Verificar que não inclui atividades do tenant2
-      expect(timeline.data.every((item) => item.type !== 'task' || item.data.title !== 'Tarefa Tenant 2')).toBe(true);
+      expect(timeline.data.every((item) => {
+        if (item.type !== 'task') return true;
+        const taskData = item.data as { title: string };
+        return taskData.title !== 'Tarefa Tenant 2';
+      })).toBe(true);
     });
 
     it('deve incluir informações da entidade (name)', async () => {

@@ -105,12 +105,9 @@ export async function findOverdueTasks(
             { lastNotificationSentAt: { lt: today } },
           ],
         },
-        // Deve ter pelo menos um usuário para notificar
+        // Deve ter pelo menos um usuário para notificar (createdById é obrigatório no schema)
         {
-          OR: [
-            { assignedToId: { not: null } },
-            { createdById: { not: null } },
-          ],
+          createdById: { not: '' }, // Sempre haverá createdById, pois é campo obrigatório
         },
       ],
     },

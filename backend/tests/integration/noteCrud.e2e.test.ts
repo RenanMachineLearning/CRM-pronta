@@ -1443,7 +1443,8 @@ describe('Note CRUD - E2E Tests', () => {
       expect(auditLog).toBeDefined();
       expect(auditLog?.action).toBe('create');
       // Changes deve estar ausente ou null em create
-      expect(auditLog?.changes).toBeUndefined() || expect(auditLog?.changes).toBeNull();
+      const changes = auditLog?.changes;
+      expect(changes === undefined || changes === null).toBe(true);
     });
 
     it('deve registrar auditoria sem changes ao deletar note (apenas action=delete)', async () => {
@@ -1476,7 +1477,8 @@ describe('Note CRUD - E2E Tests', () => {
       expect(auditLog).toBeDefined();
       expect(auditLog?.action).toBe('delete');
       // Changes deve estar ausente ou null em delete
-      expect(auditLog?.changes).toBeUndefined() || expect(auditLog?.changes).toBeNull();
+      const deleteChanges = auditLog?.changes;
+      expect(deleteChanges === undefined || deleteChanges === null).toBe(true);
     });
 
     it('deve retornar 404 ao tentar atualizar note já soft deleted', async () => {
@@ -1940,7 +1942,7 @@ describe('Note CRUD - E2E Tests', () => {
           entityType: 'Note',
           entityId: noteId,
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { timestamp: 'asc' },
       });
 
       expect(auditLogs.length).toBeGreaterThanOrEqual(2);

@@ -80,9 +80,9 @@ export class EmailService {
       id: string;
       title: string;
       description?: string | null;
-      dueDate: Date;
+      dueDate: Date | null;
       priority: TaskPriority;
-      status: string;
+      status: TaskStatus;
       type: TaskType;
       relatedEntityType: string;
       relatedEntityId: string;
@@ -122,7 +122,7 @@ export class EmailService {
       console.log('');
       console.log(`Data de Vencimento: ${formattedDueDate}`);
       console.log(`Prioridade: ${translateTaskPriority(task.priority)}`);
-      console.log(`Status: ${translateTaskStatus(task.status as any)}`);
+      console.log(`Status: ${translateTaskStatus(task.status)}`);
       console.log(`Tipo: ${translateTaskType(task.type)}`);
       if (task.description) {
         console.log('');

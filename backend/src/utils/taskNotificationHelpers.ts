@@ -11,9 +11,12 @@ import { TaskPriority, TaskStatus, TaskType } from '@prisma/client';
  * Formata data para exibição em email (formato brasileiro)
  * 
  * @param date - Data a ser formatada
- * @returns Data formatada como DD/MM/AAAA
+ * @returns Data formatada como DD/MM/AAAA ou "Não definida"
  */
-export function formatDateForEmail(date: Date): string {
+export function formatDateForEmail(date: Date | null): string {
+  if (!date) {
+    return 'Não definida';
+  }
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
@@ -71,9 +74,13 @@ export function translateTaskType(type: TaskType): string {
  * Calcula quantos dias a tarefa está vencida
  * 
  * @param dueDate - Data de vencimento
- * @returns Número de dias vencidos (positivo) ou dias até vencimento (negativo)
+ * @returns Número de dias vencidos (positivo) ou dias até vencimento (negativo), 0 se null
  */
-export function getDaysOverdue(dueDate: Date): number {
+export function getDaysOverdue(dueDate: Date | null): number {
+  if (!dueDate) {
+    return 0;
+  }
+  
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   today.setUTCMilliseconds(0);

@@ -231,7 +231,12 @@ describe('Timeline - E2E Tests', () => {
         const taskId = taskResponse.body.id;
 
         // Aguardar log de auditoria
-        await waitForAuditLog(tenant1.id, 'Task', taskId, 'create');
+        await waitForAuditLog({
+          tenantId: tenant1.id,
+          entityType: 'Task',
+          entityId: taskId,
+          action: 'create',
+        });
 
         // Criar nota relacionada ao contato
         const noteResponse = await request(app)
@@ -249,7 +254,12 @@ describe('Timeline - E2E Tests', () => {
         const noteId = noteResponse.body.id;
 
         // Aguardar log de auditoria
-        await waitForAuditLog(tenant1.id, 'Note', noteId, 'create');
+        await waitForAuditLog({
+          tenantId: tenant1.id,
+          entityType: 'Note',
+          entityId: noteId,
+          action: 'create',
+        });
 
         // Criar alteração de auditoria (atualizar contato)
         await prisma.contact.update({

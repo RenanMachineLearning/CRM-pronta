@@ -1328,7 +1328,8 @@ describe('Task CRUD - E2E Tests', () => {
       expect(auditLog).toBeDefined();
       expect(auditLog?.action).toBe('create');
       // Changes deve estar ausente ou null em create
-      expect(auditLog?.changes).toBeUndefined() || expect(auditLog?.changes).toBeNull();
+      const changes = auditLog?.changes;
+      expect(changes === undefined || changes === null).toBe(true);
     });
   });
 

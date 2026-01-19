@@ -115,6 +115,7 @@ describe('NoteService', () => {
         tenantId: tenant1.id,
         name: 'Oportunidade Teste',
         status: 'OPEN',
+        value: 0,
         stageId: (await prisma.pipelineStage.findFirst({ where: { tenantId: tenant1.id } }))?.id || '',
       },
     });
