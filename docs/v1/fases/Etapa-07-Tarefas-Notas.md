@@ -136,488 +136,490 @@ if (!validation.allowed) {
 ### 1. Modelo de Dados — Tabelas de Tarefas e Notas
 
 #### Backend (Prisma Schema)
-- [ ] Criar tabela `Task`
-  - [ ] Campo `id` (UUID)
-  - [ ] Campo `tenantId` (foreign key) - **OBRIGATÓRIO**
-  - [ ] Campo `title` (título da tarefa - obrigatório)
-  - [ ] Campo `description` (descrição - texto, opcional)
-  - [ ] Campo `type` (enum: CALL, EMAIL, MEETING, OTHER)
-  - [ ] Campo `status` (enum: PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
-  - [ ] Campo `dueDate` (data de vencimento - DateTime?, opcional)
-  - [ ] Campo `completedAt` (timestamp - quando foi concluída - DateTime?, opcional)
-  - [ ] Campo `priority` (enum: LOW, MEDIUM, HIGH)
-  - [ ] Campo `assignedToId` (foreign key para User - opcional)
-  - [ ] Campo `createdById` (foreign key para User - obrigatório)
-  - [ ] Campo `relatedEntityType` (string: Contact, Company, Lead, Opportunity)
-  - [ ] Campo `relatedEntityId` (UUID - ID do registro relacionado)
-  - [ ] Campo `deletedAt` (DateTime?, para soft delete)
-  - [ ] Campos `created_at` e `updated_at`
-  - [ ] Relacionamento obrigatório: `tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)`
-  - [ ] Relacionamento: `createdBy User @relation(...)`
-  - [ ] Relacionamento: `assignedTo User? @relation(...)`
-  - [ ] Índice composto obrigatório: `@@index([tenantId, id])` - **OBRIGATÓRIO**
-  - [ ] Índice em `(tenantId, relatedEntityType, relatedEntityId)`
-  - [ ] Índice em `(tenantId, assignedToId, status)`
+- [x] Criar tabela `Task`
+  - [x] Campo `id` (UUID)
+  - [x] Campo `tenantId` (foreign key) - **OBRIGATÓRIO**
+  - [x] Campo `title` (título da tarefa - obrigatório)
+  - [x] Campo `description` (descrição - texto, opcional)
+  - [x] Campo `type` (enum: CALL, EMAIL, MEETING, OTHER)
+  - [x] Campo `status` (enum: PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
+  - [x] Campo `dueDate` (data de vencimento - DateTime?, opcional)
+  - [x] Campo `completedAt` (timestamp - quando foi concluída - DateTime?, opcional)
+  - [x] Campo `priority` (enum: LOW, MEDIUM, HIGH)
+  - [x] Campo `assignedToId` (foreign key para User - opcional)
+  - [x] Campo `createdById` (foreign key para User - obrigatório)
+  - [x] Campo `relatedEntityType` (string: Contact, Company, Lead, Opportunity)
+  - [x] Campo `relatedEntityId` (UUID - ID do registro relacionado)
+  - [x] Campo `deletedAt` (DateTime?, para soft delete)
+  - [x] Campos `created_at` e `updated_at`
+  - [x] Relacionamento obrigatório: `tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)`
+  - [x] Relacionamento: `createdBy User @relation(...)`
+  - [x] Relacionamento: `assignedTo User? @relation(...)`
+  - [x] Índice composto obrigatório: `@@index([tenantId, id])` - **OBRIGATÓRIO**
+  - [x] Índice em `(tenantId, relatedEntityType, relatedEntityId)`
+  - [x] Índice em `(tenantId, assignedToId, status)`
 
-- [ ] Criar tabela `Note`
-  - [ ] Campo `id` (UUID)
-  - [ ] Campo `tenantId` (foreign key) - **OBRIGATÓRIO**
-  - [ ] Campo `content` (conteúdo - texto ou markdown - obrigatório, máximo 10.000 caracteres)
-  - [ ] Campo `type` (enum: NOTE, COMMENT, ANNOTATION)
-  - [ ] Campo `relatedEntityType` (string: Contact, Company, Lead, Opportunity, Task)
-  - [ ] Campo `relatedEntityId` (UUID - ID do registro relacionado)
-  - [ ] Campo `createdById` (foreign key para User - obrigatório)
-  - [ ] Campo `deletedAt` (DateTime?, para soft delete)
-  - [ ] Campos `created_at` e `updated_at`
-  - [ ] Relacionamento obrigatório: `tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)`
-  - [ ] Relacionamento: `createdBy User @relation(...)`
-  - [ ] Índice composto obrigatório: `@@index([tenantId, id])` - **OBRIGATÓRIO**
-  - [ ] Índice em `(tenantId, relatedEntityType, relatedEntityId)`
+- [x] Criar tabela `Note`
+  - [x] Campo `id` (UUID)
+  - [x] Campo `tenantId` (foreign key) - **OBRIGATÓRIO**
+  - [x] Campo `content` (conteúdo - texto ou markdown - obrigatório, máximo 10.000 caracteres)
+  - [x] Campo `type` (enum: NOTE, COMMENT, ANNOTATION)
+  - [x] Campo `relatedEntityType` (string: Contact, Company, Lead, Opportunity, Task)
+  - [x] Campo `relatedEntityId` (UUID - ID do registro relacionado)
+  - [x] Campo `createdById` (foreign key para User - obrigatório)
+  - [x] Campo `deletedAt` (DateTime?, para soft delete)
+  - [x] Campos `created_at` e `updated_at`
+  - [x] Relacionamento obrigatório: `tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)`
+  - [x] Relacionamento: `createdBy User @relation(...)`
+  - [x] Índice composto obrigatório: `@@index([tenantId, id])` - **OBRIGATÓRIO**
+  - [x] Índice em `(tenantId, relatedEntityType, relatedEntityId)`
 
-- [ ] Criar migração Prisma
-  - [ ] Executar `prisma migrate dev --name add_tasks_notes`
-  - [ ] Validar que todas as tabelas foram criadas
+- [x] Criar migração Prisma
+  - [x] Executar `prisma migrate dev --name add_tasks_notes`
+  - [x] Validar que todas as tabelas foram criadas
 
 #### Validação
-- [ ] Testar criação de tarefa via Prisma
-- [ ] Testar criação de nota via Prisma
-- [ ] Testar vinculação a registros
+- [x] Testar criação de tarefa via Prisma
+- [x] Testar criação de nota via Prisma
+- [x] Testar vinculação a registros
 
 ---
 
 ### 2. Tipos e Status Configuráveis
 
 #### Backend (Seed Script)
-- [ ] Criar tipos de tarefa padrão
-  - [ ] "Ligação"
-  - [ ] "Email"
-  - [ ] "Reunião"
-  - [ ] "Outro"
+- [x] Criar tipos de tarefa padrão
+  - [x] "Ligação" (CALL)
+  - [x] "Email" (EMAIL)
+  - [x] "Reunião" (MEETING)
+  - [x] "Outro" (OTHER)
 
-- [ ] Criar status de tarefa padrão
-  - [ ] "Pendente"
-  - [ ] "Em Andamento"
-  - [ ] "Concluída"
-  - [ ] "Cancelada"
+- [x] Criar status de tarefa padrão
+  - [x] "Pendente" (PENDING)
+  - [x] "Em Andamento" (IN_PROGRESS)
+  - [x] "Concluída" (COMPLETED)
+  - [x] "Cancelada" (CANCELLED)
+
+**Nota:** Implementado via enums no Prisma schema (TaskType, TaskStatus, TaskPriority, NoteType)
 
 #### Validação
-- [ ] Executar seed e verificar que tipos foram criados
+- [x] Executar seed e verificar que tipos foram criados
 
 ---
 
 ### 2.5. Services (TaskService e NoteService)
 
 #### Backend (Services)
-- [ ] Criar `TaskService` em `backend/src/services/taskService.ts`
-  - [ ] Método `listTasks(tenantId, filters?, pagination?, userId?)`
-    - [ ] Filtrar por tenant
-    - [ ] Aplicar filtros (status, type, assignedToId, relatedEntityType, relatedEntityId, dueDate)
-    - [ ] Paginação (limit, offset)
-    - [ ] Ordenação (dueDate, priority, created_at)
-    - [ ] Incluir relacionamentos (assignedTo, createdBy, registro relacionado)
-    - [ ] Filtrar campos por permissão se userId fornecido
-  - [ ] Método `getTaskById(taskId, tenantId, userId?)`
-    - [ ] Validar que tarefa pertence ao tenant
-    - [ ] Incluir relacionamentos
-    - [ ] Filtrar campos por permissão se userId fornecido
-  - [ ] Método `createTask(data, tenantId, requestingUserId?)`
-    - [ ] Validar dados obrigatórios (title)
-    - [ ] Validar enums (type, status, priority)
-    - [ ] Validar dueDate (não pode ser passada)
-    - [ ] Validar relacionamentos (relatedEntityType/Id, assignedToId)
-    - [ ] Capturar createdById do requestingUserId
-    - [ ] Criar tarefa
-    - [ ] Registrar auditoria
-  - [ ] Método `updateTask(taskId, data, tenantId, requestingUserId?)`
-    - [ ] Validar que tarefa pertence ao tenant
-    - [ ] Validar enums se fornecidos
-    - [ ] Se status mudar para COMPLETED: atualizar completedAt
-    - [ ] Capturar changes (old/new) para auditoria
-    - [ ] Atualizar tarefa
-    - [ ] Registrar auditoria com changes
-  - [ ] Método `deleteTask(taskId, tenantId, requestingUserId?)`
-    - [ ] Validar que tarefa pertence ao tenant
-    - [ ] Soft delete (marcar deletedAt)
-    - [ ] Registrar auditoria
-  - [ ] Seguir padrão de `ContactService` e `LeadService`
+- [x] Criar `TaskService` em `backend/src/services/taskService.ts`
+  - [x] Método `listTasks(tenantId, filters?, pagination?, userId?)`
+    - [x] Filtrar por tenant
+    - [x] Aplicar filtros (status, type, assignedToId, relatedEntityType, relatedEntityId, dueDate)
+    - [x] Paginação (limit, offset)
+    - [x] Ordenação (dueDate, priority, created_at)
+    - [x] Incluir relacionamentos (assignedTo, createdBy, registro relacionado)
+    - [x] Filtrar campos por permissão se userId fornecido
+  - [x] Método `getTaskById(taskId, tenantId, userId?)`
+    - [x] Validar que tarefa pertence ao tenant
+    - [x] Incluir relacionamentos
+    - [x] Filtrar campos por permissão se userId fornecido
+  - [x] Método `createTask(data, tenantId, requestingUserId?)`
+    - [x] Validar dados obrigatórios (title)
+    - [x] Validar enums (type, status, priority)
+    - [x] Validar dueDate (não pode ser passada)
+    - [x] Validar relacionamentos (relatedEntityType/Id, assignedToId)
+    - [x] Capturar createdById do requestingUserId
+    - [x] Criar tarefa
+    - [x] Registrar auditoria
+  - [x] Método `updateTask(taskId, data, tenantId, requestingUserId?)`
+    - [x] Validar que tarefa pertence ao tenant
+    - [x] Validar enums se fornecidos
+    - [x] Se status mudar para COMPLETED: atualizar completedAt
+    - [x] Capturar changes (old/new) para auditoria
+    - [x] Atualizar tarefa
+    - [x] Registrar auditoria com changes
+  - [x] Método `deleteTask(taskId, tenantId, requestingUserId?)`
+    - [x] Validar que tarefa pertence ao tenant
+    - [x] Soft delete (marcar deletedAt)
+    - [x] Registrar auditoria
+  - [x] Seguir padrão de `ContactService` e `LeadService`
 
-- [ ] Criar `NoteService` em `backend/src/services/noteService.ts`
-  - [ ] Método `listNotes(tenantId, filters?, pagination?, userId?)`
-    - [ ] Filtrar por tenant
-    - [ ] Aplicar filtros (type, relatedEntityType, relatedEntityId)
-    - [ ] Paginação (limit, offset)
-    - [ ] Ordenação (created_at DESC - mais recente primeiro)
-    - [ ] Incluir relacionamentos (createdBy, registro relacionado)
-    - [ ] Filtrar campos por permissão se userId fornecido
-  - [ ] Método `getNoteById(noteId, tenantId, userId?)`
-    - [ ] Validar que nota pertence ao tenant
-    - [ ] Incluir relacionamentos
-    - [ ] Filtrar campos por permissão se userId fornecido
-  - [ ] Método `createNote(data, tenantId, requestingUserId)`
-    - [ ] Validar dados obrigatórios (content)
-    - [ ] Validar limite de tamanho do conteúdo (10.000 caracteres)
-    - [ ] Validar enum (type)
-    - [ ] Validar relacionamentos (relatedEntityType/Id)
-    - [ ] Capturar createdById do requestingUserId
-    - [ ] Criar nota
-    - [ ] Registrar auditoria
-  - [ ] Método `updateNote(noteId, data, tenantId, requestingUserId?)`
-    - [ ] Validar que nota pertence ao tenant
-    - [ ] Validar que usuário é o criador (ou tem permissão admin)
-    - [ ] Validar limite de tamanho se content for atualizado
-    - [ ] Validar enum se type for atualizado
-    - [ ] Capturar changes (old/new) para auditoria
-    - [ ] Atualizar nota
-    - [ ] Registrar auditoria com changes
-  - [ ] Método `deleteNote(noteId, tenantId, requestingUserId?)`
-    - [ ] Validar que nota pertence ao tenant
-    - [ ] Validar que usuário é o criador (ou tem permissão admin)
-    - [ ] Soft delete (marcar deletedAt)
-    - [ ] Registrar auditoria
-  - [ ] Seguir padrão de `ContactService` e `LeadService`
+- [x] Criar `NoteService` em `backend/src/services/noteService.ts`
+  - [x] Método `listNotes(tenantId, filters?, pagination?, userId?)`
+    - [x] Filtrar por tenant
+    - [x] Aplicar filtros (type, relatedEntityType, relatedEntityId)
+    - [x] Paginação (limit, offset)
+    - [x] Ordenação (created_at DESC - mais recente primeiro)
+    - [x] Incluir relacionamentos (createdBy, registro relacionado)
+    - [x] Filtrar campos por permissão se userId fornecido
+  - [x] Método `getNoteById(noteId, tenantId, userId?)`
+    - [x] Validar que nota pertence ao tenant
+    - [x] Incluir relacionamentos
+    - [x] Filtrar campos por permissão se userId fornecido
+  - [x] Método `createNote(data, tenantId, requestingUserId)`
+    - [x] Validar dados obrigatórios (content)
+    - [x] Validar limite de tamanho do conteúdo (10.000 caracteres)
+    - [x] Validar enum (type)
+    - [x] Validar relacionamentos (relatedEntityType/Id)
+    - [x] Capturar createdById do requestingUserId
+    - [x] Criar nota
+    - [x] Registrar auditoria
+  - [x] Método `updateNote(noteId, data, tenantId, requestingUserId?)`
+    - [x] Validar que nota pertence ao tenant
+    - [x] Validar que usuário é o criador (ou tem permissão admin)
+    - [x] Validar limite de tamanho se content for atualizado
+    - [x] Validar enum se type for atualizado
+    - [x] Capturar changes (old/new) para auditoria
+    - [x] Atualizar nota
+    - [x] Registrar auditoria com changes
+  - [x] Método `deleteNote(noteId, tenantId, requestingUserId?)`
+    - [x] Validar que nota pertence ao tenant
+    - [x] Validar que usuário é o criador (ou tem permissão admin)
+    - [x] Soft delete (marcar deletedAt)
+    - [x] Registrar auditoria
+  - [x] Seguir padrão de `ContactService` e `LeadService`
 
 #### Validação
-- [ ] Testar que TaskService segue padrão de ContactService
-- [ ] Testar que NoteService segue padrão de ContactService
-- [ ] Testar que filtros funcionam corretamente
-- [ ] Testar que paginação funciona corretamente
+- [x] Testar que TaskService segue padrão de ContactService
+- [x] Testar que NoteService segue padrão de ContactService
+- [x] Testar que filtros funcionam corretamente
+- [x] Testar que paginação funciona corretamente
 
 ---
 
 ### 2.6. Validações Específicas
 
 #### Backend (Validadores)
-- [ ] Validar enums
-  - [ ] `Task.type`: valores permitidos (CALL, EMAIL, MEETING, OTHER)
-  - [ ] `Task.status`: valores permitidos (PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
-  - [ ] `Task.priority`: valores permitidos (LOW, MEDIUM, HIGH)
-  - [ ] `Note.type`: valores permitidos (NOTE, COMMENT, ANNOTATION)
+- [x] Validar enums
+  - [x] `Task.type`: valores permitidos (CALL, EMAIL, MEETING, OTHER)
+  - [x] `Task.status`: valores permitidos (PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
+  - [x] `Task.priority`: valores permitidos (LOW, MEDIUM, HIGH)
+  - [x] `Note.type`: valores permitidos (NOTE, COMMENT, ANNOTATION)
 
-- [ ] Validar datas
-  - [ ] `dueDate`: não pode ser passada (se fornecida)
-  - [ ] `completedAt`: só pode ser preenchida quando status = COMPLETED
-  - [ ] Formato de data válido (DateTime)
+- [x] Validar datas
+  - [x] `dueDate`: não pode ser passada (se fornecida)
+  - [x] `completedAt`: só pode ser preenchida quando status = COMPLETED
+  - [x] Formato de data válido (DateTime)
 
-- [ ] Validar relacionamentos
-  - [ ] `relatedEntityType` e `relatedEntityId` devem existir e pertencer ao tenant
-  - [ ] Validar que entidade relacionada existe na tabela correspondente
-  - [ ] `assignedToId` deve existir e pertencer ao tenant (se fornecido)
-  - [ ] `createdById` deve existir e pertencer ao tenant (obrigatório)
+- [x] Validar relacionamentos
+  - [x] `relatedEntityType` e `relatedEntityId` devem existir e pertencer ao tenant
+  - [x] Validar que entidade relacionada existe na tabela correspondente
+  - [x] `assignedToId` deve existir e pertencer ao tenant (se fornecido)
+  - [x] `createdById` deve existir e pertencer ao tenant (obrigatório)
 
-- [ ] Validar conteúdo de notas
-  - [ ] Limite de tamanho (10.000 caracteres)
-  - [ ] Não pode ser vazio ou apenas espaços em branco
-  - [ ] Validar encoding (UTF-8)
+- [x] Validar conteúdo de notas
+  - [x] Limite de tamanho (10.000 caracteres)
+  - [x] Não pode ser vazio ou apenas espaços em branco
+  - [x] Validar encoding (UTF-8)
 
-- [ ] Validar campos obrigatórios
-  - [ ] Task: `title` é obrigatório
-  - [ ] Note: `content` é obrigatório
-  - [ ] Task: `createdById` é obrigatório (capturado do token)
-  - [ ] Note: `createdById` é obrigatório (capturado do token)
+- [x] Validar campos obrigatórios
+  - [x] Task: `title` é obrigatório
+  - [x] Note: `content` é obrigatório
+  - [x] Task: `createdById` é obrigatório (capturado do token)
+  - [x] Note: `createdById` é obrigatório (capturado do token)
 
 #### Validação
-- [ ] Teste: enum inválido é rejeitado
-- [ ] Teste: data passada é rejeitada
-- [ ] Teste: relacionamento inexistente é rejeitado
-- [ ] Teste: conteúdo de nota muito longo é rejeitado
-- [ ] Teste: campos obrigatórios são validados
+- [x] Teste: enum inválido é rejeitado
+- [x] Teste: data passada é rejeitada
+- [x] Teste: relacionamento inexistente é rejeitado
+- [x] Teste: conteúdo de nota muito longo é rejeitado
+- [x] Teste: campos obrigatórios são validados
 
 ---
 
 ### 3. CRUD de Tarefas
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/tasks`
-  - [ ] Requer autenticação e permissão "Task.list"
-  - [ ] Listar tarefas do tenant atual (excluir soft deleted: `deletedAt IS NULL`)
-  - [ ] Paginação (limit, offset)
-  - [ ] Filtros: `status`, `type`, `assignedToId`, `relatedEntityType`, `relatedEntityId`, `dueDate`
-  - [ ] Ordenação: `dueDate`, `priority`, `created_at`
-  - [ ] Incluir usuário atribuído, criador, registro relacionado
-  - [ ] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
+- [x] Criar rota `GET /api/tasks`
+  - [x] Requer autenticação e permissão "Task.list"
+  - [x] Listar tarefas do tenant atual (excluir soft deleted: `deletedAt IS NULL`)
+  - [x] Paginação (limit, offset)
+  - [x] Filtros: `status`, `type`, `assignedToId`, `relatedEntityType`, `relatedEntityId`, `dueDate`
+  - [x] Ordenação: `dueDate`, `priority`, `created_at`
+  - [x] Incluir usuário atribuído, criador, registro relacionado
+  - [x] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
 
-- [ ] Criar rota `GET /api/tasks/:id`
-  - [ ] Requer autenticação e permissão "Task.read"
-  - [ ] Retornar tarefa específica
-  - [ ] Validar que tarefa pertence ao tenant atual
-  - [ ] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
+- [x] Criar rota `GET /api/tasks/:id`
+  - [x] Requer autenticação e permissão "Task.read"
+  - [x] Retornar tarefa específica
+  - [x] Validar que tarefa pertence ao tenant atual
+  - [x] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
 
-- [ ] Criar rota `POST /api/tasks`
-  - [ ] Requer autenticação e permissão "Task.create"
-  - [ ] Receber: `title`, `description`, `type`, `status`, `dueDate`, `priority`, `assignedToId`, `relatedEntityType`, `relatedEntityId`
-  - [ ] Validar dados obrigatórios (title)
-  - [ ] Validar enums (type, status, priority)
-  - [ ] Validar dueDate (não pode ser passada se fornecida)
-  - [ ] Validar que registro relacionado existe e pertence ao tenant
-  - [ ] Validar que assignedToId existe e pertence ao tenant (se fornecido)
-  - [ ] Capturar `createdById` do token (req.userId)
-  - [ ] Criar tarefa via `TaskService.createTask`
-  - [ ] **Registrar auditoria** usando `logAudit('Task', taskId, 'create', userId, tenantId)`
-  - [ ] Retornar tarefa criada (com campos filtrados por permissão)
+- [x] Criar rota `POST /api/tasks`
+  - [x] Requer autenticação e permissão "Task.create"
+  - [x] Receber: `title`, `description`, `type`, `status`, `dueDate`, `priority`, `assignedToId`, `relatedEntityType`, `relatedEntityId`
+  - [x] Validar dados obrigatórios (title)
+  - [x] Validar enums (type, status, priority)
+  - [x] Validar dueDate (não pode ser passada se fornecida)
+  - [x] Validar que registro relacionado existe e pertence ao tenant
+  - [x] Validar que assignedToId existe e pertence ao tenant (se fornecido)
+  - [x] Capturar `createdById` do token (req.userId)
+  - [x] Criar tarefa via `TaskService.createTask`
+  - [x] **Registrar auditoria** usando `logAudit('Task', taskId, 'create', userId, tenantId)`
+  - [x] Retornar tarefa criada (com campos filtrados por permissão)
 
-- [ ] Criar rota `PUT /api/tasks/:id`
-  - [ ] Requer autenticação e permissão "Task.update"
-  - [ ] Receber mesmos campos do POST
-  - [ ] Validar que tarefa pertence ao tenant atual
-  - [ ] **Validar permissões por campo** usando `validateFieldPermissionsForUpdate`
-  - [ ] Validar enums se fornecidos
-  - [ ] Se status mudar para "COMPLETED": atualizar `completedAt`
-  - [ ] Capturar changes (old/new) para auditoria
-  - [ ] Atualizar tarefa via `TaskService.updateTask`
-  - [ ] **Registrar auditoria** usando `logAudit('Task', taskId, 'update', userId, tenantId, changes)`
-  - [ ] Retornar tarefa atualizada (com campos filtrados por permissão)
+- [x] Criar rota `PUT /api/tasks/:id`
+  - [x] Requer autenticação e permissão "Task.update"
+  - [x] Receber mesmos campos do POST
+  - [x] Validar que tarefa pertence ao tenant atual
+  - [x] **Validar permissões por campo** usando `validateFieldPermissionsForUpdate`
+  - [x] Validar enums se fornecidos
+  - [x] Se status mudar para "COMPLETED": atualizar `completedAt`
+  - [x] Capturar changes (old/new) para auditoria
+  - [x] Atualizar tarefa via `TaskService.updateTask`
+  - [x] **Registrar auditoria** usando `logAudit('Task', taskId, 'update', userId, tenantId, changes)`
+  - [x] Retornar tarefa atualizada (com campos filtrados por permissão)
 
-- [ ] Criar rota `DELETE /api/tasks/:id`
-  - [ ] Requer autenticação e permissão "Task.delete"
-  - [ ] Validar que tarefa pertence ao tenant atual
-  - [ ] **Soft delete** (marcar `deletedAt` via `TaskService.deleteTask`)
-  - [ ] **Registrar auditoria** usando `logAudit('Task', taskId, 'delete', userId, tenantId)`
-  - [ ] Retornar sucesso
+- [x] Criar rota `DELETE /api/tasks/:id`
+  - [x] Requer autenticação e permissão "Task.delete"
+  - [x] Validar que tarefa pertence ao tenant atual
+  - [x] **Soft delete** (marcar `deletedAt` via `TaskService.deleteTask`)
+  - [x] **Registrar auditoria** usando `logAudit('Task', taskId, 'delete', userId, tenantId)`
+  - [x] Retornar sucesso
 
 #### Validação
-- [ ] Teste E2E: criar tarefa funciona
-- [ ] Teste E2E: listar tarefas retorna apenas do tenant atual
-- [ ] Teste E2E: atualizar tarefa funciona
-- [ ] Teste E2E: concluir tarefa atualiza `completedAt`
+- [x] Teste E2E: criar tarefa funciona
+- [x] Teste E2E: listar tarefas retorna apenas do tenant atual
+- [x] Teste E2E: atualizar tarefa funciona
+- [x] Teste E2E: concluir tarefa atualiza `completedAt`
 
 ---
 
 ### 4. CRUD de Notas
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/notes`
-  - [ ] Requer autenticação e permissão "Note.list"
-  - [ ] Listar notas do tenant atual (excluir soft deleted: `deletedAt IS NULL`)
-  - [ ] Paginação (limit, offset)
-  - [ ] Filtros: `type`, `relatedEntityType`, `relatedEntityId`
-  - [ ] Ordenação: `created_at` (mais recente primeiro)
-  - [ ] Incluir criador, registro relacionado
-  - [ ] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
+- [x] Criar rota `GET /api/notes`
+  - [x] Requer autenticação e permissão "Note.list"
+  - [x] Listar notas do tenant atual (excluir soft deleted: `deletedAt IS NULL`)
+  - [x] Paginação (limit, offset)
+  - [x] Filtros: `type`, `relatedEntityType`, `relatedEntityId`
+  - [x] Ordenação: `created_at` (mais recente primeiro)
+  - [x] Incluir criador, registro relacionado
+  - [x] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
 
-- [ ] Criar rota `GET /api/notes/:id`
-  - [ ] Requer autenticação e permissão "Note.read"
-  - [ ] Retornar nota específica
-  - [ ] Validar que nota pertence ao tenant atual
-  - [ ] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
+- [x] Criar rota `GET /api/notes/:id`
+  - [x] Requer autenticação e permissão "Note.read"
+  - [x] Retornar nota específica
+  - [x] Validar que nota pertence ao tenant atual
+  - [x] **Filtrar campos por permissão** usando `filterFieldsByPermission` (permissões por campo)
 
-- [ ] Criar rota `POST /api/notes`
-  - [ ] Requer autenticação e permissão "Note.create"
-  - [ ] Receber: `content`, `type`, `relatedEntityType`, `relatedEntityId`
-  - [ ] Validar dados obrigatórios (content)
-  - [ ] Validar limite de tamanho do conteúdo (ex: 10.000 caracteres)
-  - [ ] Validar enum (type)
-  - [ ] Validar que registro relacionado existe e pertence ao tenant
-  - [ ] Criar nota via `NoteService.createNote` (capturar `createdById` do token)
-  - [ ] **Registrar auditoria** usando `logAudit('Note', noteId, 'create', userId, tenantId)`
-  - [ ] Retornar nota criada (com campos filtrados por permissão)
+- [x] Criar rota `POST /api/notes`
+  - [x] Requer autenticação e permissão "Note.create"
+  - [x] Receber: `content`, `type`, `relatedEntityType`, `relatedEntityId`
+  - [x] Validar dados obrigatórios (content)
+  - [x] Validar limite de tamanho do conteúdo (ex: 10.000 caracteres)
+  - [x] Validar enum (type)
+  - [x] Validar que registro relacionado existe e pertence ao tenant
+  - [x] Criar nota via `NoteService.createNote` (capturar `createdById` do token)
+  - [x] **Registrar auditoria** usando `logAudit('Note', noteId, 'create', userId, tenantId)`
+  - [x] Retornar nota criada (com campos filtrados por permissão)
 
-- [ ] Criar rota `PUT /api/notes/:id`
-  - [ ] Requer autenticação e permissão "Note.update"
-  - [ ] Receber: `content`, `type`
-  - [ ] Validar que nota pertence ao tenant atual
-  - [ ] Validar que usuário é o criador (ou tem permissão admin)
-  - [ ] **Validar permissões por campo** usando `validateFieldPermissionsForUpdate`
-  - [ ] Validar limite de tamanho se content for atualizado
-  - [ ] Validar enum se type for atualizado
-  - [ ] Capturar changes (old/new) para auditoria
-  - [ ] Atualizar nota via `NoteService.updateNote`
-  - [ ] **Registrar auditoria** usando `logAudit('Note', noteId, 'update', userId, tenantId, changes)`
-  - [ ] Retornar nota atualizada (com campos filtrados por permissão)
+- [x] Criar rota `PUT /api/notes/:id`
+  - [x] Requer autenticação e permissão "Note.update"
+  - [x] Receber: `content`, `type`
+  - [x] Validar que nota pertence ao tenant atual
+  - [x] Validar que usuário é o criador (ou tem permissão admin)
+  - [x] **Validar permissões por campo** usando `validateFieldPermissionsForUpdate`
+  - [x] Validar limite de tamanho se content for atualizado
+  - [x] Validar enum se type for atualizado
+  - [x] Capturar changes (old/new) para auditoria
+  - [x] Atualizar nota via `NoteService.updateNote`
+  - [x] **Registrar auditoria** usando `logAudit('Note', noteId, 'update', userId, tenantId, changes)`
+  - [x] Retornar nota atualizada (com campos filtrados por permissão)
 
-- [ ] Criar rota `DELETE /api/notes/:id`
-  - [ ] Requer autenticação e permissão "Note.delete"
-  - [ ] Validar que nota pertence ao tenant atual
-  - [ ] Validar que usuário é o criador (ou tem permissão admin)
-  - [ ] **Soft delete** (marcar `deletedAt` via `NoteService.deleteNote`)
-  - [ ] **Registrar auditoria** usando `logAudit('Note', noteId, 'delete', userId, tenantId)`
-  - [ ] Retornar sucesso
+- [x] Criar rota `DELETE /api/notes/:id`
+  - [x] Requer autenticação e permissão "Note.delete"
+  - [x] Validar que nota pertence ao tenant atual
+  - [x] Validar que usuário é o criador (ou tem permissão admin)
+  - [x] **Soft delete** (marcar `deletedAt` via `NoteService.deleteNote`)
+  - [x] **Registrar auditoria** usando `logAudit('Note', noteId, 'delete', userId, tenantId)`
+  - [x] Retornar sucesso
 
 #### Validação
-- [ ] Teste E2E: criar nota funciona
-- [ ] Teste E2E: listar notas retorna apenas do tenant atual
-- [ ] Teste E2E: atualizar nota funciona
-- [ ] Teste E2E: deletar nota funciona
+- [x] Teste E2E: criar nota funciona
+- [x] Teste E2E: listar notas retorna apenas do tenant atual
+- [x] Teste E2E: atualizar nota funciona
+- [x] Teste E2E: deletar nota funciona
 
 ---
 
 ### 5. Editor de Notas
 
 #### Backend (Lógica)
-- [ ] Decidir formato de notas
+- [x] Decidir formato de notas
   - [ ] **Opção A**: Texto simples
-  - [ ] **Opção B**: Markdown
+  - [x] **Opção B**: Markdown
   - [ ] **Opção C**: Rich text (HTML)
-  - [ ] **Recomendação V1**: Markdown (simples e flexível)
+  - [x] **Recomendação V1**: Markdown (simples e flexível)
 
-- [ ] Armazenar conteúdo
-  - [ ] Se Markdown: armazenar como texto
-  - [ ] Renderizar Markdown no frontend
+- [x] Armazenar conteúdo
+  - [x] Se Markdown: armazenar como texto
+  - [x] Renderizar Markdown no frontend
 
 #### Frontend (React + TypeScript)
-- [ ] Criar componente `NoteEditor`
-  - [ ] Editor de texto (textarea ou editor Markdown)
-  - [ ] Preview de Markdown (se usar Markdown)
-  - [ ] Botões de formatação básica (negrito, itálico, lista)
+- [x] Criar componente `NoteEditor`
+  - [x] Editor de texto (textarea ou editor Markdown)
+  - [x] Preview de Markdown (se usar Markdown)
+  - [x] Botões de formatação básica (negrito, itálico, lista)
 
 #### Validação
-- [ ] Teste: editor de notas funciona
-- [ ] Teste: preview de Markdown funciona (se aplicável)
+- [x] Teste: editor de notas funciona
+- [x] Teste: preview de Markdown funciona (se aplicável)
 
 ---
 
 ### 6. Timeline/Histórico de Atividades
 
 #### Backend (Rotas)
-- [ ] Criar rota `GET /api/timeline/:entityType/:entityId`
-  - [ ] Requer autenticação
-  - [ ] **Filtrar por tenant** (isolamento multi-tenant)
-  - [ ] Validar que registro relacionado existe e pertence ao tenant
-  - [ ] Retornar histórico de atividades de um registro
-  - [ ] Incluir:
-    - [ ] Tarefas relacionadas (ordenadas por data, excluir soft deleted)
-    - [ ] Notas relacionadas (ordenadas por data, excluir soft deleted)
-    - [ ] Alterações de auditoria (da Etapa 3 - já filtram por tenant automaticamente)
-  - [ ] **Incluir informações de usuário** (quem criou tarefa/nota, quem fez alteração)
-  - [ ] Paginação (limit, offset)
-  - [ ] Ordenação: `created_at` (mais recente primeiro)
+- [x] Criar rota `GET /api/timeline/:entityType/:entityId`
+  - [x] Requer autenticação
+  - [x] **Filtrar por tenant** (isolamento multi-tenant)
+  - [x] Validar que registro relacionado existe e pertence ao tenant
+  - [x] Retornar histórico de atividades de um registro
+  - [x] Incluir:
+    - [x] Tarefas relacionadas (ordenadas por data, excluir soft deleted)
+    - [x] Notas relacionadas (ordenadas por data, excluir soft deleted)
+    - [x] Alterações de auditoria (da Etapa 3 - já filtram por tenant automaticamente)
+  - [x] **Incluir informações de usuário** (quem criou tarefa/nota, quem fez alteração)
+  - [x] Paginação (limit, offset)
+  - [x] Ordenação: `created_at` (mais recente primeiro)
 
-- [ ] Criar helper `getTimeline(entityType, entityId, tenantId)`
-  - [ ] Buscar tarefas relacionadas (filtrar por tenant e excluir soft deleted)
-  - [ ] Buscar notas relacionadas (filtrar por tenant e excluir soft deleted)
-  - [ ] Buscar logs de auditoria (já filtram por tenant automaticamente)
-  - [ ] Agregar e ordenar por data (timestamp)
-  - [ ] Incluir informações de usuário em cada item
-  - [ ] Retornar timeline unificada
+- [x] Criar helper `getTimeline(entityType, entityId, tenantId)`
+  - [x] Buscar tarefas relacionadas (filtrar por tenant e excluir soft deleted)
+  - [x] Buscar notas relacionadas (filtrar por tenant e excluir soft deleted)
+  - [x] Buscar logs de auditoria (já filtram por tenant automaticamente)
+  - [x] Agregar e ordenar por data (timestamp)
+  - [x] Incluir informações de usuário em cada item
+  - [x] Retornar timeline unificada
 
 #### Validação
-- [ ] Teste: timeline retorna atividades corretas
-- [ ] Teste: timeline está ordenada corretamente
-- [ ] Teste: timeline inclui tarefas, notas e auditoria
+- [x] Teste: timeline retorna atividades corretas
+- [x] Teste: timeline está ordenada corretamente
+- [x] Teste: timeline inclui tarefas, notas e auditoria
 
 ---
 
 ### 7. Frontend — Listagem de Tarefas
 
 #### Frontend (React + TypeScript)
-- [ ] Criar componente `TaskList`
-  - [ ] Tabela/listagem de tarefas
-  - [ ] Colunas: título, tipo, status, atribuído a, vencimento, prioridade
-  - [ ] Filtros: status, tipo, atribuído a, vencimento
-  - [ ] Indicador visual de tarefas vencidas
-  - [ ] Botão "Concluir" para tarefas pendentes
+- [x] Criar componente `TaskList`
+  - [x] Tabela/listagem de tarefas
+  - [x] Colunas: título, tipo, status, atribuído a, vencimento, prioridade
+  - [x] Filtros: status, tipo, atribuído a, vencimento
+  - [x] Indicador visual de tarefas vencidas
+  - [x] Botão "Concluir" para tarefas pendentes
 
-- [ ] Criar página `TasksPage`
-  - [ ] Integrar `TaskList`
-  - [ ] Botão "Nova Tarefa"
-  - [ ] Visualização de tarefas por status (opcional)
+- [x] Criar página `TasksPage`
+  - [x] Integrar `TaskList`
+  - [x] Botão "Nova Tarefa"
+  - [x] Visualização de tarefas por status (opcional)
 
 #### Validação
-- [ ] Teste: listagem de tarefas funciona
-- [ ] Teste: filtros funcionam
-- [ ] Teste: concluir tarefa funciona
+- [x] Teste: listagem de tarefas funciona
+- [x] Teste: filtros funcionam
+- [x] Teste: concluir tarefa funciona
 
 ---
 
 ### 8. Frontend — Formulário de Tarefa
 
 #### Frontend (React + TypeScript)
-- [ ] Criar componente `TaskForm`
-  - [ ] Campos: title, description, type, status, dueDate, priority
-  - [ ] Seleção de usuário atribuído (lookup)
-  - [ ] Seleção de registro relacionado (entityType + lookup)
-  - [ ] Validação de campos
-  - [ ] Submit para criar/atualizar
+- [x] Criar componente `TaskForm`
+  - [x] Campos: title, description, type, status, dueDate, priority
+  - [x] Seleção de usuário atribuído (lookup)
+  - [x] Seleção de registro relacionado (entityType + lookup)
+  - [x] Validação de campos
+  - [x] Submit para criar/atualizar
 
-- [ ] Criar página `TaskFormPage`
-  - [ ] Integrar `TaskForm`
-  - [ ] Modo criação ou edição
+- [x] Criar página `TaskFormPage`
+  - [x] Integrar `TaskForm`
+  - [x] Modo criação ou edição
 
 #### Validação
-- [ ] Teste: criar tarefa funciona
-- [ ] Teste: editar tarefa funciona
+- [x] Teste: criar tarefa funciona
+- [x] Teste: editar tarefa funciona
 
 ---
 
 ### 9. Frontend — Editor e Listagem de Notas
 
 #### Frontend (React + TypeScript)
-- [ ] Criar componente `NoteEditor` (reutilizar do item 5)
-- [ ] Criar componente `NoteList`
-  - [ ] Listagem de notas
-  - [ ] Mostrar conteúdo (truncado se muito longo)
-  - [ ] Mostrar criador e data
-  - [ ] Link para editar/deletar
+- [x] Criar componente `NoteEditor` (reutilizar do item 5)
+- [x] Criar componente `NoteList`
+  - [x] Listagem de notas
+  - [x] Mostrar conteúdo (truncado se muito longo)
+  - [x] Mostrar criador e data
+  - [x] Link para editar/deletar
 
-- [ ] Criar componente `NoteForm`
-  - [ ] Integrar `NoteEditor`
-  - [ ] Seleção de registro relacionado
-  - [ ] Submit para criar/atualizar
+- [x] Criar componente `NoteForm`
+  - [x] Integrar `NoteEditor`
+  - [x] Seleção de registro relacionado
+  - [x] Submit para criar/atualizar
 
 #### Validação
-- [ ] Teste: criar nota funciona
-- [ ] Teste: editar nota funciona
-- [ ] Teste: listar notas funciona
+- [x] Teste: criar nota funciona
+- [x] Teste: editar nota funciona
+- [x] Teste: listar notas funciona
 
 ---
 
 ### 10. Frontend — Timeline
 
 #### Frontend (React + TypeScript)
-- [ ] Criar componente `Timeline`
-  - [ ] Lista vertical de atividades
-  - [ ] Agrupar por data (hoje, ontem, esta semana, etc.)
-  - [ ] Mostrar tipo de atividade (tarefa, nota, alteração)
-  - [ ] Mostrar usuário e timestamp
-  - [ ] Link para detalhes da atividade
+- [x] Criar componente `Timeline`
+  - [x] Lista vertical de atividades
+  - [x] Agrupar por data (hoje, ontem, esta semana, etc.)
+  - [x] Mostrar tipo de atividade (tarefa, nota, alteração)
+  - [x] Mostrar usuário e timestamp
+  - [x] Link para detalhes da atividade
 
-- [ ] Integrar timeline em páginas de detalhes
-  - [ ] Página de detalhes de contato
-  - [ ] Página de detalhes de empresa
-  - [ ] Página de detalhes de lead
-  - [ ] Página de detalhes de oportunidade
+- [x] Integrar timeline em páginas de detalhes
+  - [x] Página de detalhes de contato
+  - [x] Página de detalhes de empresa
+  - [x] Página de detalhes de lead
+  - [x] Página de detalhes de oportunidade
 
 #### Validação
-- [ ] Teste: timeline aparece em páginas de detalhes
-- [ ] Teste: timeline mostra atividades corretas
-- [ ] Teste: timeline está ordenada corretamente
+- [x] Teste: timeline aparece em páginas de detalhes
+- [x] Teste: timeline mostra atividades corretas
+- [x] Teste: timeline está ordenada corretamente
 
 ---
 
 ### 11. Notificações de Tarefas (Opcional V1)
 
 #### Backend (Lógica)
-- [ ] Criar job/agendamento para tarefas vencidas
-  - [ ] Buscar tarefas com `dueDate` passado e status "Pendente"
-  - [ ] Enviar notificação (email ou in-app)
-  - [ ] **Opcional na V1**: pode ser implementado depois
+- [x] Criar job/agendamento para tarefas vencidas
+  - [x] Buscar tarefas com `dueDate` passado e status "Pendente"
+  - [x] Enviar notificação (email ou in-app)
+  - [x] **Opcional na V1**: pode ser implementado depois
 
 #### Validação
-- [ ] Teste: notificações funcionam (se implementado)
+- [x] Teste: notificações funcionam (se implementado)
 
 ---
 
 ### 12. Testes
 
 #### Backend (Testes)
-- [ ] Testes unitários
-  - [ ] CRUD de tarefas
-  - [ ] CRUD de notas
-  - [ ] Timeline
-  - [ ] Validações de enums
-  - [ ] Validações de datas
-  - [ ] Validações de relacionamentos
+- [x] Testes unitários
+  - [x] CRUD de tarefas
+  - [x] CRUD de notas
+  - [x] Timeline
+  - [x] Validações de enums
+  - [x] Validações de datas
+  - [x] Validações de relacionamentos
 
-- [ ] Testes de integração
-  - [ ] Tarefa vinculada a registro
-  - [ ] Nota vinculada a registro
-  - [ ] Timeline agrega corretamente
-  - [ ] **Testes de auditoria** (verificar que logs são criados em create, update, delete)
-  - [ ] **Testes de permissões por campo** (verificar filtragem em GET, validação em UPDATE)
-  - [ ] **Testes de soft delete** (verificar que deletedAt é preenchido, registros não aparecem em listagens)
+- [x] Testes de integração
+  - [x] Tarefa vinculada a registro
+  - [x] Nota vinculada a registro
+  - [x] Timeline agrega corretamente
+  - [x] **Testes de auditoria** (verificar que logs são criados em create, update, delete)
+  - [x] **Testes de permissões por campo** (verificar filtragem em GET, validação em UPDATE)
+  - [x] **Testes de soft delete** (verificar que deletedAt é preenchido, registros não aparecem em listagens)
 
 #### Validação
-- [ ] Todos os testes passando
-- [ ] Cobertura de testes > 70%
+- [x] Todos os testes passando
+- [x] Cobertura de testes > 70%
 
 ---
 
@@ -639,18 +641,18 @@ if (!validation.allowed) {
 
 Antes de avançar para a **Etapa 8 (Busca/Filtros)**, verifique:
 
-- [ ] Tarefas podem ser criadas e gerenciadas
-- [ ] Notas podem ser criadas e vinculadas a registros
-- [ ] Timeline exibindo histórico de atividades por registro
-- [ ] Status e tipos de tarefas configuráveis
-- [ ] Editor de notas funcionando
-- [ ] **Auditoria funcionando para todas as operações CRUD** (logs criados em create, update, delete)
-- [ ] **Permissões por campo funcionando** (filtragem em GET, validação em UPDATE)
-- [ ] **Soft delete funcionando** (deletedAt preenchido, registros não aparecem em listagens)
-- [ ] **Validações específicas implementadas** (enums, datas, relacionamentos, limites)
-- [ ] Frontend básico funcionando
-- [ ] Testes passando
-- [ ] Documentação atualizada
+- [x] Tarefas podem ser criadas e gerenciadas
+- [x] Notas podem ser criadas e vinculadas a registros
+- [x] Timeline exibindo histórico de atividades por registro
+- [x] Status e tipos de tarefas configuráveis
+- [x] Editor de notas funcionando
+- [x] **Auditoria funcionando para todas as operações CRUD** (logs criados em create, update, delete)
+- [x] **Permissões por campo funcionando** (filtragem em GET, validação em UPDATE)
+- [x] **Soft delete funcionando** (deletedAt preenchido, registros não aparecem em listagens)
+- [x] **Validações específicas implementadas** (enums, datas, relacionamentos, limites)
+- [x] Frontend básico funcionando
+- [x] Testes passando
+- [x] Documentação atualizada
 
 ---
 
