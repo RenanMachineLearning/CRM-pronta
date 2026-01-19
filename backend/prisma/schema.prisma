@@ -880,6 +880,7 @@ model Task {
   relatedEntityType String // Tipo de entidade relacionada (Contact, Company, Lead, Opportunity)
   relatedEntityId   String // ID do registro relacionado (UUID)
   deletedAt       DateTime? // Soft delete - null = ativo, preenchido = deletado
+  lastNotificationSentAt DateTime? @map("last_notification_sent_at") // Timestamp da última notificação de vencimento enviada
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 

@@ -25,6 +25,7 @@ import pipelineRoutes from './routes/pipelineRoutes';
 import taskRoutes from './routes/taskRoutes';
 import noteRoutes from './routes/noteRoutes';
 import timelineRoutes from './routes/timelineRoutes';
+import { startTaskNotificationJob } from './jobs/taskNotificationJob';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -125,6 +126,9 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Iniciar job de notificações de tarefas vencidas
+    startTaskNotificationJob();
   });
 }
 
