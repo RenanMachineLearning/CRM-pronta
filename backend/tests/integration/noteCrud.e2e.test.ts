@@ -15,6 +15,7 @@ import {
   assignRoleToUser,
   createStandardRoles,
   createTestPermission,
+  createTestRole,
   closeDatabase,
   waitForAuditLog,
   prisma,
@@ -1366,7 +1367,7 @@ describe('Note CRUD - E2E Tests', () => {
       expect(response.status).toBe(200);
     });
 
-    it('deve registrar auditoria com changes ao atualizar note', async () => {
+    it('deve registrar auditoria com changes ao atualizar note (verificar estrutura old/new)', async () => {
       const note = await prisma.note.create({
         data: {
           tenantId: tenant1.id,
@@ -1398,6 +1399,115 @@ describe('Note CRUD - E2E Tests', () => {
 
       expect(auditLog).toBeDefined();
       expect(auditLog?.changes).toBeDefined();
+      expect(auditLog?.changes).toBeInstanceOf(Object);
+
+      // Verificar estrutura de changes (old/new values)
+      const changes = auditLog?.changes as Record<string, { old?: any; new?: any }>;
+      expect(changes).toBeDefined();
+
+      // Verificar que content foi atualizado
+      if (changes.content) {
+        expect(changes.content.old).toBe('Nota Original');
+        expect(changes.content.new).toBe('Nota Atualizada');
+      }
+
+      // Verificar que type foi atualizado
+      if (changes.type) {
+        expect(changes.type.old).toBe('NOTE');
+        expect(changes.type.new).toBe('COMMENT');
+      }
+    });
+
+    it('deve registrar auditoria sem changes ao criar note (apenas action=create)', async () => {
+      const response = await request(app)
+        .post('/api/notes')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .send({
+          content: 'Nota Create Auditoria',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+        });
+
+      expect(response.status).toBe(201);
+      const noteId = response.body.id;
+
+      // Aguardar auditoria
+      const auditLog = await waitForAuditLog({
+        tenantId: tenant1.id,
+        entityType: 'Note',
+        entityId: noteId,
+        action: 'create',
+      });
+
+      expect(auditLog).toBeDefined();
+      expect(auditLog?.action).toBe('create');
+      // Changes deve estar ausente ou null em create
+      expect(auditLog?.changes).toBeUndefined() || expect(auditLog?.changes).toBeNull();
+    });
+
+    it('deve registrar auditoria sem changes ao deletar note (apenas action=delete)', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Nota Delete Auditoria',
+          type: 'NOTE',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      const response = await request(app)
+        .delete(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`);
+
+      expect(response.status).toBe(200);
+
+      // Aguardar auditoria
+      const auditLog = await waitForAuditLog({
+        tenantId: tenant1.id,
+        entityType: 'Note',
+        entityId: note.id,
+        action: 'delete',
+      });
+
+      expect(auditLog).toBeDefined();
+      expect(auditLog?.action).toBe('delete');
+      // Changes deve estar ausente ou null em delete
+      expect(auditLog?.changes).toBeUndefined() || expect(auditLog?.changes).toBeNull();
+    });
+
+    it('deve retornar 404 ao tentar atualizar note já soft deleted', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Nota Para Deletar',
+          type: 'NOTE',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      // Soft delete
+      await prisma.note.update({
+        where: { id: note.id },
+        data: { deletedAt: new Date() },
+      });
+
+      // Tentar atualizar note deletada
+      const response = await request(app)
+        .put(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .send({
+          content: 'Tentativa de Atualizar',
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toContain('não encontrada');
     });
   });
 
@@ -1868,6 +1978,167 @@ describe('Note CRUD - E2E Tests', () => {
         });
 
       expect(response.status).toBe(404);
+    });
+  });
+
+  describe('Permissões por Campo', () => {
+    let fieldUser: { id: string; email: string; password: string };
+    let fieldToken: string;
+    let fieldRole: { id: string };
+
+    beforeAll(async () => {
+      // Criar permissões por campo
+      const noteListPermission = await createTestPermission({
+        tenantId: tenant1.id,
+        entity: 'Note',
+        action: 'list',
+      });
+
+      const noteReadPermission = await createTestPermission({
+        tenantId: tenant1.id,
+        entity: 'Note',
+        action: 'read',
+      });
+
+      const noteContentReadPermission = await createTestPermission({
+        tenantId: tenant1.id,
+        entity: 'Note',
+        action: 'read',
+        field: 'content',
+      });
+
+      const noteUpdatePermission = await createTestPermission({
+        tenantId: tenant1.id,
+        entity: 'Note',
+        action: 'update',
+      });
+
+      const noteContentUpdatePermission = await createTestPermission({
+        tenantId: tenant1.id,
+        entity: 'Note',
+        action: 'update',
+        field: 'content',
+      });
+
+      // Criar role com permissões por campo
+      fieldRole = await createTestRole({
+        tenantId: tenant1.id,
+        name: 'Note Field Permission Role',
+        permissionIds: [
+          noteListPermission.id,
+          noteReadPermission.id,
+          noteContentReadPermission.id,
+          noteUpdatePermission.id,
+          noteContentUpdatePermission.id,
+        ],
+      });
+
+      // Criar usuário com role
+      const fieldUserObj = await createTestUser({
+        email: 'fielduser@notecrud.test',
+        password: 'FieldUserPass123',
+        name: 'Field User',
+        tenantId: tenant1.id,
+      });
+      fieldUser = { ...fieldUserObj, password: 'FieldUserPass123' };
+      await assignRoleToUser(fieldUser.id, fieldRole.id);
+      fieldToken = generateToken(fieldUser.id, tenant1.id);
+    });
+
+    it('GET: usuário com apenas Note.read.content não vê outros campos', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Conteúdo da nota',
+          type: 'NOTE',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      const response = await request(app)
+        .get(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${fieldToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('content', 'Conteúdo da nota');
+      // Campos sem permissão não devem estar presentes
+      expect(response.body).not.toHaveProperty('type');
+    });
+
+    it('UPDATE: usuário sem Note.update.type não pode atualizar type', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Nota original',
+          type: 'NOTE',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      const response = await request(app)
+        .put(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${fieldToken}`)
+        .send({
+          content: 'Conteúdo atualizado',
+          type: 'COMMENT',
+        });
+
+      // Deve retornar erro de permissão
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('permissão para atualizar');
+    });
+
+    it('UPDATE: usuário com Note.update.content pode atualizar content', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Conteúdo original',
+          type: 'NOTE',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      const response = await request(app)
+        .put(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${fieldToken}`)
+        .send({
+          content: 'Conteúdo atualizado com sucesso',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.content).toBe('Conteúdo atualizado com sucesso');
+    });
+
+    it('Admin vê todos os campos (tem todas as permissões)', async () => {
+      const note = await prisma.note.create({
+        data: {
+          tenantId: tenant1.id,
+          content: 'Nota completa',
+          type: 'COMMENT',
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
+          createdById: adminUser1.id,
+        },
+      });
+
+      const response = await request(app)
+        .get(`/api/notes/${note.id}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('content');
+      expect(response.body).toHaveProperty('type');
+      expect(response.body).toHaveProperty('relatedEntityType');
     });
   });
 });
