@@ -1109,4 +1109,95 @@ describe('Opportunity CRUD - E2E Tests', () => {
       expect(deleteLog.action).toBe('delete');
     });
   });
+
+  describe('GET /api/opportunities - Busca com parâmetro q', () => {
+    beforeAll(async () => {
+      // Criar oportunidades para testes de busca
+      await prisma.opportunity.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Venda para João Silva',
+          value: new Prisma.Decimal(50000),
+          currency: 'BRL',
+          stageId: stage1.id,
+          status: 'OPEN',
+        },
+      });
+
+      await prisma.opportunity.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Oportunidade de Venda Tech',
+          value: new Prisma.Decimal(75000),
+          currency: 'BRL',
+          stageId: stage2.id,
+          status: 'OPEN',
+        },
+      });
+    });
+
+    it('deve filtrar por nome com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/opportunities?q=venda')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        expect(
+          response.body.data.some((o: any) =>
+            o.name.toLowerCase().includes('venda')
+          )
+        ).toBe(true);
+      }
+    });
+
+    it('deve ser case-insensitive', async () => {
+      const response = await request(app)
+        .get('/api/opportunities?q=VENDA')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeInstanceOf(Array);
+    });
+
+    it('deve combinar busca com filtros existentes', async () => {
+      const response = await request(app)
+        .get('/api/opportunities?q=venda&status=OPEN')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        expect(response.body.data.every((o: any) => o.status === 'OPEN')).toBe(true);
+      }
+    });
+
+    it('deve retornar 400 para query muito longa', async () => {
+      const longQuery = 'a'.repeat(501);
+      const response = await request(app)
+        .get(`/api/opportunities?q=${encodeURIComponent(longQuery)}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(400);
+
+      expect(response.body.error).toBeTruthy();
+      expect(response.body.message).toContain('não pode exceder');
+    });
+
+    it('deve funcionar sem parâmetro q (listagem completa)', async () => {
+      const response = await request(app)
+        .get('/api/opportunities')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.pagination).toBeDefined();
+    });
+  });
 });

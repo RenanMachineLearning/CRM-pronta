@@ -14,6 +14,7 @@ import { validateUniqueField } from '../utils/uniqueFieldValidator';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
+import { buildSearchConditions } from '../utils/entitySearchHelpers';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,7 @@ const prisma = new PrismaClient();
 export interface CompanyFilters {
   industry?: string;
   size?: CompanySize;
+  q?: string; // Termo de busca
 }
 
 // Interface para paginação
@@ -132,6 +134,39 @@ export class CompanyService {
     // Adicionar filtro de size se fornecido
     if (filters?.size) {
       where.size = filters.size;
+    }
+
+    // Adicionar condição de busca se `q` for fornecido
+    // IMPORTANTE: Usar AND entre filtros existentes e OR para busca
+    if (filters?.q) {
+      const searchConditions = buildSearchConditions('company', filters.q);
+      if (searchConditions.length > 0) {
+        // Combinar filtros existentes (AND) com busca (OR)
+        const andConditions: any[] = [];
+
+        // Adicionar condições base (tenantId e deletedAt) sempre
+        andConditions.push({ tenantId });
+        andConditions.push({ deletedAt: null });
+
+        // Adicionar filtros existentes como condições AND
+        if (filters.industry) {
+          andConditions.push({
+            industry: {
+              contains: filters.industry.trim(),
+              mode: 'insensitive',
+            },
+          });
+        }
+        if (filters.size) {
+          andConditions.push({ size: filters.size });
+        }
+
+        // Adicionar busca como OR dentro do AND
+        andConditions.push({ OR: searchConditions });
+
+        // Usar estrutura AND para combinar tudo
+        where.AND = andConditions;
+      }
     }
 
     // Configurar ordenação

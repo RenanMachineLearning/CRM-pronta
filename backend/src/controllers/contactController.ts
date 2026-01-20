@@ -14,12 +14,24 @@ import { ContactStatus } from '@prisma/client';
 import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { validateSearchQuery } from '../utils/entitySearchHelpers';
+import { SearchError } from '../types/search.types';
 
 /**
  * Lista contatos com paginação e filtros
  * 
- * @param req - Request com query params (limit, offset, companyId, status, tagId, orderBy, order)
+ * @param req - Request com query params (limit, offset, companyId, status, tagId, orderBy, order, q)
  * @param res - Response para retornar lista de contatos
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - companyId: string (opcional: UUID da empresa)
+ * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
+ * - tagId: string (opcional: UUID da tag)
+ * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
+ * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca em nome, email, telefone, etc.
  */
 export async function listContacts(req: Request, res: Response): Promise<void> {
   try {
@@ -34,6 +46,7 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
     const tagId = req.query.tagId as string | undefined;
     const orderBy = req.query.orderBy as string | undefined;
     const order = req.query.order as string | undefined;
+    const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
 
     // Validar limit
     if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
@@ -80,6 +93,28 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Validar parâmetro de busca
+    let searchQuery: string | undefined;
+    if (q !== undefined) {
+      try {
+        searchQuery = validateSearchQuery(q);
+      } catch (error: any) {
+        if (error instanceof SearchError) {
+          res.status(error.statusCode).json({
+            error: 'Parâmetro inválido',
+            message: error.message,
+            code: error.code,
+          });
+        } else {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: error.message || 'Query inválida',
+          });
+        }
+        return;
+      }
+    }
+
     // userId já validado pelo middleware
     const userId = req.userId!;
 
@@ -90,6 +125,7 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
         companyId,
         status: status as ContactStatus | undefined,
         tagId,
+        q: searchQuery, // NOVO: Passar query de busca
       },
       {
         limit,

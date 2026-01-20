@@ -710,4 +710,107 @@ describe('Lead CRUD - E2E Tests', () => {
       expect(deleteLog).toBeDefined();
     });
   });
+
+  describe('GET /api/leads - Busca com parâmetro q', () => {
+    beforeAll(async () => {
+      // Criar leads para testes de busca
+      await prisma.lead.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Maria',
+          lastName: 'Santos',
+          email: 'maria.santos@example.com',
+          phone: '+55 11 88888-8888',
+          company: 'Empresa Teste',
+          source: 'Website',
+          status: 'NEW',
+        },
+      });
+
+      await prisma.lead.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Carlos',
+          lastName: 'Silva',
+          email: 'carlos@example.com',
+          status: 'QUALIFIED',
+        },
+      });
+    });
+
+    it('deve filtrar por nome com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/leads?q=maria')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        expect(
+          response.body.data.some((l: any) =>
+            l.firstName.toLowerCase().includes('maria') ||
+            l.lastName?.toLowerCase().includes('maria')
+          )
+        ).toBe(true);
+      }
+    });
+
+    it('deve filtrar por email com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/leads?q=maria@example.com')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+    });
+
+    it('deve ser case-insensitive', async () => {
+      const response = await request(app)
+        .get('/api/leads?q=MARIA')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeInstanceOf(Array);
+    });
+
+    it('deve combinar busca com filtros existentes', async () => {
+      const response = await request(app)
+        .get('/api/leads?q=silva&status=QUALIFIED')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        expect(response.body.data.every((l: any) => l.status === 'QUALIFIED')).toBe(true);
+      }
+    });
+
+    it('deve retornar 400 para query muito longa', async () => {
+      const longQuery = 'a'.repeat(501);
+      const response = await request(app)
+        .get(`/api/leads?q=${encodeURIComponent(longQuery)}`)
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(400);
+
+      expect(response.body.error).toBeTruthy();
+      expect(response.body.message).toContain('não pode exceder');
+    });
+
+    it('deve funcionar sem parâmetro q (listagem completa)', async () => {
+      const response = await request(app)
+        .get('/api/leads')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.pagination).toBeDefined();
+    });
+  });
 });

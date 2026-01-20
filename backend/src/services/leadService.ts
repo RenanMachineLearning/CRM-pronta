@@ -15,6 +15,7 @@ import { validateLeadStatusTransition } from '../utils/statusTransitions';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
+import { buildSearchConditions } from '../utils/entitySearchHelpers';
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ export interface LeadFilters {
   status?: LeadStatus;
   source?: string;
   converted?: boolean;
+  q?: string; // Termo de busca
 }
 
 // Interface para paginação
@@ -146,6 +148,42 @@ export class LeadService {
     // Adicionar filtro de converted se fornecido
     if (filters?.converted !== undefined) {
       where.converted = filters.converted;
+    }
+
+    // Adicionar condição de busca se `q` for fornecido
+    // IMPORTANTE: Usar AND entre filtros existentes e OR para busca
+    if (filters?.q) {
+      const searchConditions = buildSearchConditions('lead', filters.q);
+      if (searchConditions.length > 0) {
+        // Combinar filtros existentes (AND) com busca (OR)
+        const andConditions: any[] = [];
+
+        // Adicionar condições base (tenantId e deletedAt) sempre
+        andConditions.push({ tenantId });
+        andConditions.push({ deletedAt: null });
+
+        // Adicionar filtros existentes como condições AND
+        if (filters.status) {
+          andConditions.push({ status: filters.status });
+        }
+        if (filters.source) {
+          andConditions.push({
+            source: {
+              contains: filters.source.trim(),
+              mode: 'insensitive',
+            },
+          });
+        }
+        if (filters.converted !== undefined) {
+          andConditions.push({ converted: filters.converted });
+        }
+
+        // Adicionar busca como OR dentro do AND
+        andConditions.push({ OR: searchConditions });
+
+        // Usar estrutura AND para combinar tudo
+        where.AND = andConditions;
+      }
     }
 
     // Configurar ordenação

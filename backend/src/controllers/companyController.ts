@@ -15,12 +15,23 @@ import { CompanySize, ContactStatus } from '@prisma/client';
 import { validateUrl, normalizeUrl } from '../utils/validators';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { validateSearchQuery } from '../utils/entitySearchHelpers';
+import { SearchError } from '../types/search.types';
 
 /**
  * Lista empresas com paginação e filtros
  * 
- * @param req - Request com query params (limit, offset, industry, size, orderBy, order)
+ * @param req - Request com query params (limit, offset, industry, size, orderBy, order, q)
  * @param res - Response para retornar lista de empresas
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - industry: string (opcional: filtro por indústria)
+ * - size: string (opcional: SMALL, MEDIUM, LARGE, ENTERPRISE)
+ * - orderBy: string (opcional: name, createdAt, default: name)
+ * - order: string (opcional: asc, desc, default: asc para name, desc para createdAt)
+ * - q: string (opcional) - Termo de busca em nome, website, indústria
  */
 export async function listCompanies(req: Request, res: Response): Promise<void> {
   try {
@@ -34,6 +45,7 @@ export async function listCompanies(req: Request, res: Response): Promise<void> 
     const size = req.query.size as string | undefined;
     const orderBy = req.query.orderBy as string | undefined;
     const order = req.query.order as string | undefined;
+    const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
 
     // Validar limit
     if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
@@ -80,12 +92,35 @@ export async function listCompanies(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Validar parâmetro de busca
+    let searchQuery: string | undefined;
+    if (q !== undefined) {
+      try {
+        searchQuery = validateSearchQuery(q);
+      } catch (error: any) {
+        if (error instanceof SearchError) {
+          res.status(error.statusCode).json({
+            error: 'Parâmetro inválido',
+            message: error.message,
+            code: error.code,
+          });
+        } else {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: error.message || 'Query inválida',
+          });
+        }
+        return;
+      }
+    }
+
     // Buscar empresas
     const result = await CompanyService.listCompanies(
       tenantId,
       {
         industry,
         size: size as CompanySize | undefined,
+        q: searchQuery, // NOVO: Passar query de busca
       },
       {
         limit,
