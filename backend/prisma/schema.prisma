@@ -521,6 +521,8 @@ model Company {
 
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, name])
   @@map("companies")
 }
 
@@ -558,6 +560,9 @@ model Contact {
   @@index([tenantId, id])
   // Índice para busca por empresa
   @@index([tenantId, companyId])
+  // Índices para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, firstName])
+  @@index([tenantId, lastName])
   @@map("contacts")
 }
 
@@ -728,6 +733,8 @@ model Lead {
   @@index([tenantId, id])
   // Índice para busca por status (conforme checklist)
   @@index([tenantId, status])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, email])
   @@map("leads")
 }
 
@@ -815,6 +822,8 @@ model Opportunity {
   // Índices adicionais para performance em filtros
   @@index([tenantId, contactId])
   @@index([tenantId, companyId])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, name])
   @@map("opportunities")
 }
 
