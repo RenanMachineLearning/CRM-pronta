@@ -16,6 +16,7 @@ import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { validateSearchQuery } from '../utils/entitySearchHelpers';
 import { SearchError } from '../types/search.types';
+import { Filter, FilterError } from '../types/filter.types';
 
 /**
  * Lista oportunidades com paginação e filtros
@@ -33,6 +34,7 @@ import { SearchError } from '../types/search.types';
  * - orderBy: string (opcional: value, closeDate, createdAt, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
  * - q: string (opcional) - Termo de busca em nome
+ * - filters: JSON (opcional) - Filtros avançados
  */
 export async function listOpportunities(req: Request, res: Response): Promise<void> {
   try {
@@ -143,16 +145,42 @@ export async function listOpportunities(req: Request, res: Response): Promise<vo
       }
     }
 
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
+    }
+
     // Chamar service
-    const result = await OpportunityService.listOpportunities(
-      tenantId,
-      {
-        stageId,
-        status: status as OpportunityStatus | undefined,
-        contactId,
-        companyId,
-        q: searchQuery, // NOVO: Passar query de busca
-      },
+    try {
+      const result = await OpportunityService.listOpportunities(
+        tenantId,
+        {
+          stageId,
+          status: status as OpportunityStatus | undefined,
+          contactId,
+          companyId,
+          q: searchQuery,
+          advancedFilters, // NOVO: Filtros avançados
+        },
       {
         limit,
         offset,
@@ -162,7 +190,19 @@ export async function listOpportunities(req: Request, res: Response): Promise<vo
       userId
     );
 
-    res.status(200).json(result);
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof FilterError) {
+        res.status(error.statusCode).json({
+          error: 'Filtro inválido',
+          code: error.code,
+          details: error.details,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   } catch (error: any) {
     console.error('Erro ao listar oportunidades:', error);
     res.status(500).json({

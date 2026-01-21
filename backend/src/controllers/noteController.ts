@@ -14,6 +14,7 @@ import { NoteType } from '@prisma/client';
 import { logAudit } from '../utils/auditLog';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { Filter, FilterError } from '../types/filter.types';
 
 /**
  * Lista notas com paginação e filtros
@@ -109,11 +110,36 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
+    }
+
     // Montar filtros
     const filters: NoteFilters = {};
     if (type) filters.type = type as NoteType;
     if (relatedEntityType) filters.relatedEntityType = relatedEntityType as 'Contact' | 'Company' | 'Lead' | 'Opportunity' | 'Task';
     if (relatedEntityId) filters.relatedEntityId = relatedEntityId;
+    if (advancedFilters) filters.advancedFilters = advancedFilters; // NOVO: Filtros avançados
 
     // Montar paginação
     const pagination: PaginationParams = {
@@ -124,9 +150,22 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
     };
 
     // Chamar service
-    const result = await NoteService.listNotes(tenantId, filters, pagination, userId);
+    try {
+      const result = await NoteService.listNotes(tenantId, filters, pagination, userId);
 
-    res.status(200).json(result);
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof FilterError) {
+        res.status(error.statusCode).json({
+          error: 'Filtro inválido',
+          code: error.code,
+          details: error.details,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   } catch (error: any) {
     console.error('Erro ao listar notas:', error);
     res.status(500).json({

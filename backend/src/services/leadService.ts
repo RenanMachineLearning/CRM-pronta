@@ -25,6 +25,7 @@ export interface LeadFilters {
   source?: string;
   converted?: boolean;
   q?: string; // Termo de busca
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
@@ -150,39 +151,56 @@ export class LeadService {
       where.converted = filters.converted;
     }
 
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'lead');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'lead');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
+      }
+    }
+
     // Adicionar condição de busca se `q` for fornecido
-    // IMPORTANTE: Usar AND entre filtros existentes e OR para busca
     if (filters?.q) {
       const searchConditions = buildSearchConditions('lead', filters.q);
       if (searchConditions.length > 0) {
-        // Combinar filtros existentes (AND) com busca (OR)
-        const andConditions: any[] = [];
+        if (Object.keys(where).length > 2 || where.AND) {
+          const andConditions: any[] = [];
+          andConditions.push({ tenantId });
+          andConditions.push({ deletedAt: null });
 
-        // Adicionar condições base (tenantId e deletedAt) sempre
-        andConditions.push({ tenantId });
-        andConditions.push({ deletedAt: null });
+          if (where.status) {
+            andConditions.push({ status: where.status });
+            delete where.status;
+          }
+          if (where.source) {
+            andConditions.push({ source: where.source });
+            delete where.source;
+          }
+          if (where.converted !== undefined) {
+            andConditions.push({ converted: where.converted });
+            delete where.converted;
+          }
 
-        // Adicionar filtros existentes como condições AND
-        if (filters.status) {
-          andConditions.push({ status: filters.status });
+          const advancedFields = Object.keys(where).filter(
+            key => key !== 'tenantId' && key !== 'deletedAt' && key !== 'AND'
+          );
+          if (advancedFields.length > 0) {
+            const advancedConditions: any = {};
+            for (const field of advancedFields) {
+              advancedConditions[field] = where[field];
+              delete where[field];
+            }
+            andConditions.push(advancedConditions);
+          }
+
+          andConditions.push({ OR: searchConditions });
+          where.AND = andConditions;
+        } else {
+          where.OR = searchConditions;
         }
-        if (filters.source) {
-          andConditions.push({
-            source: {
-              contains: filters.source.trim(),
-              mode: 'insensitive',
-            },
-          });
-        }
-        if (filters.converted !== undefined) {
-          andConditions.push({ converted: filters.converted });
-        }
-
-        // Adicionar busca como OR dentro do AND
-        andConditions.push({ OR: searchConditions });
-
-        // Usar estrutura AND para combinar tudo
-        where.AND = andConditions;
       }
     }
 

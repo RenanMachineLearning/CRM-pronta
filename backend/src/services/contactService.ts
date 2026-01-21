@@ -15,6 +15,8 @@ import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
 import { buildSearchConditions } from '../utils/entitySearchHelpers';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +26,7 @@ export interface ContactFilters {
   status?: ContactStatus;
   tagId?: string;
   q?: string; // Termo de busca
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
@@ -171,43 +174,76 @@ export class ContactService {
       };
     }
 
+    // Adicionar filtros avançados (após filtros simples)
+    // IMPORTANTE: Filtros simples têm prioridade se houver conflito
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        // Validar filtros avançados
+        validateFilters(filters.advancedFilters, 'contact');
+
+        // Construir query Prisma
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'contact');
+
+        // Mesclar com where (filtros simples têm prioridade se conflito)
+        // Object.assign sobrescreve, então filtros simples já aplicados não serão sobrescritos
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        // Re-throw para controller tratar
+        throw error;
+      }
+    }
+
     // Adicionar condição de busca se `q` for fornecido
-    // IMPORTANTE: Usar AND entre filtros existentes e OR para busca
+    // IMPORTANTE: Busca textual combina com filtros usando AND
     if (filters?.q) {
       const searchConditions = buildSearchConditions('contact', filters.q);
       if (searchConditions.length > 0) {
-        // Combinar filtros existentes (AND) com busca (OR)
-        const andConditions: any[] = [];
+        // Se já temos condições complexas, usar AND
+        // Caso contrário, adicionar OR diretamente
+        if (Object.keys(where).length > 2 || where.AND) {
+          // Já temos filtros, combinar tudo com AND
+          const andConditions: any[] = [];
 
-        // Adicionar condições base (tenantId e deletedAt) sempre
-        andConditions.push({ tenantId });
-        andConditions.push({ deletedAt: null });
+          // Adicionar condições base
+          andConditions.push({ tenantId });
+          andConditions.push({ deletedAt: null });
 
-        // Adicionar filtros existentes como condições AND
-        if (filters.companyId) {
-          andConditions.push({ companyId: filters.companyId });
+          // Adicionar filtros simples (se não foram movidos para AND)
+          if (where.companyId) {
+            andConditions.push({ companyId: where.companyId });
+            delete where.companyId;
+          }
+          if (where.status) {
+            andConditions.push({ status: where.status });
+            delete where.status;
+          }
+          if (where.tags) {
+            andConditions.push({ tags: where.tags });
+            delete where.tags;
+          }
+
+          // Adicionar filtros avançados (todos os outros campos em where)
+          const advancedFields = Object.keys(where).filter(
+            key => key !== 'tenantId' && key !== 'deletedAt' && key !== 'AND'
+          );
+          if (advancedFields.length > 0) {
+            const advancedConditions: any = {};
+            for (const field of advancedFields) {
+              advancedConditions[field] = where[field];
+              delete where[field];
+            }
+            andConditions.push(advancedConditions);
+          }
+
+          // Adicionar busca como OR dentro do AND
+          andConditions.push({ OR: searchConditions });
+
+          // Usar estrutura AND para combinar tudo
+          where.AND = andConditions;
+        } else {
+          // Apenas busca, sem outros filtros
+          where.OR = searchConditions;
         }
-        if (filters.status) {
-          andConditions.push({ status: filters.status });
-        }
-        if (filters.tagId) {
-          andConditions.push({
-            tags: {
-              some: {
-                tagId: filters.tagId,
-                tag: {
-                  tenantId,
-                },
-              },
-            },
-          });
-        }
-
-        // Adicionar busca como OR dentro do AND
-        andConditions.push({ OR: searchConditions });
-
-        // Usar estrutura AND para combinar tudo
-        where.AND = andConditions;
       }
     }
 

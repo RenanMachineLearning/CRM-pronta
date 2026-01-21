@@ -17,6 +17,8 @@
 import { PrismaClient, NoteType } from '@prisma/client';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +27,7 @@ export interface NoteFilters {
   type?: NoteType;
   relatedEntityType?: 'Contact' | 'Company' | 'Lead' | 'Opportunity' | 'Task';
   relatedEntityId?: string;
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
@@ -354,6 +357,17 @@ export class NoteService {
 
     if (filters?.relatedEntityId) {
       where.relatedEntityId = filters.relatedEntityId;
+    }
+
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'note');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'note');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
+      }
     }
 
     // Configurar ordenação (padrão: createdAt DESC - mais recente primeiro)

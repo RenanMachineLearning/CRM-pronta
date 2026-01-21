@@ -39,6 +39,11 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - companyId: string (opcional: UUID da empresa)
  * - orderBy: string (opcional: value, closeDate, createdAt, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca textual
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"OPEN"},{"field":"value","operator":"greaterThan","value":10000}]
  * 
  * Response 200:
  * {

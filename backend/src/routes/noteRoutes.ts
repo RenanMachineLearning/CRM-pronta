@@ -38,6 +38,10 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - relatedEntityId: string (opcional: UUID da entidade relacionada, deve ser fornecido junto com relatedEntityType)
  * - orderBy: string (opcional: createdAt, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"type","operator":"equals","value":"NOTE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
  * 
  * Nota: relatedEntityType e relatedEntityId devem ser fornecidos juntos.
  * 

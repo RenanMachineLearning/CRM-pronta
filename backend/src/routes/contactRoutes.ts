@@ -48,6 +48,14 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - companyId: string (opcional: UUID da empresa)
  * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
  * - tagId: string (opcional: UUID da tag)
+ * - q: string (opcional) - Termo de busca textual
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"ACTIVE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
+ * 
+ * Operadores disponíveis: equals, notEquals, contains, notContains, greaterThan, lessThan,
+ * greaterThanOrEqual, lessThanOrEqual, between, in, notIn, isNull, isNotNull
  * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
  * 

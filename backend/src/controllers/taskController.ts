@@ -15,12 +15,16 @@ import { isValidDateNotPast } from '../utils/validators';
 import { logAudit } from '../utils/auditLog';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { Filter, FilterError } from '../types/filter.types';
 
 /**
  * Lista tarefas com paginação e filtros
  * 
- * @param req - Request com query params (limit, offset, status, type, assignedToId, relatedEntityType, relatedEntityId, dueDateFrom, dueDateTo, overdue, completed, orderBy, order)
+ * @param req - Request com query params (limit, offset, status, type, assignedToId, relatedEntityType, relatedEntityId, dueDateFrom, dueDateTo, overdue, completed, orderBy, order, filters)
  * @param res - Response para retornar lista de tarefas
+ * 
+ * Query params:
+ * - filters: JSON (opcional) - Filtros avançados
  */
 export async function listTasks(req: Request, res: Response): Promise<void> {
   try {
@@ -181,6 +185,30 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
+    }
+
     // Montar filtros
     const filters: TaskFilters = {
       status: status as TaskStatus | undefined,
@@ -192,6 +220,7 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
       dueDateTo: dueDateToDate,
       overdue: overdueBool,
       completed: completedBool,
+      advancedFilters, // NOVO: Filtros avançados
     };
 
     // Montar paginação
@@ -203,9 +232,22 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     };
 
     // Chamar service
-    const result = await TaskService.listTasks(tenantId, filters, pagination, userId);
+    try {
+      const result = await TaskService.listTasks(tenantId, filters, pagination, userId);
 
-    res.status(200).json(result);
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof FilterError) {
+        res.status(error.statusCode).json({
+          error: 'Filtro inválido',
+          code: error.code,
+          details: error.details,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   } catch (error: any) {
     console.error('Erro ao listar tarefas:', error);
     res.status(500).json({

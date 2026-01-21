@@ -17,6 +17,8 @@ import { PrismaClient, TaskType, TaskStatus, TaskPriority } from '@prisma/client
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { isValidDateNotPast } from '../utils/validators';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
 
 const prisma = new PrismaClient();
 
@@ -32,6 +34,7 @@ export interface TaskFilters {
   // Filtros avançados
   overdue?: boolean; // Tarefas vencidas (dueDate < hoje e status != COMPLETED)
   completed?: boolean; // Apenas concluídas ou não concluídas
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
@@ -376,6 +379,17 @@ export class TaskService {
         where.status = 'COMPLETED';
       } else {
         where.status = { not: 'COMPLETED' };
+      }
+    }
+
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'task');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'task');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
       }
     }
 

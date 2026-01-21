@@ -16,6 +16,7 @@ import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { validateSearchQuery } from '../utils/entitySearchHelpers';
 import { SearchError } from '../types/search.types';
+import { Filter, FilterError } from '../types/filter.types';
 
 /**
  * Lista contatos com paginação e filtros
@@ -32,6 +33,10 @@ import { SearchError } from '../types/search.types';
  * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
  * - q: string (opcional) - Termo de busca em nome, email, telefone, etc.
+ * - filters: JSON (opcional) - Filtros avançados
+ *
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"ACTIVE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
  */
 export async function listContacts(req: Request, res: Response): Promise<void> {
   try {
@@ -115,6 +120,31 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        // Validar que é array
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
+    }
+
     // userId já validado pelo middleware
     const userId = req.userId!;
 
@@ -125,7 +155,8 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
         companyId,
         status: status as ContactStatus | undefined,
         tagId,
-        q: searchQuery, // NOVO: Passar query de busca
+        q: searchQuery,
+        advancedFilters, // NOVO: Filtros avançados
       },
       {
         limit,
@@ -138,6 +169,16 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
 
     res.status(200).json(result);
   } catch (error: any) {
+    if (error instanceof FilterError) {
+      res.status(error.statusCode).json({
+        error: 'Filtro inválido',
+        code: error.code,
+        details: error.details,
+        message: error.message,
+      });
+      return;
+    }
+
     console.error('Erro ao listar contatos:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',

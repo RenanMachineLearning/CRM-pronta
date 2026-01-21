@@ -39,6 +39,11 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - converted: boolean (opcional: true ou false)
  * - orderBy: string (opcional: createdAt, firstName, lastName, default: createdAt)
  * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca textual
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"NEW"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
  * 
  * Response 200:
  * {

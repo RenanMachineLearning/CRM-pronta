@@ -40,6 +40,10 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - relatedEntityId: string (opcional: UUID da entidade relacionada)
  * - dueDateFrom: string (opcional: data ISO para filtrar tarefas com dueDate >= esta data)
  * - dueDateTo: string (opcional: data ISO para filtrar tarefas com dueDate <= esta data)
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"PENDING"},{"field":"dueDate","operator":"greaterThan","value":"2024-01-01"}]
  * - overdue: boolean (opcional: true para tarefas vencidas não concluídas)
  * - completed: boolean (opcional: true para apenas concluídas, false para não concluídas)
  * - orderBy: string (opcional: dueDate, priority, createdAt, title, default: createdAt)
