@@ -49,6 +49,8 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
  * - tagId: string (opcional: UUID da tag)
  * - q: string (opcional) - Termo de busca textual
+ * - hasEmail: boolean (opcional) - Filtrar contatos com/sem email (true/false)
+ * - hasPhone: boolean (opcional) - Filtrar contatos com/sem telefone (true/false)
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
  * 
  * Exemplo de filtros avançados:

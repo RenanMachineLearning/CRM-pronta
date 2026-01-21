@@ -52,6 +52,12 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
     const orderBy = req.query.orderBy as string | undefined;
     const order = req.query.order as string | undefined;
     const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
+    const hasEmail = req.query.hasEmail !== undefined 
+      ? req.query.hasEmail === 'true' 
+      : undefined; // NOVO: Contato tem email?
+    const hasPhone = req.query.hasPhone !== undefined 
+      ? req.query.hasPhone === 'true' 
+      : undefined; // NOVO: Contato tem telefone?
 
     // Validar limit
     if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
@@ -156,7 +162,9 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
         status: status as ContactStatus | undefined,
         tagId,
         q: searchQuery,
-        advancedFilters, // NOVO: Filtros avançados
+        hasEmail, // NOVO: Filtro específico
+        hasPhone, // NOVO: Filtro específico
+        advancedFilters, // Filtros avançados
       },
       {
         limit,

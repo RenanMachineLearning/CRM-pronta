@@ -25,6 +25,7 @@ export interface CompanyFilters {
   industry?: string;
   size?: CompanySize;
   q?: string; // Termo de busca
+  hasContacts?: boolean; // NOVO: Empresa tem contatos?
   advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
@@ -137,6 +138,28 @@ export class CompanyService {
     // Adicionar filtro de size se fornecido
     if (filters?.size) {
       where.size = filters.size;
+    }
+
+    // Filtros específicos por entidade
+    // hasContacts - Empresa tem contatos?
+    if (filters?.hasContacts !== undefined) {
+      if (filters.hasContacts) {
+        // Tem contatos
+        where.contacts = {
+          some: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      } else {
+        // Não tem contatos
+        where.contacts = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
     }
 
     // Adicionar filtros avançados (após filtros simples)

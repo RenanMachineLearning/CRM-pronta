@@ -27,7 +27,7 @@ import { convertFilterValue, parseRelationField } from './filterHelpers';
  *     createdAt: { gt: new Date('2024-01-01') }
  *   }
  */
-export function buildFilterQuery(filters: Filter[], entityType: string): Prisma.WhereInput {
+export function buildFilterQuery(filters: Filter[], entityType: string): any {
   const config = ENTITY_FILTER_CONFIGS[entityType];
   if (!config) {
     throw new Error(`Entidade "${entityType}" não suporta filtros avançados`);

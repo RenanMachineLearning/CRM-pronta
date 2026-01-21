@@ -26,6 +26,8 @@ export interface ContactFilters {
   status?: ContactStatus;
   tagId?: string;
   q?: string; // Termo de busca
+  hasEmail?: boolean; // NOVO: Contato tem email?
+  hasPhone?: boolean; // NOVO: Contato tem telefone?
   advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
@@ -172,6 +174,49 @@ export class ContactService {
           },
         },
       };
+    }
+
+    // Filtros específicos por entidade
+    // hasEmail - Contato tem email?
+    if (filters?.hasEmail !== undefined) {
+      if (filters.hasEmail) {
+        // Tem email
+        where.emails = {
+          some: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      } else {
+        // Não tem email
+        where.emails = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
+    }
+
+    // hasPhone - Contato tem telefone?
+    if (filters?.hasPhone !== undefined) {
+      if (filters.hasPhone) {
+        // Tem telefone
+        where.phones = {
+          some: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      } else {
+        // Não tem telefone
+        where.phones = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
     }
 
     // Adicionar filtros avançados (após filtros simples)

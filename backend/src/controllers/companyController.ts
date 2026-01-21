@@ -97,6 +97,11 @@ export async function listCompanies(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Extrair filtros específicos por entidade
+    const hasContacts = req.query.hasContacts !== undefined 
+      ? req.query.hasContacts === 'true' 
+      : undefined; // NOVO: Empresa tem contatos?
+
     // Validar parâmetro de busca
     let searchQuery: string | undefined;
     if (q !== undefined) {
@@ -151,7 +156,8 @@ export async function listCompanies(req: Request, res: Response): Promise<void> 
           industry,
           size: size as CompanySize | undefined,
           q: searchQuery,
-          advancedFilters, // NOVO: Filtros avançados
+          hasContacts, // NOVO: Filtro específico
+          advancedFilters, // Filtros avançados
         },
       {
         limit,

@@ -40,6 +40,7 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - orderBy: string (opcional: name, createdAt, default: name)
  * - order: string (opcional: asc, desc, default: asc para name, desc para createdAt)
  * - q: string (opcional) - Termo de busca textual
+ * - hasContacts: boolean (opcional) - Filtrar empresas com/sem contatos (true/false)
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
  * 
  * Exemplo de filtros avançados:

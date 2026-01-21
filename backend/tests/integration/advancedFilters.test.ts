@@ -75,8 +75,11 @@ describe('Advanced Filters - E2E Tests', () => {
       password: 'AdminPass123',
       name: 'Admin User',
       tenantId: tenant1.id,
-      roleId: adminRole1.id,
     });
+    
+    // Associar role ao usuário
+    await assignRoleToUser(adminUser1Obj.id, adminRole1.id);
+    
     adminUser1 = {
       id: adminUser1Obj.id,
       email: adminUser1Obj.email,
@@ -430,8 +433,10 @@ describe('Advanced Filters - E2E Tests', () => {
         password: 'UserPass123',
         name: 'User 1',
         tenantId: tenant1.id,
-        roleId: adminRole1.id,
       });
+      
+      // Associar role ao usuário
+      await assignRoleToUser(user1.id, adminRole1.id);
 
       task1 = await prisma.task.create({
         data: {
@@ -609,8 +614,11 @@ describe('Advanced Filters - E2E Tests', () => {
         password: 'AdminPass123',
         name: 'Admin User 2',
         tenantId: tenant2.id,
-        roleId: adminRole2.id,
       });
+      
+      // Associar role ao usuário
+      await assignRoleToUser(adminUser2Obj.id, adminRole2.id);
+      
       adminUser2 = { id: adminUser2Obj.id };
       adminToken2 = generateToken(adminUser2.id, tenant2.id);
 
