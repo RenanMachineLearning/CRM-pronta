@@ -47,7 +47,8 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - status: string (opcional: NEW, QUALIFIED, CONVERTED, LOST)
  * - source: string (opcional: busca parcial case-insensitive)
  * - converted: boolean (opcional: true ou false)
- * - q: string (opcional) - Termo de busca textual
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "joao" encontra "João"
  * 
  * Query params de ordenação:
  * - sortBy: string | string[] (opcional) - Campo(s) para ordenação

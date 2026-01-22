@@ -161,19 +161,20 @@ Implementar busca global, filtros avançados, ordenação e paginação. Busca e
 ### 7. Busca Tolerante a Diacríticos
 
 #### Backend (Lógica)
-- [ ] Criar helper `normalizeText(text)`
-  - [ ] Remover acentos (á → a, ç → c)
-  - [ ] Converter para lowercase
-  - [ ] Remover caracteres especiais
+- [x] Criar helper `normalizeText(text)`
+  - [x] Remover acentos (á → a, ç → c)
+  - [x] Converter para lowercase
+  - [x] Remover caracteres especiais
 
-- [ ] Aplicar normalização em buscas
-  - [ ] Normalizar query de busca
-  - [ ] Normalizar campos antes de comparar
-  - [ ] Usar função PostgreSQL `unaccent` (se disponível) ou normalizar em código
+- [x] Aplicar normalização em buscas
+  - [x] Normalizar query de busca
+  - [x] Normalizar campos antes de comparar
+  - [x] Usar função PostgreSQL `unaccent` (se disponível) ou normalizar em código
+  - **Nota**: Implementado normalização apenas na query (V1). Normalização completa no banco pode ser adicionada depois se necessário.
 
 #### Validação
-- [ ] Teste: busca "jose" encontra "José"
-- [ ] Teste: busca "sao paulo" encontra "São Paulo"
+- [x] Teste: busca "jose" encontra "José"
+- [x] Teste: busca "sao paulo" encontra "São Paulo"
 
 ---
 

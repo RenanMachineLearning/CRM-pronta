@@ -15,26 +15,33 @@ import {
 
 describe('searchHelpers', () => {
   describe('normalizeText', () => {
-    it('deve remover acentos', () => {
+    it('deve remover acentos corretamente', () => {
       expect(normalizeText('São Paulo')).toBe('sao paulo');
       expect(normalizeText('José')).toBe('jose');
       expect(normalizeText('café')).toBe('cafe');
       expect(normalizeText('Ação')).toBe('acao');
+      expect(normalizeText('Ção')).toBe('cao');
+      expect(normalizeText('nação')).toBe('nacao');
+      expect(normalizeText('órgão')).toBe('orgao');
     });
 
-    it('deve converter para minúsculas', () => {
-      expect(normalizeText('JOÃO SILVA')).toBe('joão silva');
+    it('deve converter para minúsculas e remover acentos', () => {
+      expect(normalizeText('JOÃO SILVA')).toBe('joao silva');
       expect(normalizeText('EMPRESA XYZ')).toBe('empresa xyz');
+      expect(normalizeText('SÃO PAULO')).toBe('sao paulo');
+      expect(normalizeText('JOSÉ')).toBe('jose');
     });
 
     it('deve remover caracteres especiais', () => {
       expect(normalizeText('joão@silva.com')).toBe('joaosilvacom');
       expect(normalizeText('(11) 99999-9999')).toBe('11999999999');
+      expect(normalizeText('josé.silva@empresa.com.br')).toBe('josesilvaempresacombr');
     });
 
     it('deve normalizar espaços múltiplos', () => {
-      expect(normalizeText('  João   Silva  ')).toBe('joão silva');
-      expect(normalizeText('são  paulo')).toBe('são paulo');
+      expect(normalizeText('  João   Silva  ')).toBe('joao silva');
+      expect(normalizeText('são  paulo')).toBe('sao paulo');
+      expect(normalizeText('josé    maria')).toBe('jose maria');
     });
 
     it('deve retornar string vazia para input vazio', () => {
@@ -42,6 +49,21 @@ describe('searchHelpers', () => {
       expect(normalizeText('   ')).toBe('');
       expect(normalizeText(null as any)).toBe('');
       expect(normalizeText(undefined as any)).toBe('');
+    });
+
+    it('deve normalizar casos específicos de busca tolerante a diacríticos', () => {
+      // Casos de teste da documentação
+      expect(normalizeText('jose')).toBe('jose');
+      expect(normalizeText('José')).toBe('jose');
+      expect(normalizeText('JOSÉ')).toBe('jose');
+      expect(normalizeText('sao paulo')).toBe('sao paulo');
+      expect(normalizeText('São Paulo')).toBe('sao paulo');
+      expect(normalizeText('SÃO PAULO')).toBe('sao paulo');
+    });
+
+    it('deve preservar hífens', () => {
+      expect(normalizeText('São-Paulo')).toBe('sao-paulo');
+      expect(normalizeText('João-Silva')).toBe('joao-silva');
     });
   });
 

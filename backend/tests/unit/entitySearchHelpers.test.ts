@@ -15,30 +15,46 @@ import { SearchError } from '../../src/types/search.types';
 
 describe('entitySearchHelpers', () => {
   describe('buildSearchConditions', () => {
-    it('deve construir condições para contato', () => {
+    it('deve construir condições para contato normalizando a query', () => {
       const conditions = buildSearchConditions('contact', 'joão');
 
       expect(conditions).toHaveLength(6); // firstName, lastName, title, notes, email, phone
+      // Query deve ser normalizada (joão → joao)
       expect(conditions[0]).toEqual({
-        firstName: { contains: 'joão', mode: 'insensitive' },
+        firstName: { contains: 'joao', mode: 'insensitive' },
       });
       expect(conditions[1]).toEqual({
-        lastName: { contains: 'joão', mode: 'insensitive' },
+        lastName: { contains: 'joao', mode: 'insensitive' },
       });
       expect(conditions[4]).toEqual({
         emails: {
           some: {
-            email: { contains: 'joão', mode: 'insensitive' },
+            email: { contains: 'joao', mode: 'insensitive' },
           },
         },
       });
       expect(conditions[5]).toEqual({
         phones: {
           some: {
-            phone: { contains: 'joão', mode: 'insensitive' },
+            phone: { contains: 'joao', mode: 'insensitive' },
           },
         },
       });
+    });
+
+    it('deve normalizar query com acentos para busca tolerante a diacríticos', () => {
+      const conditions = buildSearchConditions('contact', 'José');
+      
+      // Query "José" deve ser normalizada para "jose"
+      expect(conditions[0].firstName.contains).toBe('jose');
+      expect(conditions[1].lastName.contains).toBe('jose');
+    });
+
+    it('deve normalizar query "São Paulo" para "sao paulo"', () => {
+      const conditions = buildSearchConditions('company', 'São Paulo');
+      
+      // Query "São Paulo" deve ser normalizada para "sao paulo"
+      expect(conditions[0].name.contains).toBe('sao paulo');
     });
 
     it('deve construir condições para empresa', () => {

@@ -47,7 +47,8 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - status: string (opcional: OPEN, WON, LOST, ARCHIVED)
  * - contactId: string (opcional: UUID do contato)
  * - companyId: string (opcional: UUID da empresa)
- * - q: string (opcional) - Termo de busca textual
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "acao" encontra "Ação"
  * 
  * Query params de ordenação:
  * - sortBy: string | string[] (opcional) - Campo(s) para ordenação

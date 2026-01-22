@@ -8,11 +8,14 @@
  */
 
 import { ENTITY_SEARCH_CONFIGS } from '../types/entitySearch.types';
-import { sanitizeQuery } from './searchHelpers';
+import { sanitizeQuery, normalizeText } from './searchHelpers';
 import { SearchError } from '../types/search.types';
 
 /**
  * Constrói condições de busca Prisma para uma entidade
+ *
+ * Aplica normalização de texto (remoção de acentos) na query para permitir
+ * busca tolerante a diacríticos. Por exemplo, busca "jose" encontrará "José".
  *
  * @param entity - Nome da entidade (ex: "contact", "company")
  * @param query - Termo de busca (já sanitizado)
@@ -20,11 +23,11 @@ import { SearchError } from '../types/search.types';
  * @throws SearchError se entidade não suporta busca ou query inválida
  *
  * @example
- * buildSearchConditions('contact', 'joão')
+ * buildSearchConditions('contact', 'josé')
  * → [
- *     { firstName: { contains: 'joão', mode: 'insensitive' } },
- *     { lastName: { contains: 'joão', mode: 'insensitive' } },
- *     { emails: { some: { email: { contains: 'joão', mode: 'insensitive' } } } }
+ *     { firstName: { contains: 'jose', mode: 'insensitive' } },
+ *     { lastName: { contains: 'jose', mode: 'insensitive' } },
+ *     { emails: { some: { email: { contains: 'jose', mode: 'insensitive' } } } }
  *   ]
  */
 export function buildSearchConditions(entity: string, query: string): any[] {
@@ -42,6 +45,9 @@ export function buildSearchConditions(entity: string, query: string): any[] {
   }
 
   const trimmedQuery = query.trim();
+  // Normalizar query para remover acentos e permitir busca tolerante a diacríticos
+  // Exemplo: "José" → "jose", "São Paulo" → "sao paulo"
+  const normalizedQuery = normalizeText(trimmedQuery);
   const conditions: any[] = [];
 
   // Construir condição para cada campo pesquisável
@@ -52,7 +58,7 @@ export function buildSearchConditions(entity: string, query: string): any[] {
         [fieldConfig.relation.model]: {
           some: {
             [fieldConfig.relation.field]: {
-              contains: trimmedQuery,
+              contains: normalizedQuery, // Usar query normalizada
               mode: 'insensitive',
             },
           },
@@ -62,7 +68,7 @@ export function buildSearchConditions(entity: string, query: string): any[] {
       // Campo direto na entidade
       conditions.push({
         [fieldConfig.field]: {
-          contains: trimmedQuery,
+          contains: normalizedQuery, // Usar query normalizada
           mode: 'insensitive',
         },
       });

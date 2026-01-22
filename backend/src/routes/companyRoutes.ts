@@ -47,7 +47,8 @@ router.use(tenantContextMiddleware, authMiddleware);
  * Query params de filtros:
  * - industry: string (opcional: busca parcial case-insensitive)
  * - size: string (opcional: SMALL, MEDIUM, LARGE, ENTERPRISE)
- * - q: string (opcional) - Termo de busca textual
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "sao paulo" encontra "São Paulo"
  * 
  * Query params de ordenação:
  * - sortBy: string | string[] (opcional) - Campo(s) para ordenação

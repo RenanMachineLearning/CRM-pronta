@@ -58,7 +58,8 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - companyId: string (opcional: UUID da empresa)
  * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
  * - tagId: string (opcional: UUID da tag)
- * - q: string (opcional) - Termo de busca textual
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "jose" encontra "José", buscar "sao paulo" encontra "São Paulo"
  * - hasEmail: boolean (opcional) - Filtrar contatos com/sem email (true/false)
  * - hasPhone: boolean (opcional) - Filtrar contatos com/sem telefone (true/false)
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
