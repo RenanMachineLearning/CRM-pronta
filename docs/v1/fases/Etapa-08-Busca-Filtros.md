@@ -124,7 +124,7 @@ Implementar busca global, filtros avançados, ordenação e paginação. Busca e
 
 - [ ] Estender rotas de listagem com ordenação
   - [ ] `GET /api/contacts?sortBy=firstName&sortOrder=asc`
-  - [ ] Ordenação padrão: `created_at desc`
+  - [ ] Ordenação padrão: `createdAt desc`
 
 - [ ] Suportar ordenação múltipla
   - [ ] `GET /api/contacts?sortBy=companyId,firstName&sortOrder=asc,asc`

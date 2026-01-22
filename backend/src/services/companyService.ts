@@ -17,6 +17,7 @@ import { EntityDataService } from './entityDataService';
 import { buildSearchConditions } from '../utils/entitySearchHelpers';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
 
 const prisma = new PrismaClient();
 
@@ -33,8 +34,10 @@ export interface CompanyFilters {
 export interface PaginationParams {
   limit?: number;
   offset?: number;
-  orderBy?: 'name' | 'createdAt';
-  order?: 'asc' | 'desc';
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para criação de empresa
@@ -211,17 +214,13 @@ export class CompanyService {
       }
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'name';
-    const orderDirection = pagination?.order || (orderByField === 'name' ? 'asc' : 'desc');
-
-    const orderBy: any = {};
-    if (orderByField === 'name' || orderByField === 'createdAt') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      // Fallback para name asc se campo inválido
-      orderBy.name = 'asc';
-    }
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'company'
+    );
 
     // Buscar empresas com relacionamentos e contagem de contatos
     const [companies, total] = await Promise.all([

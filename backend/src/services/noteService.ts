@@ -19,6 +19,7 @@ import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../
 import { logAudit } from '../utils/auditLog';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
 
 const prisma = new PrismaClient();
 
@@ -34,8 +35,10 @@ export interface NoteFilters {
 export interface PaginationParams {
   limit?: number;
   offset?: number;
-  orderBy?: 'createdAt';
-  order?: 'asc' | 'desc';
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para dados de criação
@@ -370,17 +373,13 @@ export class NoteService {
       }
     }
 
-    // Configurar ordenação (padrão: createdAt DESC - mais recente primeiro)
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'createdAt') {
-      orderBy.createdAt = orderDirection;
-    } else {
-      // Fallback para createdAt desc se campo inválido
-      orderBy.createdAt = 'desc';
-    }
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'note'
+    );
 
     // Buscar notas com relacionamentos
     const [notes, total] = await Promise.all([

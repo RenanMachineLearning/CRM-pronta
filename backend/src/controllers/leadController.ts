@@ -18,6 +18,7 @@ import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { validateSearchQuery } from '../utils/entitySearchHelpers';
 import { SearchError } from '../types/search.types';
 import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
 
 /**
  * Lista leads com paginação e filtros
@@ -48,8 +49,6 @@ export async function listLeads(req: Request, res: Response): Promise<void> {
     const status = req.query.status as string | undefined;
     const source = req.query.source as string | undefined;
     const converted = req.query.converted as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
     const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
 
     // Validar limit
@@ -95,22 +94,19 @@ export async function listLeads(req: Request, res: Response): Promise<void> {
       }
     }
 
-    // Validar orderBy
-    if (orderBy && !['createdAt', 'firstName', 'lastName'].includes(orderBy)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser createdAt, firstName ou lastName',
-      });
-      return;
-    }
-
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'lead');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar parâmetro de busca
@@ -173,8 +169,11 @@ export async function listLeads(req: Request, res: Response): Promise<void> {
       {
         limit,
         offset,
-        orderBy: orderBy as 'createdAt' | 'firstName' | 'lastName' | undefined,
-        order: order as 'asc' | 'desc' | undefined,
+        // Passar parâmetros de ordenação do query string para o service
+        sortBy: req.query.sortBy as string | string[] | undefined,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+        orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+        order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
       },
       userId
     );

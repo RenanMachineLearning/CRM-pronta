@@ -16,6 +16,7 @@ import { logAudit } from '../utils/auditLog';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
 
 /**
  * Lista tarefas com paginação e filtros
@@ -44,8 +45,6 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     const dueDateTo = req.query.dueDateTo as string | undefined;
     const overdue = req.query.overdue as string | undefined;
     const completed = req.query.completed as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
 
     // Validar limit
     if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
@@ -110,22 +109,19 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Validar orderBy
-    if (orderBy && !['dueDate', 'priority', 'createdAt', 'title'].includes(orderBy)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser dueDate, priority, createdAt ou title',
-      });
-      return;
-    }
-
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'task');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar e converter datas
@@ -227,8 +223,11 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     const pagination: PaginationParams = {
       limit,
       offset,
-      orderBy: orderBy as 'dueDate' | 'priority' | 'createdAt' | 'title' | undefined,
-      order: order as 'asc' | 'desc' | undefined,
+      // Passar parâmetros de ordenação do query string para o service
+      sortBy: req.query.sortBy as string | string[] | undefined,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+      orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+      order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
     };
 
     // Chamar service

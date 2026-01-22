@@ -15,6 +15,7 @@ import { logAudit } from '../utils/auditLog';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
 
 /**
  * Lista notas com paginação e filtros
@@ -34,8 +35,6 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
     const type = req.query.type as string | undefined;
     const relatedEntityType = req.query.relatedEntityType as string | undefined;
     const relatedEntityId = req.query.relatedEntityId as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
 
     // Validar limit
     if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
@@ -92,22 +91,19 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Validar orderBy (apenas createdAt permitido)
-    if (orderBy && orderBy !== 'createdAt') {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser createdAt',
-      });
-      return;
-    }
-
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'note');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Parsear filtros avançados
@@ -145,8 +141,11 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
     const pagination: PaginationParams = {
       limit,
       offset,
-      orderBy: orderBy as 'createdAt' | undefined || 'createdAt',
-      order: order as 'asc' | 'desc' | undefined || 'desc',
+      // Passar parâmetros de ordenação do query string para o service
+      sortBy: req.query.sortBy as string | string[] | undefined,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+      orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+      order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
     };
 
     // Chamar service

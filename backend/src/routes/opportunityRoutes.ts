@@ -37,9 +37,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - status: string (opcional: OPEN, WON, LOST, ARCHIVED)
  * - contactId: string (opcional: UUID do contato)
  * - companyId: string (opcional: UUID da empresa)
- * - orderBy: string (opcional: value, closeDate, createdAt, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
  * - q: string (opcional) - Termo de busca textual
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=value
+ *   Exemplo múltiplo: ?sortBy=status,value
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=desc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
  * 
  * Exemplo de filtros avançados:

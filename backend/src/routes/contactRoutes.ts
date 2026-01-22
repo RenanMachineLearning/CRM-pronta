@@ -58,8 +58,22 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Operadores disponíveis: equals, notEquals, contains, notContains, greaterThan, lessThan,
  * greaterThanOrEqual, lessThanOrEqual, between, in, notIn, isNull, isNotNull
- * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=firstName
+ *   Exemplo múltiplo: ?sortBy=companyId,firstName
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
+ * 
+ * Exemplos de ordenação:
+ * - GET /api/contacts?sortBy=firstName&sortOrder=asc
+ * - GET /api/contacts?sortBy=companyId,firstName&sortOrder=asc,asc
  * 
  * Response 200:
  * {

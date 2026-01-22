@@ -37,9 +37,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - offset: número (opcional, default: 0)
  * - industry: string (opcional: busca parcial case-insensitive)
  * - size: string (opcional: SMALL, MEDIUM, LARGE, ENTERPRISE)
- * - orderBy: string (opcional: name, createdAt, default: name)
- * - order: string (opcional: asc, desc, default: asc para name, desc para createdAt)
  * - q: string (opcional) - Termo de busca textual
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=name
+ *   Exemplo múltiplo: ?sortBy=status,name
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * - hasContacts: boolean (opcional) - Filtrar empresas com/sem contatos (true/false)
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
  * 

@@ -37,9 +37,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - status: string (opcional: NEW, QUALIFIED, CONVERTED, LOST)
  * - source: string (opcional: busca parcial case-insensitive)
  * - converted: boolean (opcional: true ou false)
- * - orderBy: string (opcional: createdAt, firstName, lastName, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
  * - q: string (opcional) - Termo de busca textual
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=firstName
+ *   Exemplo múltiplo: ?sortBy=status,firstName
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
  * 
  * Exemplo de filtros avançados:

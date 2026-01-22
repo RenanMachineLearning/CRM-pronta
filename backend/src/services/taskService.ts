@@ -19,6 +19,7 @@ import { logAudit } from '../utils/auditLog';
 import { isValidDateNotPast } from '../utils/validators';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
 
 const prisma = new PrismaClient();
 
@@ -41,8 +42,10 @@ export interface TaskFilters {
 export interface PaginationParams {
   limit?: number;
   offset?: number;
-  orderBy?: 'dueDate' | 'priority' | 'createdAt' | 'title';
-  order?: 'asc' | 'desc';
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para dados de criação
@@ -393,17 +396,13 @@ export class TaskService {
       }
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'dueDate' || orderByField === 'priority' || orderByField === 'createdAt' || orderByField === 'title') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      // Fallback para createdAt desc se campo inválido
-      orderBy.createdAt = 'desc';
-    }
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'task'
+    );
 
     // Buscar tarefas com relacionamentos
     const [tasks, total] = await Promise.all([

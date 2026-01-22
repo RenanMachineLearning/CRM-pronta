@@ -18,6 +18,7 @@ import { EntityDataService } from './entityDataService';
 import { buildSearchConditions } from '../utils/entitySearchHelpers';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
 
 const prisma = new PrismaClient();
 
@@ -35,8 +36,10 @@ export interface OpportunityFilters {
 export interface PaginationParams {
   limit?: number;
   offset?: number;
-  orderBy?: 'value' | 'closeDate' | 'createdAt';
-  order?: 'asc' | 'desc';
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para dados de criação
@@ -228,16 +231,13 @@ export class OpportunityService {
       }
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'value' || orderByField === 'closeDate' || orderByField === 'createdAt') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      orderBy.createdAt = 'desc'; // Fallback
-    }
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'opportunity'
+    );
 
     // Buscar oportunidades com relacionamentos
     const [opportunities, total] = await Promise.all([

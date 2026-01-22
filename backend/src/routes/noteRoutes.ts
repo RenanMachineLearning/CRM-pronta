@@ -36,9 +36,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - type: string (opcional: NOTE, COMMENT, ANNOTATION)
  * - relatedEntityType: string (opcional: Contact, Company, Lead, Opportunity, Task)
  * - relatedEntityId: string (opcional: UUID da entidade relacionada, deve ser fornecido junto com relatedEntityType)
- * - orderBy: string (opcional: createdAt, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
  * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=createdAt
+ *   Exemplo múltiplo: ?sortBy=createdAt,updatedAt
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=desc
+ *   Exemplo múltiplo: ?sortOrder=desc,asc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * 
  * Exemplo de filtros avançados:
  * ?filters=[{"field":"type","operator":"equals","value":"NOTE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]

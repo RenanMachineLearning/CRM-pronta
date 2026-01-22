@@ -46,8 +46,18 @@ router.use(tenantContextMiddleware, authMiddleware);
  * ?filters=[{"field":"status","operator":"equals","value":"PENDING"},{"field":"dueDate","operator":"greaterThan","value":"2024-01-01"}]
  * - overdue: boolean (opcional: true para tarefas vencidas não concluídas)
  * - completed: boolean (opcional: true para apenas concluídas, false para não concluídas)
- * - orderBy: string (opcional: dueDate, priority, createdAt, title, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=dueDate
+ *   Exemplo múltiplo: ?sortBy=priority,dueDate
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * 
  * Response 200:
  * {
