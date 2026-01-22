@@ -34,7 +34,8 @@ export interface LeadFilters {
 // Interface para paginação
 export interface PaginationParams {
   limit?: number;
-  offset?: number;
+  offset?: number; // Manter para compatibilidade
+  page?: number; // NOVO
   orderBy?: string | string[]; // Manter para compatibilidade
   order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
   sortBy?: string | string[]; // NOVO
@@ -123,14 +124,34 @@ export class LeadService {
   ): Promise<{
     data: LeadResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -222,7 +243,7 @@ export class LeadService {
       prisma.lead.findMany({
         where,
         take: limit,
-        skip: offset,
+        skip: skip,
         include: {
           convertedToContact: {
             select: {
@@ -253,6 +274,9 @@ export class LeadService {
       }),
       prisma.lead.count({ where }),
     ]);
+
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
     // Formatar resposta
     let data: LeadResponse[] = leads.map((lead) => ({
@@ -326,9 +350,11 @@ export class LeadService {
     return {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
   }

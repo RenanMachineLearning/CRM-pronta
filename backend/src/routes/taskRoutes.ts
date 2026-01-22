@@ -30,9 +30,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Task.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/tasks?page=1&limit=20
+ * - GET /api/tasks?page=2&limit=10
+ * - GET /api/tasks?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - status: string (opcional: PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
  * - type: string (opcional: CALL, EMAIL, MEETING, OTHER)
  * - assignedToId: string (opcional: UUID do usuário atribuído)
@@ -62,7 +72,13 @@ router.use(tenantContextMiddleware, authMiddleware);
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos

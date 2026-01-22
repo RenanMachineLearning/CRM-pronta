@@ -31,9 +31,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Lead.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/leads?page=1&limit=20
+ * - GET /api/leads?page=2&limit=10
+ * - GET /api/leads?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - status: string (opcional: NEW, QUALIFIED, CONVERTED, LOST)
  * - source: string (opcional: busca parcial case-insensitive)
  * - converted: boolean (opcional: true ou false)
@@ -58,7 +68,13 @@ router.use(tenantContextMiddleware, authMiddleware);
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos

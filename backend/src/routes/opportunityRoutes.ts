@@ -30,9 +30,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Opportunity.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/opportunities?page=1&limit=20
+ * - GET /api/opportunities?page=2&limit=10
+ * - GET /api/opportunities?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - stageId: string (opcional: UUID do estágio do pipeline)
  * - status: string (opcional: OPEN, WON, LOST, ARCHIVED)
  * - contactId: string (opcional: UUID do contato)
@@ -58,7 +68,13 @@ router.use(tenantContextMiddleware, authMiddleware);
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos

@@ -17,6 +17,7 @@ import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
 import { Filter, FilterError } from '../types/filter.types';
 import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
+import { processPaginationParams, PaginationError } from '../utils/paginationHelper';
 
 /**
  * Lista tarefas com paginação e filtros
@@ -34,8 +35,6 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     const userId = req.userId!;
 
     // Extrair query params
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
     const status = req.query.status as string | undefined;
     const type = req.query.type as string | undefined;
     const assignedToId = req.query.assignedToId as string | undefined;
@@ -46,22 +45,20 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     const overdue = req.query.overdue as string | undefined;
     const completed = req.query.completed as string | undefined;
 
-    // Validar limit
-    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'limit deve ser um número entre 1 e 100',
-      });
-      return;
-    }
-
-    // Validar offset
-    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'offset deve ser um número maior ou igual a 0',
-      });
-      return;
+    // Processar e validar parâmetros de paginação usando helper centralizado
+    let paginationParams;
+    try {
+      paginationParams = processPaginationParams(req.query);
+    } catch (error: any) {
+      if (error instanceof PaginationError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar status
@@ -221,8 +218,9 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
 
     // Montar paginação
     const pagination: PaginationParams = {
-      limit,
-      offset,
+      page: paginationParams.page,
+      limit: paginationParams.limit,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined, // Legado
       // Passar parâmetros de ordenação do query string para o service
       sortBy: req.query.sortBy as string | string[] | undefined,
       sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,

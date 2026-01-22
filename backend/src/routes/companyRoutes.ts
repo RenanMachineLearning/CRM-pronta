@@ -32,9 +32,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Company.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/companies?page=1&limit=20
+ * - GET /api/companies?page=2&limit=10
+ * - GET /api/companies?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - industry: string (opcional: busca parcial case-insensitive)
  * - size: string (opcional: SMALL, MEDIUM, LARGE, ENTERPRISE)
  * - q: string (opcional) - Termo de busca textual
@@ -59,7 +69,13 @@ router.use(tenantContextMiddleware, authMiddleware);
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Nota: Contatos são incluídos apenas como contagem (contactsCount) para performance.
