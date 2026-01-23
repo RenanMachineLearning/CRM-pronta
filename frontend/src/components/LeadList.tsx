@@ -10,6 +10,11 @@ import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
+import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
+import { Pagination } from './Pagination/Pagination';
+import { useSorting } from '../hooks/useSorting';
+import { usePagination } from '../hooks/usePagination';
+import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
 import type { Lead, LeadFilters, LeadStatus } from '../types/lead';
 import type { Filter } from '../types/filter';
 
@@ -22,41 +27,67 @@ export interface LeadListProps {
 }
 
 export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead, advancedFilters = [] }: LeadListProps) {
-  // Estado para filtros, ordenação e paginação (sempre necessário)
+  // Estado para filtros
   const [filters, setFilters] = useState<LeadFilters>({});
   
-  // Estado para ordenação
-  const [orderBy, setOrderBy] = useState<'firstName' | 'createdAt'>('createdAt');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // Estado para paginação
-  const [page, setPage] = useState(1);
-  const limit = 20;
+  // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar leads da prop)
+  const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
+  const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
+
+  // Sincronizar ordenação e paginação com URL (sempre chamar, mas callbacks só fazem algo se não usar leads da prop)
+  useSortPaginationUrlSync(
+    sorting,
+    paginationState,
+    (newSort) => {
+      if (!leadsProp && (newSort.sortBy !== sorting.sortBy || newSort.sortOrder !== sorting.sortOrder)) {
+        setSortingState(newSort);
+      }
+    },
+    (newPagination) => {
+      if (!leadsProp) {
+        if (newPagination.page !== undefined && newPagination.page !== paginationState.page) {
+          updatePage(newPagination.page);
+        }
+        if (newPagination.limit !== undefined && newPagination.limit !== paginationState.limit) {
+          updateLimit(newPagination.limit as any);
+        }
+      }
+    }
+  );
 
   // Se leads fornecido como prop, usar; senão, buscar com hook
   const {
     leads: leadsFromHook,
     loading,
     error,
-    pagination,
+    pagination: paginationInfo,
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
     setAdvancedFilters: updateAdvancedFilters,
-  } = useLeads(filters, {
-    limit,
-    offset: (page - 1) * limit,
-    orderBy,
-    order,
-  }, advancedFilters);
+  } = useLeads(
+    filters,
+    {
+      ...toPaginationParams(),
+      ...toSortParams(),
+    },
+    advancedFilters
+  );
+
+  // Atualizar total quando receber resposta da API (apenas se não usar leads da prop)
+  useEffect(() => {
+    if (!leadsProp) {
+      updateTotal(paginationInfo.total);
+    }
+  }, [paginationInfo.total, updateTotal, leadsProp]);
 
   // Atualizar filtros avançados quando mudarem externamente (apenas se não usar leads da prop)
   useEffect(() => {
     if (!leadsProp) {
       updateAdvancedFilters(advancedFilters);
-      setPage(1); // Resetar para primeira página
+      updatePage(1); // Resetar para primeira página
     }
-  }, [advancedFilters, updateAdvancedFilters, leadsProp]);
+  }, [advancedFilters, updateAdvancedFilters, updatePage, leadsProp]);
   
   // Usar leads da prop se fornecido, senão usar do hook
   const leads = leadsProp || leadsFromHook;
@@ -65,52 +96,41 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
   const showLoading = leadsProp ? false : loading;
   const showError = leadsProp ? null : error;
 
-  // Atualizar paginação quando page, orderBy ou order mudarem
+  // Atualizar paginação e ordenação na API quando mudarem (apenas se não usar leads da prop)
   useEffect(() => {
-    updatePagination({
-      limit,
-      offset: (page - 1) * limit,
-      orderBy,
-      order,
-    });
-  }, [page, orderBy, order, limit, updatePagination]);
-
-  // Handlers
-  const handleSort = (column: 'firstName' | 'createdAt') => {
-    if (orderBy === column) {
-      // Se já está ordenando por esta coluna, inverter ordem
-      setOrder(order === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Se é nova coluna, ordenar ascendente
-      setOrderBy(column);
-      setOrder('asc');
+    if (!leadsProp) {
+      updatePagination({
+        ...toPaginationParams(),
+        ...toSortParams(),
+      });
     }
-    setPage(1); // Resetar para primeira página
+  }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, leadsProp]);
+
+  // Handler para ordenação
+  const handleSort = (field: string) => {
+    if (!leadsProp) {
+      updateSorting(field);
+      updatePage(1); // Resetar para primeira página
+    }
   };
 
   const handleFilterChange = (key: keyof LeadFilters, value: string | boolean | undefined) => {
-    const newFilters = { ...filters };
-    if (value !== undefined && value !== '') {
-      if (key === 'converted') {
-        // Converter string 'true'/'false' para boolean
-        newFilters[key] = value === 'true' || value === true;
+    if (!leadsProp) {
+      const newFilters = { ...filters };
+      if (value !== undefined && value !== '') {
+        if (key === 'converted') {
+          // Converter string 'true'/'false' para boolean
+          newFilters[key] = value === 'true' || value === true;
+        } else {
+          newFilters[key] = value as any;
+        }
       } else {
-        newFilters[key] = value as any;
+        delete newFilters[key];
       }
-    } else {
-      delete newFilters[key];
+      updateFilters(newFilters);
+      updatePage(1); // Resetar para primeira página
     }
-    updateFilters(newFilters);
-    setPage(1); // Resetar para primeira página
   };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    updatePagination({ offset: (newPage - 1) * limit });
-  };
-
-  // Calcular número de páginas
-  const totalPages = Math.ceil(pagination.total / limit);
 
   // Funções auxiliares
   const formatName = (lead: Lead): string => {
@@ -140,14 +160,25 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // Renderizar cabeçalho da tabela com ordenação
+  // Renderizar cabeçalho da tabela com ordenação (apenas se não usar leads da prop)
   const renderTableHeader = (column: 'firstName' | 'createdAt', label: string) => {
-    const isActive = orderBy === column;
+    if (leadsProp) {
+      // Se leads vem da prop, não permitir ordenação
+      return (
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {label}
+        </th>
+      );
+    }
     return (
-      <th
-        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSort(column)}
-      >
+      <SortableTableHeader
+        fieldName={column}
+        displayName={label}
+        currentSort={sorting}
+        onSort={handleSort}
+      />
+    );
+  };
         <div className="flex items-center space-x-1">
           <span>{label}</span>
           {isActive && (
@@ -301,8 +332,8 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
         </table>
       </div>
 
-      {/* Paginação */}
-      {pagination.total > 0 && (
+      {/* Paginação - apenas se não usar leads da prop */}
+      {!leadsProp && (
         <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
           <div className="flex flex-1 justify-between sm:hidden">
             <Button

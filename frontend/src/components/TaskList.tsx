@@ -11,6 +11,11 @@ import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
 import { Input } from './Input';
+import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
+import { Pagination } from './Pagination/Pagination';
+import { useSorting } from '../hooks/useSorting';
+import { usePagination } from '../hooks/usePagination';
+import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
 import type {
   Task,
   TaskFilters,
@@ -43,34 +48,49 @@ export function TaskList({
   // Estado para filtros
   const [filters, setFilters] = useState<TaskFilters>(initialFilters || {});
   
-  // Estado para ordenação
-  const [orderBy, setOrderBy] = useState<'dueDate' | 'priority' | 'createdAt' | 'title'>('createdAt');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // Estado para paginação
-  const [page, setPage] = useState(1);
-  const limit = 20;
+  // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar tasks da prop)
+  const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
+  const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
 
   // Estado para concluir tarefa
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sincronizar ordenação e paginação com URL (sempre chamar, mas callbacks só fazem algo se não usar tasks da prop)
+  useSortPaginationUrlSync(
+    sorting,
+    paginationState,
+    (newSort) => {
+      if (!tasksProp && (newSort.sortBy !== sorting.sortBy || newSort.sortOrder !== sorting.sortOrder)) {
+        setSortingState(newSort);
+      }
+    },
+    (newPagination) => {
+      if (!tasksProp) {
+        if (newPagination.page !== undefined && newPagination.page !== paginationState.page) {
+          updatePage(newPagination.page);
+        }
+        if (newPagination.limit !== undefined && newPagination.limit !== paginationState.limit) {
+          updateLimit(newPagination.limit as any);
+        }
+      }
+    }
+  );
 
   // Se tasks fornecido como prop, usar; senão, buscar com hook
   const {
     tasks: tasksFromHook,
     loading,
     error,
-    pagination,
+    pagination: paginationInfo,
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
   } = useTasks(
     initialFilters || filters,
     initialPagination || {
-      limit,
-      offset: (page - 1) * limit,
-      orderBy,
-      order,
+      ...toPaginationParams(),
+      ...toSortParams(),
     }
   );
   
@@ -81,53 +101,52 @@ export function TaskList({
   const showLoading = tasksProp ? false : loading;
   const showError = tasksProp ? null : error;
 
-  // Atualizar paginação quando page, orderBy ou order mudarem
+  // Atualizar total quando receber resposta da API (apenas se não usar tasks da prop)
+  useEffect(() => {
+    if (!tasksProp) {
+      updateTotal(paginationInfo.total);
+    }
+  }, [paginationInfo.total, updateTotal, tasksProp]);
+
+  // Atualizar paginação e ordenação na API quando mudarem (apenas se não usar tasks da prop)
   useEffect(() => {
     if (!tasksProp) {
       updatePagination({
-        limit,
-        offset: (page - 1) * limit,
-        orderBy,
-        order,
+        ...toPaginationParams(),
+        ...toSortParams(),
       });
     }
-  }, [page, orderBy, order, limit, updatePagination, tasksProp]);
+  }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, tasksProp]);
 
-  // Handlers
-  const handleSort = (column: 'dueDate' | 'priority' | 'createdAt' | 'title') => {
-    if (orderBy === column) {
-      setOrder(order === 'asc' ? 'desc' : 'asc');
-    } else {
-      setOrderBy(column);
-      setOrder('asc');
+  // Handler para ordenação
+  const handleSort = (field: string) => {
+    if (!tasksProp) {
+      updateSorting(field);
+      updatePage(1);
     }
-    setPage(1);
   };
 
   const handleFilterChange = (key: keyof TaskFilters, value: string | boolean | undefined) => {
-    const newFilters = { ...filters };
-    if (value !== undefined && value !== '') {
-      if (key === 'overdue' || key === 'completed') {
-        newFilters[key] = value === 'true' || value === true;
+    if (!tasksProp) {
+      const newFilters = { ...filters };
+      if (value !== undefined && value !== '') {
+        if (key === 'overdue' || key === 'completed') {
+          newFilters[key] = value === 'true' || value === true;
+        } else {
+          newFilters[key] = value as any;
+        }
       } else {
-        newFilters[key] = value as any;
+        delete newFilters[key];
       }
-    } else {
-      delete newFilters[key];
+      updateFilters(newFilters);
+      updatePage(1);
     }
-    updateFilters(newFilters);
-    setPage(1);
   };
 
   const handleClearFilters = () => {
-    updateFilters({});
-    setPage(1);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
     if (!tasksProp) {
-      updatePagination({ offset: (newPage - 1) * limit });
+      updateFilters({});
+      updatePage(1);
     }
   };
 
@@ -147,8 +166,6 @@ export function TaskList({
     }
   };
 
-  // Calcular número de páginas
-  const totalPages = Math.ceil(pagination.total / limit);
 
   // Funções auxiliares
   const formatDate = (date: string | null | undefined): string => {
@@ -229,22 +246,6 @@ export function TaskList({
     }
   };
 
-  const renderTableHeader = (column: 'dueDate' | 'priority' | 'createdAt' | 'title', label: string) => {
-    const isActive = orderBy === column;
-    return (
-      <th
-        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSort(column)}
-      >
-        <div className="flex items-center space-x-1">
-          <span>{label}</span>
-          {isActive && (
-            <span>{order === 'asc' ? '↑' : '↓'}</span>
-          )}
-        </div>
-      </th>
-    );
-  };
 
   // Renderizar loading
   if (showLoading && tasks.length === 0) {
@@ -349,18 +350,58 @@ export function TaskList({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {renderTableHeader('title', 'Título')}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Atribuído a
-              </th>
-              {renderTableHeader('dueDate', 'Vencimento')}
-              {renderTableHeader('priority', 'Prioridade')}
+              {tasksProp ? (
+                <>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Título
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Atribuído a
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vencimento
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prioridade
+                  </th>
+                </>
+              ) : (
+                <>
+                  <SortableTableHeader
+                    fieldName="title"
+                    displayName="Título"
+                    currentSort={sorting}
+                    onSort={handleSort}
+                  />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Atribuído a
+                  </th>
+                  <SortableTableHeader
+                    fieldName="dueDate"
+                    displayName="Vencimento"
+                    currentSort={sorting}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHeader
+                    fieldName="priority"
+                    displayName="Prioridade"
+                    currentSort={sorting}
+                    onSort={handleSort}
+                  />
+                </>
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
               </th>
@@ -439,90 +480,13 @@ export function TaskList({
         </table>
       </div>
 
-      {/* Paginação */}
-      {showPagination && pagination.total > 0 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-          <div className="flex flex-1 justify-between sm:hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages}
-            >
-              Próxima
-            </Button>
-          </div>
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">{pagination.offset + 1}</span> a{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.offset + limit, pagination.total)}
-                </span>{' '}
-                de <span className="font-medium">{pagination.total}</span> tarefas
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
-                  className="rounded-l-md"
-                >
-                  Anterior
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => {
-                    return (
-                      p === 1 ||
-                      p === totalPages ||
-                      (p >= page - 1 && p <= page + 1)
-                    );
-                  })
-                  .map((p, index, array) => {
-                    const prev = array[index - 1];
-                    const showEllipsis = prev && p - prev > 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && (
-                          <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                            ...
-                          </span>
-                        )}
-                        <Button
-                          variant={p === page ? 'primary' : 'secondary'}
-                          size="sm"
-                          onClick={() => handlePageChange(p)}
-                          className="rounded-none"
-                        >
-                          {p}
-                        </Button>
-                      </React.Fragment>
-                    );
-                  })}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page >= totalPages}
-                  className="rounded-r-md"
-                >
-                  Próxima
-                </Button>
-              </nav>
-            </div>
-          </div>
-        </div>
+      {/* Paginação - apenas se não usar tasks da prop */}
+      {showPagination && !tasksProp && (
+        <Pagination
+          pagination={paginationState}
+          onPageChange={updatePage}
+          onLimitChange={updateLimit}
+        />
       )}
     </div>
   );
