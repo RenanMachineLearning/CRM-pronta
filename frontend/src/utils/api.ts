@@ -59,6 +59,7 @@ export async function apiRequest<T>(
     method: config.method || 'GET',
     headers,
     body: config.body ? JSON.stringify(config.body) : undefined,
+    signal: config.signal, // Suporte para AbortSignal
   });
 
   // Verificar se resposta é JSON
