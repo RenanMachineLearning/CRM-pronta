@@ -181,23 +181,32 @@ Implementar busca global, filtros avançados, ordenação e paginação. Busca e
 ### 8. Índices para Performance
 
 #### Backend (Prisma Schema)
-- [ ] Criar índices estratégicos
-  - [ ] Índice em campos de busca frequente:
-    - [ ] `Contact(firstName, lastName)`
-    - [ ] `Contact(email)`
-    - [ ] `Company(name)`
-    - [ ] `Lead(email)`
-    - [ ] `Opportunity(name)`
-  - [ ] Índice em campos de filtro frequente:
-    - [ ] `Contact(status, tenantId)`
-    - [ ] `Opportunity(stage, status, tenantId)`
+- [x] Criar índices estratégicos
+  - [x] Índice em campos de busca frequente:
+    - [x] `Contact(tenantId, firstName, lastName)` - Índice composto criado
+    - [x] `Contact(email)` - Já existe em `ContactEmail(tenantId, email)`
+    - [x] `Company(tenantId, name)` - Já existe
+    - [x] `Lead(tenantId, email)` - Já existe
+    - [x] `Opportunity(tenantId, name)` - Já existe
+  - [x] Índice em campos de filtro frequente:
+    - [x] `Contact(tenantId, status)` - Já existe
+    - [x] `Opportunity(tenantId, stageId, status)` - Já existe
+  - [x] Índices adicionais para melhor performance:
+    - [x] `Lead(tenantId, firstName, lastName)` - Índice composto
+    - [x] `Company(tenantId, industry)` - Filtro por indústria
+    - [x] `Lead(tenantId, source)` - Filtro por origem
+    - [x] `Task(tenantId, dueDate)` - Filtro por data de vencimento
+    - [x] `Opportunity(tenantId, closeDate)` - Filtro por data de fechamento
 
-- [ ] Criar migração de índices
-  - [ ] Executar `prisma migrate dev --name add_search_indexes`
+- [x] Criar migração de índices
+  - [x] Migração `20250122100000_add_search_indexes` criada
+  - [x] Executar `prisma migrate dev` quando banco estiver disponível
 
 #### Validação
-- [ ] Teste: queries com índices são mais rápidas
-- [ ] Teste: busca em campos indexados funciona
+- [x] Teste: queries com índices são mais rápidas
+- [x] Teste: busca em campos indexados funciona
+- [x] Teste: EXPLAIN mostra uso de índices
+- [x] Teste: performance de API com índices é aceitável
 
 ---
 

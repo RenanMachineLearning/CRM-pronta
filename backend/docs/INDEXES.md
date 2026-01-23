@@ -23,6 +23,127 @@ ORDER BY "order" ASC
 
 **Status**: ✅ Implementado no schema
 
+## Índices de Busca e Filtro - Etapa 8
+
+### Contact - Índices de Busca
+
+**Índice composto**: `@@index([tenantId, firstName, lastName])`
+
+**Propósito**: Otimizar busca por nome completo de contato
+
+**Query otimizada**:
+```sql
+SELECT * FROM contacts 
+WHERE tenant_id = ? 
+AND first_name ILIKE '%termo%' 
+AND last_name ILIKE '%termo%'
+```
+
+**Status**: ✅ Implementado no schema
+
+**Índices individuais**:
+- `@@index([tenantId, firstName])` - Busca por primeiro nome
+- `@@index([tenantId, lastName])` - Busca por sobrenome
+- `@@index([tenantId, status])` - Filtro por status
+- `@@index([tenantId, companyId])` - Busca por empresa
+
+### ContactEmail - Índice de Busca
+
+**Índice**: `@@index([tenantId, email])`
+
+**Propósito**: Otimizar busca por email de contato
+
+**Query otimizada**:
+```sql
+SELECT * FROM contact_emails 
+WHERE tenant_id = ? 
+AND email ILIKE '%termo%'
+```
+
+**Status**: ✅ Implementado no schema
+
+### Company - Índices de Busca e Filtro
+
+**Índice de busca**: `@@index([tenantId, name])`
+
+**Propósito**: Otimizar busca por nome da empresa
+
+**Query otimizada**:
+```sql
+SELECT * FROM companies 
+WHERE tenant_id = ? 
+AND name ILIKE '%termo%'
+```
+
+**Status**: ✅ Implementado no schema
+
+**Índice de filtro**: `@@index([tenantId, industry])`
+
+**Propósito**: Otimizar filtro por indústria
+
+**Query otimizada**:
+```sql
+SELECT * FROM companies 
+WHERE tenant_id = ? 
+AND industry = ?
+```
+
+**Status**: ✅ Implementado no schema (Etapa 8)
+
+### Lead - Índices de Busca e Filtro
+
+**Índice composto**: `@@index([tenantId, firstName, lastName])`
+
+**Propósito**: Otimizar busca por nome completo de lead
+
+**Query otimizada**:
+```sql
+SELECT * FROM leads 
+WHERE tenant_id = ? 
+AND first_name ILIKE '%termo%' 
+AND last_name ILIKE '%termo%'
+```
+
+**Status**: ✅ Implementado no schema (Etapa 8)
+
+**Outros índices**:
+- `@@index([tenantId, email])` - Busca por email
+- `@@index([tenantId, status])` - Filtro por status
+- `@@index([tenantId, source])` - Filtro por origem (Etapa 8)
+
+### Opportunity - Índices de Busca e Filtro
+
+**Índice de busca**: `@@index([tenantId, name])`
+
+**Propósito**: Otimizar busca por nome da oportunidade
+
+**Status**: ✅ Implementado no schema
+
+**Índices de filtro**:
+- `@@index([tenantId, stageId, status])` - Filtro por estágio e status
+- `@@index([tenantId, contactId])` - Busca por contato
+- `@@index([tenantId, companyId])` - Busca por empresa
+- `@@index([tenantId, closeDate])` - Filtro por data de fechamento (Etapa 8)
+
+### Task - Índices de Filtro
+
+**Índices existentes**:
+- `@@index([tenantId, relatedEntityType, relatedEntityId])` - Busca por entidade relacionada
+- `@@index([tenantId, assignedToId, status])` - Busca por usuário e status
+
+**Novo índice**: `@@index([tenantId, dueDate])`
+
+**Propósito**: Otimizar filtro por data de vencimento
+
+**Query otimizada**:
+```sql
+SELECT * FROM tasks 
+WHERE tenant_id = ? 
+AND due_date <= ?
+```
+
+**Status**: ✅ Implementado no schema (Etapa 8)
+
 ## Índices V2 Condicionais (Documentados, não implementados)
 
 ### AuditLog - Índice por Usuário
@@ -48,10 +169,16 @@ Quando o banco de dados estiver disponível, execute:
 
 ```bash
 cd backend
-npx prisma migrate dev --name add_indexes
+npx prisma migrate dev
 ```
 
-Isso criará a migração com o índice `Field(tenantId, entityId)`.
+Isso aplicará a migração `20250122100000_add_search_indexes` que inclui:
+- Índice composto Contact(tenantId, firstName, lastName)
+- Índice composto Lead(tenantId, firstName, lastName)
+- Índice Company(tenantId, industry)
+- Índice Lead(tenantId, source)
+- Índice Task(tenantId, dueDate)
+- Índice Opportunity(tenantId, closeDate)
 
 ## Validação
 
