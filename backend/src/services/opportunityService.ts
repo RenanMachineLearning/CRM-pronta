@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, OpportunityStatus, Prisma } from '@prisma/client';
+import { OpportunityStatus, Prisma } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validatePositiveNumber, validateDateNotPast, validateProbability } from '../utils/validators';
@@ -19,8 +20,11 @@ import { buildSearchConditions } from '../utils/entitySearchHelpers';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface OpportunityFilters {
@@ -156,14 +160,37 @@ export class OpportunityService {
     let skip: number;
     let page: number;
 
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listOpportunities', { tenantId, filters, pagination, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<{
+        data: OpportunityResponse[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          offset?: number;
+        };
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
     if (pagination?.page !== undefined) {
       // Usar page/limit (novo)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       page = pagination.page;
       skip = (page - 1) * limit;
     } else if (pagination?.offset !== undefined) {
       // Usar offset (legado)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       skip = pagination.offset;
       page = Math.floor(skip / limit) + 1;
     } else {
@@ -260,59 +287,63 @@ export class OpportunityService {
       'opportunity'
     );
 
-    // Buscar oportunidades com relacionamentos
-    const [opportunities, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        where,
-        take: limit,
-        skip: skip,
-        include: {
-          stage: {
-            select: {
-              id: true,
-              name: true,
-              order: true,
-              probability: true,
-              color: true,
-              pipelineId: true,
+    // Buscar oportunidades com relacionamentos (usando timeout)
+    const [opportunities, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.opportunity.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            stage: {
+              select: {
+                id: true,
+                name: true,
+                order: true,
+                probability: true,
+                color: true,
+                pipelineId: true,
+              },
             },
-          },
-          contact: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+            contact: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
-          },
-          company: {
-            select: {
-              id: true,
-              name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
-          },
-          lead: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+            lead: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
-          },
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy,
-      }),
-      prisma.opportunity.count({ where }),
-    ]);
+          orderBy,
+        }),
+        prisma.opportunity.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listOpportunities'
+    );
 
     // Calcular totalPages
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
@@ -400,7 +431,7 @@ export class OpportunityService {
       )) as OpportunityResponse[];
     }
 
-    return {
+    const result = {
       data,
       pagination: {
         page,
@@ -410,6 +441,16 @@ export class OpportunityService {
         offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('opportunity'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**

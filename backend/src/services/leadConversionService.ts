@@ -5,13 +5,12 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { ContactService, CreateContactData } from './contactService';
 import { OpportunityService, CreateOpportunityData } from './opportunityService';
 import { logAudit } from '../utils/auditLog';
 import { validateEmail, validatePhone, validatePositiveNumber, validateProbability, validateDateNotPast } from '../utils/validators';
 
-const prisma = new PrismaClient();
 
 // Interface para dados de conversão
 export interface ConvertLeadData {

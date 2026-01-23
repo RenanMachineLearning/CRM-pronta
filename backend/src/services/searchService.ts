@@ -12,7 +12,7 @@
  * - Paginação por entidade
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import {
   GlobalSearchParams,
   GlobalSearchResult,
@@ -27,8 +27,12 @@ import {
 import { normalizeText, extractSnippet, calculateRelevance, sanitizeQuery } from '../utils/searchHelpers';
 import { checkPermission } from '../utils/permissions';
 import { filterFieldsByPermission } from '../utils/fieldPermissions';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { getSelectionProfile } from '../utils/selectionProfiles';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 /**
  * Configuração de busca por entidade
@@ -73,6 +77,20 @@ export class SearchService {
     tenantId: string,
     userId: string
   ): Promise<GlobalSearchResult> {
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('searchGlobal', { ...params, tenantId, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<GlobalSearchResult>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
     const { query, entities, limit = 10 } = params;
 
     // Sanitizar e normalizar query
@@ -81,7 +99,7 @@ export class SearchService {
 
     if (!normalizedQuery || normalizedQuery.trim().length === 0) {
       // Query vazia após normalização, retornar resultados vazios
-      return {
+      const emptyResult = {
         query: sanitizedQuery,
         timestamp: new Date().toISOString(),
         results: {
@@ -97,16 +115,57 @@ export class SearchService {
           opportunities: 0,
         },
       };
+      
+      // Armazenar resultado vazio em cache (TTL menor)
+      try {
+        await cacheManager.set(cacheKey, emptyResult, CACHE_TTL.SEARCH / 2);
+      } catch (error) {
+        console.error('[Cache] Erro ao armazenar no cache:', error);
+      }
+      
+      return emptyResult;
     }
+
+    // Aplicar limite de 100 resultados por entidade
+    const limitPerEntity = Math.min(limit, QUERY_LIMITS.MAX_RESULTS_PER_ENTITY);
 
     // Determinar quais entidades buscar
     const entitiesToSearch: SearchableEntity[] = entities?.length
       ? (entities as SearchableEntity[])
       : ['contact', 'company', 'lead', 'opportunity'];
 
+    // Executar busca com timeout
+    const result = await withQueryTimeout(
+      this.performSearch(entitiesToSearch, normalizedQuery, sanitizedQuery, tenantId, userId, limitPerEntity),
+      QUERY_TIMEOUTS.SEARCH,
+      'searchGlobal'
+    );
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.SEARCH);
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
+  }
+
+  /**
+   * Executa a busca em todas as entidades
+   */
+  private static async performSearch(
+    entitiesToSearch: SearchableEntity[],
+    normalizedQuery: string,
+    sanitizedQuery: string,
+    tenantId: string,
+    userId: string,
+    limitPerEntity: number
+  ): Promise<GlobalSearchResult> {
     // Buscar em cada entidade em paralelo
     const searchPromises = entitiesToSearch.map(entity =>
-      this.searchInEntity(entity, normalizedQuery, sanitizedQuery, tenantId, userId, limit)
+      this.searchInEntity(entity, normalizedQuery, sanitizedQuery, tenantId, userId, limitPerEntity)
     );
 
     const results = await Promise.all(searchPromises);
@@ -231,27 +290,57 @@ export class SearchService {
     userId: string,
     limit: number
   ): Promise<SearchResult<ContactData>[]> {
-    const contacts = await prisma.contact.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        OR: this.buildContactSearchConditions(normalizedQuery, config),
+    // Aplicar limite máximo
+    const limitedLimit = Math.min(limit, QUERY_LIMITS.MAX_RESULTS_PER_ENTITY);
+    
+    // Para busca, precisamos de mais campos que em listagem normal
+    // Usar include com selects otimizados para relacionamentos
+    const selectWithRelations = {
+      id: true,
+      tenantId: true,
+      firstName: true,
+      lastName: true,
+      title: true,
+      notes: true, // Necessário para busca
+      status: true,
+      companyId: true,
+      createdAt: true,
+      company: {
+        select: { id: true, name: true },
       },
-      take: limit,
-      include: {
-        company: {
-          select: { id: true, name: true },
-        },
-        emails: {
-          take: 3, // Limitar emails para performance
-          orderBy: { isPrimary: 'desc' },
-        },
-        phones: {
-          take: 3, // Limitar phones para performance
-          orderBy: { isPrimary: 'desc' },
+      emails: {
+        take: 3, // Limitar emails para performance
+        orderBy: { isPrimary: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          type: true,
         },
       },
-    });
+      phones: {
+        take: 3, // Limitar phones para performance
+        orderBy: { isPrimary: 'desc' },
+        select: {
+          id: true,
+          phone: true,
+          type: true,
+        },
+      },
+    };
+
+    const contacts = await withQueryTimeout(
+      prisma.contact.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          OR: this.buildContactSearchConditions(normalizedQuery, config),
+        },
+        take: limitedLimit,
+        select: selectWithRelations,
+      }),
+      QUERY_TIMEOUTS.SEARCH,
+      'searchContacts'
+    );
 
     // Processar resultados e adicionar metadados
     const results: SearchResult<ContactData>[] = [];
@@ -321,14 +410,25 @@ export class SearchService {
     userId: string,
     limit: number
   ): Promise<SearchResult<CompanyData>[]> {
-    const companies = await prisma.company.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        OR: this.buildCompanySearchConditions(normalizedQuery, config),
-      },
-      take: limit,
-    });
+    // Aplicar limite máximo
+    const limitedLimit = Math.min(limit, QUERY_LIMITS.MAX_RESULTS_PER_ENTITY);
+    
+    // Usar perfil de seleção otimizado para busca (list)
+    const select = getSelectionProfile('company', 'list');
+
+    const companies = await withQueryTimeout(
+      prisma.company.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          OR: this.buildCompanySearchConditions(normalizedQuery, config),
+        },
+        take: limitedLimit,
+        select,
+      }),
+      QUERY_TIMEOUTS.SEARCH,
+      'searchCompanies'
+    );
 
     const results: SearchResult<CompanyData>[] = [];
 
@@ -384,14 +484,25 @@ export class SearchService {
     userId: string,
     limit: number
   ): Promise<SearchResult<LeadData>[]> {
-    const leads = await prisma.lead.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        OR: this.buildLeadSearchConditions(normalizedQuery, config),
-      },
-      take: limit,
-    });
+    // Aplicar limite máximo
+    const limitedLimit = Math.min(limit, QUERY_LIMITS.MAX_RESULTS_PER_ENTITY);
+    
+    // Usar perfil de seleção otimizado para busca (list)
+    const select = getSelectionProfile('lead', 'list');
+
+    const leads = await withQueryTimeout(
+      prisma.lead.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          OR: this.buildLeadSearchConditions(normalizedQuery, config),
+        },
+        take: limitedLimit,
+        select,
+      }),
+      QUERY_TIMEOUTS.SEARCH,
+      'searchLeads'
+    );
 
     const results: SearchResult<LeadData>[] = [];
 
@@ -450,19 +561,39 @@ export class SearchService {
     userId: string,
     limit: number
   ): Promise<SearchResult<OpportunityData>[]> {
-    const opportunities = await prisma.opportunity.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        OR: this.buildOpportunitySearchConditions(normalizedQuery, config),
+    // Aplicar limite máximo
+    const limitedLimit = Math.min(limit, QUERY_LIMITS.MAX_RESULTS_PER_ENTITY);
+    
+    // Para busca, precisamos de stage também
+    const selectWithStage = {
+      id: true,
+      tenantId: true,
+      name: true,
+      value: true,
+      currency: true,
+      status: true,
+      stageId: true,
+      contactId: true,
+      companyId: true,
+      createdAt: true,
+      stage: {
+        select: { id: true, name: true },
       },
-      take: limit,
-      include: {
-        stage: {
-          select: { id: true, name: true },
+    } as any; // Usar 'as any' porque Prisma.SelectSubset pode não incluir todos os campos necessários
+
+    const opportunities = await withQueryTimeout(
+      prisma.opportunity.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          OR: this.buildOpportunitySearchConditions(normalizedQuery, config),
         },
-      },
-    });
+        take: limitedLimit,
+        select: selectWithStage,
+      }),
+      QUERY_TIMEOUTS.SEARCH,
+      'searchOpportunities'
+    );
 
     const results: SearchResult<OpportunityData>[] = [];
 
@@ -474,7 +605,7 @@ export class SearchService {
         id: opportunity.id,
         tenantId: opportunity.tenantId,
         name: opportunity.name,
-        value: opportunity.value.toNumber(),
+        value: opportunity.value.toNumber ? opportunity.value.toNumber() : Number(opportunity.value),
         currency: opportunity.currency,
         status: opportunity.status,
         stageId: opportunity.stageId,

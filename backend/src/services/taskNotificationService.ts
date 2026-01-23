@@ -12,11 +12,11 @@
  * - Estatísticas de processamento
  */
 
-import { PrismaClient, TaskStatus, UserStatus } from '@prisma/client';
+import { TaskStatus, UserStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { EmailService } from './emailService';
 import type { OverdueTaskWithRelations, NotificationStats } from '../types/taskNotification';
 
-const prisma = new PrismaClient();
 
 /**
  * Retry com backoff exponencial

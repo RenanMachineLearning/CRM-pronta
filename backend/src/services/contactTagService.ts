@@ -5,10 +5,9 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { ContactService, ContactResponse } from './contactService';
 
-const prisma = new PrismaClient();
 
 export class ContactTagService {
   /**

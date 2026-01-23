@@ -16,6 +16,7 @@ import {
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -130,6 +131,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Note', 'create'),
+  invalidateEntityCache('note'),
   createNote
 );
 
@@ -184,6 +186,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Note', 'delete'),
+  invalidateEntityCache('note'),
   deleteNote
 );
 

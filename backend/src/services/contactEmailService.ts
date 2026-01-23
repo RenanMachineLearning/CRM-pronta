@@ -5,11 +5,10 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { logAudit } from '../utils/auditLog';
 import { validateEmail } from '../utils/validators';
 
-const prisma = new PrismaClient();
 
 // Interface para resposta de email
 export interface ContactEmailResponse {

@@ -14,14 +14,14 @@
  * - Validação de permissões de edição (apenas criador ou Admin)
  */
 
-import { PrismaClient, NoteType } from '@prisma/client';
+import { NoteType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface NoteFilters {
@@ -60,7 +60,7 @@ export interface UpdateNoteData {
 export interface NoteResponse {
   id: string;
   tenantId: string;
-  content: string;
+  content?: string; // Opcional em listagens (campo grande não é buscado)
   type: NoteType;
   relatedEntityType: string;
   relatedEntityId: string;
@@ -342,6 +342,29 @@ export class NoteService {
       offset?: number; // Manter para compatibilidade
     };
   }> {
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listNotes', { tenantId, filters, pagination, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<{
+        data: NoteResponse[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          offset?: number;
+        };
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
     // Calcular paginação: priorizar page sobre offset
     let limit: number;
     let skip: number;
@@ -349,12 +372,12 @@ export class NoteService {
 
     if (pagination?.page !== undefined) {
       // Usar page/limit (novo)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       page = pagination.page;
       skip = (page - 1) * limit;
     } else if (pagination?.offset !== undefined) {
       // Usar offset (legado)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       skip = pagination.offset;
       page = Math.floor(skip / limit) + 1;
     } else {
@@ -402,32 +425,32 @@ export class NoteService {
       'note'
     );
 
-    // Buscar notas com relacionamentos
-    const [notes, total] = await Promise.all([
-      prisma.note.findMany({
-        where,
-        take: limit,
-        skip: skip,
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy,
-      }),
-      prisma.note.count({ where }),
-    ]);
+    // Usar perfil de seleção otimizado (sem content - campo grande)
+    const select = getSelectionProfile('note', 'list');
+
+    // Buscar notas com timeout e select otimizado
+    const [notes, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.note.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          select, // Usar select otimizado (sem content)
+          orderBy,
+        }),
+        prisma.note.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listNotes'
+    );
 
     // Calcular totalPages
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
     // Formatar resposta e buscar informações de entidades relacionadas
+    // Nota: content não está disponível em listagens (não foi buscado - campo grande)
     let data: NoteResponse[] = await Promise.all(
-      notes.map(async (note) => {
+      notes.map(async (note: any) => {
         const relatedEntity = await getRelatedEntityInfo(
           note.relatedEntityType,
           note.relatedEntityId,
@@ -437,7 +460,8 @@ export class NoteService {
         return {
           id: note.id,
           tenantId: note.tenantId,
-          content: note.content,
+          // content não é incluído em listagens (campo grande - até 10.000 caracteres)
+          // Será buscado apenas em getNoteById
           type: note.type,
           relatedEntityType: note.relatedEntityType,
           relatedEntityId: note.relatedEntityId,
@@ -466,7 +490,7 @@ export class NoteService {
       )) as NoteResponse[];
     }
 
-    return {
+    const result = {
       data,
       pagination: {
         page,
@@ -476,6 +500,16 @@ export class NoteService {
         offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('note'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**
@@ -497,23 +531,22 @@ export class NoteService {
       throw new Error('ID da nota inválido');
     }
 
-    // Buscar nota com relacionamentos
-    const note = await prisma.note.findFirst({
-      where: {
-        id: noteId,
-        tenantId, // Isolamento multi-tenant obrigatório
-        deletedAt: null, // Excluir soft deleted
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+    // Usar perfil de seleção para detalhe (com content)
+    const select = getSelectionProfile('note', 'detail');
+
+    // Buscar nota com timeout e select otimizado (inclui content)
+    const note = await withQueryTimeout(
+      prisma.note.findFirst({
+        where: {
+          id: noteId,
+          tenantId, // Isolamento multi-tenant obrigatório
+          deletedAt: null, // Excluir soft deleted
         },
-      },
-    });
+        select, // Inclui content em detalhes
+      }),
+      QUERY_TIMEOUTS.DEFAULT,
+      'getNoteById'
+    );
 
     if (!note) {
       throw new Error('Nota não encontrada, não pertence ao seu tenant ou foi deletada');
@@ -526,11 +559,11 @@ export class NoteService {
       tenantId
     );
 
-    // Formatar resposta
+    // Formatar resposta (com content)
     let noteResponse: NoteResponse = {
       id: note.id,
       tenantId: note.tenantId,
-      content: note.content,
+      content: note.content, // Content disponível em detalhes
       type: note.type,
       relatedEntityType: note.relatedEntityType,
       relatedEntityId: note.relatedEntityId,

@@ -13,7 +13,8 @@
  * - Filtros e paginação avançados
  */
 
-import { PrismaClient, TaskType, TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskType, TaskStatus, TaskPriority } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { isValidDateNotPast } from '../utils/validators';
@@ -21,7 +22,6 @@ import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface TaskFilters {

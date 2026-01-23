@@ -5,12 +5,12 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { UserStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { hashPassword, validatePasswordPolicy } from '../utils/password';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface UserFilters {

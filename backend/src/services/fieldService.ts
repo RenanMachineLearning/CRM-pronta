@@ -5,9 +5,9 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 // Tipos de campo suportados
 export const SUPPORTED_FIELD_TYPES = ['text', 'number', 'date', 'boolean', 'lookup', 'select'] as const;

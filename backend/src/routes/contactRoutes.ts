@@ -28,6 +28,7 @@ import { addTagToContact, removeTagFromContact } from '../controllers/contactTag
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -344,6 +345,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Contact', 'create'),
+  invalidateEntityCache('contact'),
   createContact
 );
 
@@ -447,6 +449,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Contact', 'delete'),
+  invalidateEntityCache('contact'),
   deleteContact
 );
 

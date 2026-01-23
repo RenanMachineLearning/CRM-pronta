@@ -6,12 +6,11 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { UserService } from '../services/userService';
 import { getUserPermissions } from '../utils/permissions';
 import { comparePassword, hashPassword, validatePasswordPolicy } from '../utils/password';
 
-const prisma = new PrismaClient();
 
 /**
  * Campos que devem ser excluídos da resposta do perfil

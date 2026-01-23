@@ -12,9 +12,8 @@
  * - Quando as tabelas existirem, a lógica já estará pronta para funcionar
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 // Interface para resposta de lookup
 export interface LookupRecord {

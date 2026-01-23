@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, ContactStatus } from '@prisma/client';
+import { ContactStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
@@ -18,8 +19,11 @@ import { buildSearchConditions } from '../utils/entitySearchHelpers';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface ContactFilters {
@@ -324,38 +328,42 @@ export class ContactService {
       'contact'
     );
 
-    // Buscar contatos com relacionamentos
-    const [contacts, total] = await Promise.all([
-      prisma.contact.findMany({
-        where,
-        take: limit,
-        skip: skip,
-        include: {
-          company: {
-            select: {
-              id: true,
-              name: true,
+    // Buscar contatos com relacionamentos (usando timeout)
+    const [contacts, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.contact.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
-          },
-          emails: true,
-          phones: true,
-          addresses: true,
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+            emails: true,
+            phones: true,
+            addresses: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy,
-      }),
-      prisma.contact.count({ where }),
-    ]);
+          orderBy,
+        }),
+        prisma.contact.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listContacts'
+    );
 
     // Formatar resposta
     let data: ContactResponse[] = contacts.map((contact) => ({
@@ -440,7 +448,7 @@ export class ContactService {
     // Calcular totalPages
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
-    return {
+    const result = {
       data,
       pagination: {
         page,
@@ -450,6 +458,16 @@ export class ContactService {
         offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('contact'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**

@@ -5,12 +5,11 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateHexColor, validateProbability } from '../utils/validators';
 
-const prisma = new PrismaClient();
 
 // Interface para dados de estágio (usado em create e update)
 export interface StageData {

@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthService } from '../services/authService';
 import { TenantService } from '../services/tenantService';
 import { PasswordResetService } from '../services/passwordResetService';
@@ -14,7 +14,6 @@ import { EmailService } from '../services/emailService';
 import { generateToken } from '../utils/jwt';
 import { hashPassword, comparePassword, validatePasswordPolicy } from '../utils/password';
 
-const prisma = new PrismaClient();
 
 /**
  * Realiza login de usuário

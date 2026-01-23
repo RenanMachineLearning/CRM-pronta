@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, CompanyStatus, CompanySize } from '@prisma/client';
+import { CompanyStatus, CompanySize } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateUrl, normalizeUrl } from '../utils/validators';
@@ -18,8 +19,11 @@ import { buildSearchConditions } from '../utils/entitySearchHelpers';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface CompanyFilters {
@@ -123,6 +127,29 @@ export class CompanyService {
       offset?: number; // Manter para compatibilidade
     };
   }> {
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listCompanies', { tenantId, filters, pagination, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<{
+        data: CompanyResponse[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          offset?: number;
+        };
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
     // Calcular paginação: priorizar page sobre offset
     let limit: number;
     let skip: number;
@@ -130,12 +157,12 @@ export class CompanyService {
 
     if (pagination?.page !== undefined) {
       // Usar page/limit (novo)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       page = pagination.page;
       skip = (page - 1) * limit;
     } else if (pagination?.offset !== undefined) {
       // Usar offset (legado)
-      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
       skip = pagination.offset;
       page = Math.floor(skip / limit) + 1;
     } else {
@@ -243,39 +270,43 @@ export class CompanyService {
       'company'
     );
 
-    // Buscar empresas com relacionamentos e contagem de contatos
-    const [companies, total] = await Promise.all([
-      prisma.company.findMany({
-        where,
-        take: limit,
-        skip: skip,
-        include: {
-          addresses: true,
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+    // Buscar empresas com relacionamentos e contagem de contatos (usando timeout)
+    const [companies, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.company.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            addresses: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                contacts: {
+                  where: {
+                    deletedAt: null, // Apenas contatos não deletados
+                  },
                 },
               },
             },
           },
-          _count: {
-            select: {
-              contacts: {
-                where: {
-                  deletedAt: null, // Apenas contatos não deletados
-                },
-              },
-            },
-          },
-        },
-        orderBy,
-      }),
-      prisma.company.count({ where       }),
-    ]);
+          orderBy,
+        }),
+        prisma.company.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listCompanies'
+    );
 
     // Calcular totalPages
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
@@ -341,7 +372,7 @@ export class CompanyService {
       )) as CompanyResponse[];
     }
 
-    return {
+    const result = {
       data,
       pagination: {
         page,
@@ -351,6 +382,16 @@ export class CompanyService {
         offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('company'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**

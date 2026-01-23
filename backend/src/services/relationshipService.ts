@@ -12,9 +12,8 @@
  * - Isso evita ambiguidade futura (ex: UI tentando criar "reverse relation")
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 // Interface para criação de relacionamento
 export interface CreateRelationshipData {

@@ -18,6 +18,7 @@ import { addAddressToCompany } from '../controllers/addressController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -207,6 +208,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Company', 'create'),
+  invalidateEntityCache('company'),
   createCompany
 );
 
@@ -261,6 +263,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Company', 'delete'),
+  invalidateEntityCache('company'),
   deleteCompany
 );
 
