@@ -2,12 +2,16 @@
  * Página de listagem de empresas
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CompanyList } from '../components/CompanyList';
+import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
+import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
+import type { Filter } from '../types/filter';
 
 export function CompaniesPage() {
   const navigate = useNavigate();
+  const [advancedFilters, setAdvancedFilters] = useFilterUrlSync([]);
 
   const handleCompanyClick = (companyId: string) => {
     navigate(`/companies/${companyId}/edit`);
@@ -26,9 +30,19 @@ export function CompaniesPage() {
         </p>
       </div>
 
+      {/* Filtros avançados */}
+      <div className="mb-6">
+        <AdvancedFilters
+          entity="company"
+          filters={advancedFilters}
+          onFiltersChange={setAdvancedFilters}
+        />
+      </div>
+
       <CompanyList
         onCompanyClick={handleCompanyClick}
         onNewCompany={handleNewCompany}
+        advancedFilters={advancedFilters}
       />
     </div>
   );

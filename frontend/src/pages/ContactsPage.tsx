@@ -2,12 +2,16 @@
  * Página de listagem de contatos
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContactList } from '../components/ContactList';
+import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
+import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
+import type { Filter } from '../types/filter';
 
 export function ContactsPage() {
   const navigate = useNavigate();
+  const [advancedFilters, setAdvancedFilters] = useFilterUrlSync([]);
 
   const handleContactClick = (contactId: string) => {
     navigate(`/contacts/${contactId}`);
@@ -26,9 +30,19 @@ export function ContactsPage() {
         </p>
       </div>
 
+      {/* Filtros avançados */}
+      <div className="mb-6">
+        <AdvancedFilters
+          entity="contact"
+          filters={advancedFilters}
+          onFiltersChange={setAdvancedFilters}
+        />
+      </div>
+
       <ContactList
         onContactClick={handleContactClick}
         onNewContact={handleNewContact}
+        advancedFilters={advancedFilters}
       />
     </div>
   );

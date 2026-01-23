@@ -9,13 +9,15 @@ import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import type { Contact, ContactFilters, ContactStatus } from '../types/contact';
+import type { Filter } from '../types/filter';
 
 export interface ContactListProps {
   onContactClick?: (contactId: string) => void;
   onNewContact?: () => void;
+  advancedFilters?: Filter[];
 }
 
-export function ContactList({ onContactClick, onNewContact }: ContactListProps) {
+export function ContactList({ onContactClick, onNewContact, advancedFilters = [] }: ContactListProps) {
   // Estado para filtros
   const [filters, setFilters] = useState<ContactFilters>({});
   
@@ -36,6 +38,7 @@ export function ContactList({ onContactClick, onNewContact }: ContactListProps) 
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   } = useContacts(
     filters,
     {
@@ -43,8 +46,15 @@ export function ContactList({ onContactClick, onNewContact }: ContactListProps) 
       offset: (page - 1) * limit,
       orderBy,
       order,
-    }
+    },
+    advancedFilters
   );
+
+  // Atualizar filtros avançados quando mudarem externamente
+  useEffect(() => {
+    updateAdvancedFilters(advancedFilters);
+    setPage(1); // Resetar para primeira página
+  }, [advancedFilters, updateAdvancedFilters]);
 
   // Atualizar paginação quando page, orderBy ou order mudarem
   useEffect(() => {

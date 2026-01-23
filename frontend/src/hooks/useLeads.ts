@@ -11,6 +11,7 @@ import type {
   LeadPaginationParams,
   LeadListResponse,
 } from '../types/lead';
+import type { Filter } from '../types/filter';
 
 interface UseLeadsResult {
   leads: Lead[];
@@ -24,6 +25,7 @@ interface UseLeadsResult {
   refetch: () => Promise<void>;
   setFilters: (filters: LeadFilters | undefined) => void;
   setPagination: (pagination: LeadPaginationParams) => void;
+  setAdvancedFilters: (filters: Filter[]) => void;
 }
 
 /**
@@ -31,16 +33,19 @@ interface UseLeadsResult {
  * 
  * @param initialFilters - Filtros iniciais (opcional)
  * @param initialPagination - Paginação inicial (opcional)
+ * @param initialAdvancedFilters - Filtros avançados iniciais (opcional)
  * @returns Objeto com leads, loading, error, pagination e funções de controle
  */
 export function useLeads(
   initialFilters?: LeadFilters,
-  initialPagination?: LeadPaginationParams
+  initialPagination?: LeadPaginationParams,
+  initialAdvancedFilters?: Filter[]
 ): UseLeadsResult {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<LeadFilters | undefined>(initialFilters);
+  const [advancedFilters, setAdvancedFilters] = useState<Filter[]>(initialAdvancedFilters || []);
   const [pagination, setPaginationState] = useState<LeadPaginationParams>(
     initialPagination || { limit: 20, offset: 0, orderBy: 'createdAt', order: 'desc' }
   );
@@ -56,7 +61,7 @@ export function useLeads(
     setError(null);
 
     try {
-      const response: LeadListResponse = await listLeads(filters, pagination);
+      const response: LeadListResponse = await listLeads(filters, pagination, advancedFilters);
       setLeads(response.data);
       setPaginationInfo(response.pagination);
     } catch (err) {
@@ -66,7 +71,7 @@ export function useLeads(
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, [filters, pagination, advancedFilters]);
 
   // Buscar leads quando filters ou pagination mudarem
   useEffect(() => {
@@ -85,6 +90,13 @@ export function useLeads(
     setPaginationState((prev) => ({ ...prev, ...newPagination }));
   }, []);
 
+  // Função para atualizar filtros avançados
+  const updateAdvancedFilters = useCallback((newAdvancedFilters: Filter[]) => {
+    setAdvancedFilters(newAdvancedFilters);
+    // Resetar offset quando filtros avançados mudarem
+    setPaginationState((prev) => ({ ...prev, offset: 0 }));
+  }, []);
+
   return {
     leads,
     loading,
@@ -93,5 +105,6 @@ export function useLeads(
     refetch: fetchLeads,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   };
 }

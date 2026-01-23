@@ -17,6 +17,7 @@ import type {
   OpportunityPaginationParams,
   OpportunityStatus,
 } from '../types/opportunity';
+import type { Filter } from '../types/filter';
 
 /**
  * Lista oportunidades com filtros e paginação
@@ -26,11 +27,13 @@ import type {
  * 
  * @param filters - Filtros (stageId, status, contactId, companyId)
  * @param pagination - Parâmetros de paginação (limit, offset, orderBy, order)
+ * @param advancedFilters - Filtros avançados opcionais
  * @returns Promise com lista de oportunidades e informações de paginação
  */
 export async function listOpportunities(
   filters?: OpportunityFilters,
-  pagination?: OpportunityPaginationParams
+  pagination?: OpportunityPaginationParams,
+  advancedFilters?: Filter[]
 ): Promise<OpportunityListResponse> {
   const params = new URLSearchParams();
   
@@ -46,6 +49,11 @@ export async function listOpportunities(
   }
   if (filters?.companyId) {
     params.append('companyId', filters.companyId);
+  }
+  
+  // Adicionar filtros avançados
+  if (advancedFilters && advancedFilters.length > 0) {
+    params.append('filters', JSON.stringify(advancedFilters));
   }
   
   // Adicionar paginação

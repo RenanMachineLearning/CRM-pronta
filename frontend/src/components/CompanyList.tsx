@@ -11,13 +11,15 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
 import type { Company, CompanyFilters, CompanySize } from '../types/company';
+import type { Filter } from '../types/filter';
 
 export interface CompanyListProps {
   onCompanyClick?: (companyId: string) => void;
   onNewCompany?: () => void;
+  advancedFilters?: Filter[];
 }
 
-export function CompanyList({ onCompanyClick, onNewCompany }: CompanyListProps) {
+export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = [] }: CompanyListProps) {
   // Estado para filtros
   const [filters, setFilters] = useState<CompanyFilters>({});
   
@@ -38,6 +40,7 @@ export function CompanyList({ onCompanyClick, onNewCompany }: CompanyListProps) 
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   } = useCompanies(
     filters,
     {
@@ -45,8 +48,15 @@ export function CompanyList({ onCompanyClick, onNewCompany }: CompanyListProps) 
       offset: (page - 1) * limit,
       orderBy,
       order,
-    }
+    },
+    advancedFilters
   );
+
+  // Atualizar filtros avançados quando mudarem externamente
+  useEffect(() => {
+    updateAdvancedFilters(advancedFilters);
+    setPage(1); // Resetar para primeira página
+  }, [advancedFilters, updateAdvancedFilters]);
 
   // Atualizar paginação quando page, orderBy ou order mudarem
   useEffect(() => {

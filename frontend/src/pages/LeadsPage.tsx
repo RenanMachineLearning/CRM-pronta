@@ -6,12 +6,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeadList } from '../components/LeadList';
 import { ConvertLeadModal } from '../components/ConvertLeadModal';
+import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { useLeads } from '../hooks/useLeads';
 import { getLeadById } from '../services/leadService';
+import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
 import type { Lead, ConvertLeadResponse } from '../types/lead';
+import type { Filter } from '../types/filter';
 
 export function LeadsPage() {
   const navigate = useNavigate();
+  const [advancedFilters, setAdvancedFilters] = useFilterUrlSync([]);
 
   // Usar hook useLeads diretamente
   const {
@@ -21,12 +25,18 @@ export function LeadsPage() {
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   } = useLeads(undefined, {
     limit: 20,
     offset: 0,
     orderBy: 'createdAt',
     order: 'desc',
-  });
+  }, advancedFilters);
+
+  // Atualizar filtros avançados quando mudarem
+  React.useEffect(() => {
+    updateAdvancedFilters(advancedFilters);
+  }, [advancedFilters, updateAdvancedFilters]);
 
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -110,6 +120,15 @@ export function LeadsPage() {
         <p className="mt-2 text-sm text-gray-600">
           Gerencie seus leads e converta-os em contatos e oportunidades
         </p>
+      </div>
+
+      {/* Filtros avançados */}
+      <div className="mb-6">
+        <AdvancedFilters
+          entity="lead"
+          filters={advancedFilters}
+          onFiltersChange={setAdvancedFilters}
+        />
       </div>
 
       <LeadList

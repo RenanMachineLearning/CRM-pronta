@@ -11,15 +11,17 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
 import type { Lead, LeadFilters, LeadStatus } from '../types/lead';
+import type { Filter } from '../types/filter';
 
 export interface LeadListProps {
   leads?: Lead[]; // Opcional: se fornecido, usar em vez de buscar
   onLeadClick?: (leadId: string) => void;
   onNewLead?: () => void;
   onConvertLead?: (leadId: string) => void;
+  advancedFilters?: Filter[]; // Filtros avançados (usado quando leads não é fornecido)
 }
 
-export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead }: LeadListProps) {
+export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead, advancedFilters = [] }: LeadListProps) {
   // Estado para filtros, ordenação e paginação (sempre necessário)
   const [filters, setFilters] = useState<LeadFilters>({});
   
@@ -40,12 +42,21 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   } = useLeads(filters, {
     limit,
     offset: (page - 1) * limit,
     orderBy,
     order,
-  });
+  }, advancedFilters);
+
+  // Atualizar filtros avançados quando mudarem externamente (apenas se não usar leads da prop)
+  useEffect(() => {
+    if (!leadsProp) {
+      updateAdvancedFilters(advancedFilters);
+      setPage(1); // Resetar para primeira página
+    }
+  }, [advancedFilters, updateAdvancedFilters, leadsProp]);
   
   // Usar leads da prop se fornecido, senão usar do hook
   const leads = leadsProp || leadsFromHook;

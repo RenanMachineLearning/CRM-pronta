@@ -10,10 +10,12 @@ import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
 import type { Opportunity, OpportunityFilters, OpportunityStatus } from '../types/opportunity';
+import type { Filter } from '../types/filter';
 
 export interface OpportunityListProps {
   onOpportunityClick?: (opportunityId: string) => void;
   onNewOpportunity?: () => void;
+  advancedFilters?: Filter[];
 }
 
 /**
@@ -76,7 +78,7 @@ function getStatusColor(status: OpportunityStatus): string {
   }
 }
 
-export function OpportunityList({ onOpportunityClick, onNewOpportunity }: OpportunityListProps) {
+export function OpportunityList({ onOpportunityClick, onNewOpportunity, advancedFilters = [] }: OpportunityListProps) {
   // Estado para filtros
   const [filters, setFilters] = useState<OpportunityFilters>({});
   
@@ -97,12 +99,19 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity }: Opport
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   } = useOpportunities(filters, {
     limit,
     offset: (page - 1) * limit,
     orderBy,
     order,
-  });
+  }, advancedFilters);
+
+  // Atualizar filtros avançados quando mudarem externamente
+  useEffect(() => {
+    updateAdvancedFilters(advancedFilters);
+    setPage(1); // Resetar para primeira página
+  }, [advancedFilters, updateAdvancedFilters]);
 
   // Atualizar paginação quando page, orderBy ou order mudarem
   useEffect(() => {

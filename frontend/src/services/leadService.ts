@@ -20,6 +20,7 @@ import type {
   ConvertLeadResponse,
   LeadStatus,
 } from '../types/lead';
+import type { Filter } from '../types/filter';
 
 /**
  * Lista leads com filtros e paginação
@@ -29,11 +30,13 @@ import type {
  * 
  * @param filters - Filtros (status, source, converted)
  * @param pagination - Parâmetros de paginação (limit, offset, orderBy, order)
+ * @param advancedFilters - Filtros avançados opcionais
  * @returns Promise com lista de leads e informações de paginação
  */
 export async function listLeads(
   filters?: LeadFilters,
-  pagination?: LeadPaginationParams
+  pagination?: LeadPaginationParams,
+  advancedFilters?: Filter[]
 ): Promise<LeadListResponse> {
   const params = new URLSearchParams();
   
@@ -46,6 +49,11 @@ export async function listLeads(
   }
   if (filters?.converted !== undefined) {
     params.append('converted', filters.converted.toString());
+  }
+  
+  // Adicionar filtros avançados
+  if (advancedFilters && advancedFilters.length > 0) {
+    params.append('filters', JSON.stringify(advancedFilters));
   }
   
   // Adicionar paginação
