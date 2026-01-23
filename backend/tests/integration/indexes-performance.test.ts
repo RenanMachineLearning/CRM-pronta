@@ -58,7 +58,7 @@ describe('Indexes Performance Tests', () => {
     adminUser = { id: userObj.id, email: userObj.email, password: 'Test123!@#' };
 
     // Associar role admin ao usuário
-    await assignRoleToUser(adminUser.id, adminRole.id, tenant.id);
+    await assignRoleToUser(adminUser.id, adminRole.id);
 
     // Gerar token
     adminToken = generateToken(adminUser.id, tenant.id);
@@ -77,7 +77,7 @@ describe('Indexes Performance Tests', () => {
           tenantId: tenant.id,
           firstName: `João${i}`,
           lastName: `Silva${i}`,
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.contact.createMany({ data: contacts });
@@ -87,11 +87,15 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM contacts 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id}
         AND "firstName" ILIKE '%João%'
       `;
 
-      const plan = result[0]?.Plan;
+      // EXPLAIN (FORMAT JSON) retorna array com objeto contendo "Plan"
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       
       // Verificar que algum tipo de scan de índice está sendo usado
@@ -112,12 +116,15 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM contacts 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id}
         AND "firstName" = 'João1'
         AND "lastName" = 'Silva1'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       
       // Verificar que índice está sendo usado
@@ -129,11 +136,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM contacts 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id}
         AND status = 'ACTIVE'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       
       const nodeType = plan['Node Type'];
@@ -150,7 +160,7 @@ describe('Indexes Performance Tests', () => {
           tenantId: tenant.id,
           name: `Company ${i}`,
           industry: i % 2 === 0 ? 'Technology' : 'Finance',
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.company.createMany({ data: companies });
@@ -160,11 +170,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM companies 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id} 
         AND name ILIKE '%Company%'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });
@@ -173,11 +186,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM companies 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id} 
         AND industry = 'Technology'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });
@@ -194,7 +210,7 @@ describe('Indexes Performance Tests', () => {
           lastName: `Test${i}`,
           email: `lead${i}@test.com`,
           source: i % 3 === 0 ? 'website' : i % 3 === 1 ? 'referral' : 'social',
-          status: 'NEW',
+          status: 'NEW' as const,
         });
       }
       await prisma.lead.createMany({ data: leads });
@@ -204,12 +220,15 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM leads 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id} 
         AND "firstName" = 'Lead1'
         AND "lastName" = 'Test1'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });
@@ -218,11 +237,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM leads 
-        WHERE "tenantId" = ${tenant.id}::uuid 
+        WHERE "tenantId" = ${tenant.id} 
         AND source = 'website'
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });
@@ -262,7 +284,7 @@ describe('Indexes Performance Tests', () => {
           name: `Opportunity ${i}`,
           value: 1000 * i,
           stageId: stage.id,
-          status: 'OPEN',
+          status: 'OPEN' as const,
           closeDate,
         });
       }
@@ -276,11 +298,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM opportunities 
-        WHERE "tenantId" = ${tenant.id}::uuid 
-        AND "closeDate" <= ${futureDate}::timestamp
+        WHERE "tenantId" = ${tenant.id} 
+        AND "closeDate" <= ${futureDate}
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });
@@ -297,8 +322,8 @@ describe('Indexes Performance Tests', () => {
         tasks.push({
           tenantId: tenant.id,
           title: `Task ${i}`,
-          status: 'PENDING',
-          priority: 'MEDIUM',
+          status: 'PENDING' as const,
+          priority: 'MEDIUM' as const,
           createdById: adminUser.id,
           relatedEntityType: 'Contact',
           relatedEntityId: '00000000-0000-0000-0000-000000000001',
@@ -315,11 +340,14 @@ describe('Indexes Performance Tests', () => {
       const result = await prisma.$queryRaw<Array<any>>`
         EXPLAIN (FORMAT JSON)
         SELECT * FROM tasks 
-        WHERE "tenantId" = ${tenant.id}::uuid 
-        AND "dueDate" <= ${futureDate}::timestamp
+        WHERE "tenantId" = ${tenant.id} 
+        AND "dueDate" <= ${futureDate}
       `;
 
-      const plan = result[0]?.Plan;
+      const explainResult = result[0] as any;
+      expect(explainResult).toBeDefined();
+      
+      const plan = explainResult['Plan'] || explainResult['QUERY PLAN'];
       expect(plan).toBeDefined();
       expect(plan['Node Type']).not.toBe('Seq Scan');
     });

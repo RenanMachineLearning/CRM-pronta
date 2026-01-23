@@ -117,7 +117,7 @@ export function buildOrderBy(
     }
 
     // Validar campo se entityType fornecido
-    if (config && !validateOrderField(field, entityType)) {
+    if (config && entityType && !validateOrderField(field, entityType)) {
       throw new OrderByError(
         `Campo de ordenação inválido para ${entityType}: ${field}`,
         400,
