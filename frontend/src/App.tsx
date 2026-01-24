@@ -18,6 +18,7 @@ import { TaskFormPage } from './pages/TaskFormPage';
 import { NotesPage } from './pages/NotesPage';
 import { NoteFormPage } from './pages/NoteFormPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
+import { ImportPage } from './pages/ImportPage';
 import './index.css';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
           <Route path="/notes/:id/edit" element={<NoteFormPage />} />
           <Route path="/notes/:id" element={<div>Detalhes da Nota (a implementar)</div>} />
           <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/import" element={<ImportPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
