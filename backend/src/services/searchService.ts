@@ -424,7 +424,7 @@ export class SearchService {
           OR: this.buildCompanySearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        ...(select ? { select } : {}),
+        ...(select ? { select: select as any } : {}),
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchCompanies'
@@ -498,7 +498,7 @@ export class SearchService {
           OR: this.buildLeadSearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        ...(select ? { select } : {}),
+        ...(select ? { select: select as any } : {}),
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchLeads'
@@ -579,7 +579,7 @@ export class SearchService {
       stage: {
         select: { id: true, name: true },
       },
-    } as any; // Usar 'as any' porque Prisma.SelectSubset pode não incluir todos os campos necessários
+    };
 
     const opportunities = await withQueryTimeout(
       prisma.opportunity.findMany({
@@ -589,23 +589,11 @@ export class SearchService {
           OR: this.buildOpportunitySearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        ...(selectWithStage ? { select: selectWithStage } : {}),
+        select: selectWithStage,
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchOpportunities'
-    ) as Array<{
-      id: string;
-      tenantId: string;
-      name: string;
-      value: any;
-      currency: string;
-      status: string;
-      stageId: string;
-      contactId: string | null;
-      companyId: string | null;
-      createdAt: Date;
-      stage: { id: string; name: string } | null;
-    }>;
+    );
 
     const results: SearchResult<OpportunityData>[] = [];
 
