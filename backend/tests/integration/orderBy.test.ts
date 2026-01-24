@@ -58,7 +58,7 @@ describe('OrderBy Integration Tests', () => {
     adminUser = { id: userObj.id, email: userObj.email, password: 'Test123!@#' };
 
     // Associar role admin ao usuário
-    await assignRoleToUser(adminUser.id, adminRole.id, tenant.id);
+    await assignRoleToUser(adminUser.id, adminRole.id);
 
     // Gerar token
     adminToken = generateToken(adminUser.id, tenant.id);
@@ -324,6 +324,8 @@ describe('OrderBy Integration Tests', () => {
             status: 'PENDING',
             priority: 'LOW',
             createdById: adminUser.id,
+            relatedEntityType: 'Contact',
+            relatedEntityId: '00000000-0000-0000-0000-000000000001',
           },
           {
             tenantId: tenant.id,
@@ -331,6 +333,8 @@ describe('OrderBy Integration Tests', () => {
             status: 'PENDING',
             priority: 'HIGH',
             createdById: adminUser.id,
+            relatedEntityType: 'Contact',
+            relatedEntityId: '00000000-0000-0000-0000-000000000001',
           },
         ],
       });

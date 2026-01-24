@@ -39,13 +39,13 @@ describe('filterHelpers', () => {
     it('deve converter string para Prisma.Decimal', () => {
       const result = convertFilterValue('100.50', 'decimal', FilterOperator.EQUALS);
       expect(result).toBeInstanceOf(Prisma.Decimal);
-      expect(result.toString()).toBe('100.50');
+      expect(result.toString()).toBe('100.5');
     });
 
     it('deve converter number para Prisma.Decimal', () => {
       const result = convertFilterValue(100.50, 'decimal', FilterOperator.EQUALS);
       expect(result).toBeInstanceOf(Prisma.Decimal);
-      expect(result.toString()).toBe('100.50');
+      expect(result.toString()).toBe('100.5');
     });
 
     it('deve retornar undefined para isNull/isNotNull', () => {

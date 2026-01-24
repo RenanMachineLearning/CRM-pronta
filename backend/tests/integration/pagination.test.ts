@@ -58,7 +58,7 @@ describe('Pagination Integration Tests', () => {
     adminUser = { id: userObj.id, email: userObj.email, password: 'Test123!@#' };
 
     // Associar role admin ao usuário
-    await assignRoleToUser(adminUser.id, adminRole.id, tenant.id);
+    await assignRoleToUser(adminUser.id, adminRole.id);
 
     // Gerar token
     adminToken = generateToken(adminUser.id, tenant.id);
@@ -173,7 +173,7 @@ describe('Pagination Integration Tests', () => {
         password: 'Test123!@#',
         name: 'Admin User 2',
       });
-      await assignRoleToUser(user2.id, roles2.admin.id, tenant2.id);
+      await assignRoleToUser(user2.id, roles2.admin.id);
       await createTestPermission({ tenantId: tenant2.id, entity: 'Contact', action: 'list' });
       const token2 = generateToken(user2.id, tenant2.id);
 
@@ -456,6 +456,195 @@ describe('Pagination Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.pagination.page).toBe(2);
+    });
+  });
+
+  describe('Paginação com grandes volumes', () => {
+    beforeAll(async () => {
+      // Criar 500 contatos para testar paginação com volume
+      const contacts = [];
+      const batchSize = 100;
+      for (let batch = 0; batch < 5; batch++) {
+        const batchContacts = [];
+        for (let i = 0; i < batchSize; i++) {
+          const index = batch * batchSize + i;
+          batchContacts.push({
+            tenantId: tenant.id,
+            firstName: `Volume${index}`,
+            lastName: `Test${index}`,
+            status: index % 2 === 0 ? 'ACTIVE' : 'INACTIVE',
+          });
+        }
+        await prisma.contact.createMany({ data: batchContacts });
+      }
+    });
+
+    it('deve paginar corretamente com grandes volumes', async () => {
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({ page: '1', limit: '20' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.total).toBeGreaterThanOrEqual(500);
+      expect(response.body.pagination.totalPages).toBeGreaterThan(1);
+      expect(response.body.data.length).toBeLessThanOrEqual(20);
+    });
+
+    it('deve paginar para última página com grandes volumes', async () => {
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({ page: '25', limit: '20' }); // Página 25 de um dataset grande
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.page).toBe(25);
+      expect(response.body.pagination.totalPages).toBeGreaterThanOrEqual(25);
+    });
+
+    it('deve calcular totalPages corretamente com grandes volumes', async () => {
+      const limit = 20;
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({ page: '1', limit: limit.toString() });
+
+      expect(response.status).toBe(200);
+      const expectedTotalPages = Math.ceil(response.body.pagination.total / limit);
+      expect(response.body.pagination.totalPages).toBe(expectedTotalPages);
+    });
+  });
+
+  describe('Paginação com filtros complexos', () => {
+    beforeAll(async () => {
+      // Criar dados variados para testes de filtros
+      const contacts = [];
+      for (let i = 1; i <= 50; i++) {
+        contacts.push({
+          tenantId: tenant.id,
+          firstName: `Filter${i}`,
+          lastName: i % 2 === 0 ? 'Active' : 'Inactive',
+          status: i % 2 === 0 ? 'ACTIVE' : 'INACTIVE',
+        });
+      }
+      await prisma.contact.createMany({ data: contacts });
+    });
+
+    it('deve paginar com filtros avançados', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: 'equals', value: 'ACTIVE' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({
+          filters,
+          page: '1',
+          limit: '10',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.page).toBe(1);
+      expect(response.body.pagination.limit).toBe(10);
+      // Verificar que apenas contatos ACTIVE foram retornados
+      response.body.data.forEach((contact: any) => {
+        expect(contact.status).toBe('ACTIVE');
+      });
+    });
+
+    it('deve paginar com busca textual + filtros', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: 'equals', value: 'ACTIVE' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({
+          q: 'filter',
+          filters,
+          page: '1',
+          limit: '10',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.page).toBe(1);
+    });
+  });
+
+  describe('Paginação com ordenação múltipla', () => {
+    beforeAll(async () => {
+      // Criar dados para teste de ordenação múltipla
+      const contacts = [];
+      for (let i = 1; i <= 30; i++) {
+        contacts.push({
+          tenantId: tenant.id,
+          firstName: `Sort${i % 3}`,
+          lastName: `Test${i}`,
+          status: 'ACTIVE',
+        });
+      }
+      await prisma.contact.createMany({ data: contacts });
+    });
+
+    it('deve paginar com ordenação múltipla', async () => {
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({
+          sortBy: 'firstName,lastName',
+          sortOrder: 'asc,asc',
+          page: '1',
+          limit: '10',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.page).toBe(1);
+      expect(response.body.data.length).toBeLessThanOrEqual(10);
+      
+      // Verificar que ordenação foi aplicada
+      const firstNames = response.body.data.map((c: any) => c.firstName);
+      const sortedFirstNames = [...firstNames].sort();
+      expect(firstNames).toEqual(sortedFirstNames);
+    });
+
+    it('deve manter ordenação consistente entre páginas', async () => {
+      const page1 = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({
+          sortBy: 'firstName',
+          sortOrder: 'asc',
+          page: '1',
+          limit: '10',
+        });
+
+      const page2 = await request(app)
+        .get('/api/contacts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Tenant-Slug', tenant.slug)
+        .query({
+          sortBy: 'firstName',
+          sortOrder: 'asc',
+          page: '2',
+          limit: '10',
+        });
+
+      expect(page1.status).toBe(200);
+      expect(page2.status).toBe(200);
+      
+      // Último item da página 1 deve ser menor ou igual ao primeiro da página 2
+      const lastPage1 = page1.body.data[page1.body.data.length - 1];
+      const firstPage2 = page2.body.data[0];
+      expect(lastPage1.firstName <= firstPage2.firstName).toBe(true);
     });
   });
 });

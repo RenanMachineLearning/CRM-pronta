@@ -44,10 +44,10 @@ export function buildSearchConditions(entity: string, query: string): any[] {
     return [];
   }
 
-  const trimmedQuery = query.trim();
   // Normalizar query para remover acentos e permitir busca tolerante a diacríticos
   // Exemplo: "José" → "jose", "São Paulo" → "sao paulo"
-  const normalizedQuery = normalizeText(trimmedQuery);
+  // Também remove espaços extras antes de normalizar
+  const normalizedQuery = normalizeText(query);
   const conditions: any[] = [];
 
   // Construir condição para cada campo pesquisável
@@ -105,19 +105,20 @@ export function validateSearchQuery(query?: string | null): string | undefined {
     );
   }
 
-  // Sanitizar usando helper da Parte 1
-  const sanitized = sanitizeQuery(query);
-
-  if (sanitized.length === 0) {
-    return undefined; // Query vazia após sanitização = sem busca
-  }
-
-  if (sanitized.length > 500) {
+  // Validar comprimento antes de sanitizar
+  if (query.length > 500) {
     throw new SearchError(
       'Query não pode exceder 500 caracteres',
       'QUERY_TOO_LONG',
       400
     );
+  }
+
+  // Sanitizar usando helper da Parte 1
+  const sanitized = sanitizeQuery(query);
+
+  if (sanitized.length === 0) {
+    return undefined; // Query vazia após sanitização = sem busca
   }
 
   return sanitized;

@@ -91,45 +91,64 @@ export function buildOrderBy(
   const fields = Array.isArray(sortBy) ? sortBy : [sortBy];
   const orders = Array.isArray(sortOrder) ? sortOrder : [sortOrder || 'asc'];
 
-  // Validar tamanhos compatíveis
-  if (orders.length > 0 && orders.length !== fields.length) {
-    throw new OrderByError(
-      'sortBy e sortOrder devem ter o mesmo tamanho quando usados como arrays',
-      400,
-      'INVALID_ARRAY_SIZE'
-    );
-  }
+  // Função auxiliar para construir o resultado
+  function buildResult(orders: string[], fields: string[]) {
+    // Validar e construir orderBy
+    const orderByItems: any[] = [];
 
-  // Validar e construir orderBy
-  const orderByItems: any[] = [];
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
+      const order = orders[i];
 
-  for (let i = 0; i < fields.length; i++) {
-    const field = fields[i];
-    const order = orders[i] || 'asc';
+      // Validar direção
+      if (!validateOrderDirection(order)) {
+        throw new OrderByError(
+          `Direção de ordenação inválida: ${order}. Use 'asc' ou 'desc'`,
+          400,
+          'INVALID_ORDER_DIRECTION'
+        );
+      }
 
-    // Validar direção
-    if (!validateOrderDirection(order)) {
-      throw new OrderByError(
-        `Direção de ordenação inválida: ${order}. Use 'asc' ou 'desc'`,
-        400,
-        'INVALID_ORDER_DIRECTION'
-      );
+      // Validar campo se entityType fornecido
+      if (config && entityType && !validateOrderField(field, entityType)) {
+        throw new OrderByError(
+          `Campo de ordenação inválido para ${entityType}: ${field}`,
+          400,
+          'INVALID_ORDER_FIELD'
+        );
+      }
+
+      orderByItems.push({ [field]: order });
     }
 
-    // Validar campo se entityType fornecido
-    if (config && entityType && !validateOrderField(field, entityType)) {
-      throw new OrderByError(
-        `Campo de ordenação inválido para ${entityType}: ${field}`,
-        400,
-        'INVALID_ORDER_FIELD'
-      );
-    }
-
-    orderByItems.push({ [field]: order });
+    // Retornar objeto único ou array para múltipla
+    return orderByItems.length === 1 ? orderByItems[0] : orderByItems;
   }
 
-  // Retornar objeto único ou array para múltipla
-  return orderByItems.length === 1 ? orderByItems[0] : orderByItems;
+  // Se houver mais campos do que direções:
+  // - Se apenas 1 direção foi especificada, usá-la para todos os campos
+  // - Se múltiplas direções foram especificadas mas não suficientes, lançar erro
+  if (orders.length < fields.length) {
+    if (orders.length === 1) {
+      // Se apenas 1 direção foi especificada, usá-la para todos os campos
+      const order = orders[0];
+      const filledOrders = [order];
+      for (let i = 1; i < fields.length; i++) {
+        filledOrders.push(order);
+      }
+      return buildResult(filledOrders, fields);
+    } else {
+      // Se múltiplas direções foram especificadas mas não suficientes, lançar erro
+      throw new OrderByError(
+        'sortBy e sortOrder devem ter o mesmo tamanho quando usados como arrays',
+        400,
+        'INVALID_ARRAY_SIZE'
+      );
+    }
+  }
+
+  // Se chegou até aqui, arrays têm o mesmo tamanho ou orders é maior
+  return buildResult(orders, fields);
 }
 
 /**

@@ -519,8 +519,8 @@ export async function updateNote(req: Request, res: Response): Promise<void> {
     // Capturar changes para auditoria (comparar valores após trim)
     const changes: Record<string, { old: any; new: any }> = {};
     if (content !== undefined) {
-      const oldContent = noteBefore.content.trim();
-      const newContent = noteAfter.content.trim();
+      const oldContent = noteBefore.content?.trim() || '';
+      const newContent = noteAfter.content?.trim() || '';
       if (oldContent !== newContent) {
         changes.content = { old: oldContent, new: newContent };
       }

@@ -328,6 +328,9 @@ export class ContactService {
       'contact'
     );
 
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listContacts', { tenantId, filters, pagination, userId }, tenantId);
+
     // Buscar contatos com relacionamentos (usando timeout)
     const [contacts, total] = await withQueryTimeout(
       Promise.all([

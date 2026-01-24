@@ -310,7 +310,7 @@ export class SearchService {
       },
       emails: {
         take: 3, // Limitar emails para performance
-        orderBy: { isPrimary: 'desc' },
+        orderBy: { isPrimary: 'desc' as const },
         select: {
           id: true,
           email: true,
@@ -319,7 +319,7 @@ export class SearchService {
       },
       phones: {
         take: 3, // Limitar phones para performance
-        orderBy: { isPrimary: 'desc' },
+        orderBy: { isPrimary: 'desc' as const },
         select: {
           id: true,
           phone: true,
@@ -424,7 +424,7 @@ export class SearchService {
           OR: this.buildCompanySearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        select,
+        ...(select ? { select } : {}),
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchCompanies'
@@ -498,7 +498,7 @@ export class SearchService {
           OR: this.buildLeadSearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        select,
+        ...(select ? { select } : {}),
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchLeads'
@@ -589,11 +589,23 @@ export class SearchService {
           OR: this.buildOpportunitySearchConditions(normalizedQuery, config),
         },
         take: limitedLimit,
-        select: selectWithStage,
+        ...(selectWithStage ? { select: selectWithStage } : {}),
       }),
       QUERY_TIMEOUTS.SEARCH,
       'searchOpportunities'
-    );
+    ) as Array<{
+      id: string;
+      tenantId: string;
+      name: string;
+      value: any;
+      currency: string;
+      status: string;
+      stageId: string;
+      contactId: string | null;
+      companyId: string | null;
+      createdAt: Date;
+      stage: { id: string; name: string } | null;
+    }>;
 
     const results: SearchResult<OpportunityData>[] = [];
 

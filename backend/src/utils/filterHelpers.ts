@@ -65,6 +65,23 @@ export function convertFilterValue(
     return num;
   }
 
+  // Conversão de array para number (para BETWEEN, IN, NOT_IN)
+  if (fieldType === 'number' && Array.isArray(value) &&
+      (operator === FilterOperator.BETWEEN || operator === FilterOperator.IN || operator === FilterOperator.NOT_IN)) {
+    return value.map(item => {
+      const num = Number(item);
+      if (isNaN(num) || !isFinite(num)) {
+        throw new FilterError(
+          `Valor "${item}" não é um número válido`,
+          'INVALID_NUMBER_VALUE',
+          400,
+          { value: item, fieldType }
+        );
+      }
+      return num;
+    });
+  }
+
   // Conversão de string para Date
   if (fieldType === 'date' && typeof value === 'string') {
     const date = new Date(value);
@@ -77,6 +94,23 @@ export function convertFilterValue(
       );
     }
     return date;
+  }
+
+  // Conversão de array para Date (para BETWEEN, IN, NOT_IN)
+  if (fieldType === 'date' && Array.isArray(value) &&
+      (operator === FilterOperator.BETWEEN || operator === FilterOperator.IN || operator === FilterOperator.NOT_IN)) {
+    return value.map(item => {
+      const date = new Date(item);
+      if (isNaN(date.getTime())) {
+        throw new FilterError(
+          `Valor "${item}" não é uma data válida (formato ISO 8601 esperado)`,
+          'INVALID_DATE_VALUE',
+          400,
+          { value: item, fieldType }
+        );
+      }
+      return date;
+    });
   }
 
   // Conversão de string para boolean
@@ -94,6 +128,10 @@ export function convertFilterValue(
   // Conversão de string/number para Prisma.Decimal
   if (fieldType === 'decimal') {
     try {
+      if (Array.isArray(value) && (operator === FilterOperator.BETWEEN || operator === FilterOperator.IN || operator === FilterOperator.NOT_IN)) {
+        // Para operadores que usam arrays, converter cada elemento
+        return value.map(item => new Prisma.Decimal(item));
+      }
       if (typeof value === 'string' || typeof value === 'number') {
         return new Prisma.Decimal(value);
       }

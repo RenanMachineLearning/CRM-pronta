@@ -670,4 +670,392 @@ describe('Advanced Filters - E2E Tests', () => {
       expect(response2.body.data.some((c: any) => c.id === contact1.id)).toBe(false);
     });
   });
+
+  describe('Todos os 13 Operadores de Filtro', () => {
+    let contact1: { id: string };
+    let contact2: { id: string };
+    let contact3: { id: string };
+    let company1: { id: string };
+
+    beforeAll(async () => {
+      company1 = await prisma.company.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Operator Test Company',
+          status: 'ACTIVE',
+        },
+      });
+
+      const today = new Date();
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - 10);
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 10);
+
+      contact1 = await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Operator',
+          lastName: 'Test1',
+          status: 'ACTIVE',
+          companyId: company1.id,
+          birthDate: pastDate,
+        },
+      });
+
+      contact2 = await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Operator',
+          lastName: 'Test2',
+          status: 'INACTIVE',
+          birthDate: futureDate,
+        },
+      });
+
+      contact3 = await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Different',
+          lastName: 'Test3',
+          status: 'ACTIVE',
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.contact.deleteMany({ where: { tenantId: tenant1.id, lastName: { startsWith: 'Test' } } });
+      await prisma.company.deleteMany({ where: { tenantId: tenant1.id, name: 'Operator Test Company' } });
+    });
+
+    it('deve filtrar com EQUALS', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: FilterOperator.EQUALS, value: 'ACTIVE' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.status).toBe('ACTIVE');
+      });
+    });
+
+    it('deve filtrar com NOT_EQUALS', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: FilterOperator.NOT_EQUALS, value: 'INACTIVE' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.status).not.toBe('INACTIVE');
+      });
+    });
+
+    it('deve filtrar com CONTAINS', async () => {
+      const filters = JSON.stringify([
+        { field: 'firstName', operator: FilterOperator.CONTAINS, value: 'Operator' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.firstName).toContain('Operator');
+      });
+    });
+
+    it('deve filtrar com NOT_CONTAINS', async () => {
+      const filters = JSON.stringify([
+        { field: 'firstName', operator: FilterOperator.NOT_CONTAINS, value: 'Different' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.firstName).not.toContain('Different');
+      });
+    });
+
+    it('deve filtrar com GREATER_THAN (data)', async () => {
+      const today = new Date();
+      const filters = JSON.stringify([
+        { field: 'birthDate', operator: FilterOperator.GREATER_THAN, value: today.toISOString() },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      // Deve retornar contatos com birthDate > today
+    });
+
+    it('deve filtrar com LESS_THAN (data)', async () => {
+      const today = new Date();
+      const filters = JSON.stringify([
+        { field: 'birthDate', operator: FilterOperator.LESS_THAN, value: today.toISOString() },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      // Deve retornar contatos com birthDate < today
+    });
+
+    it('deve filtrar com GREATER_THAN_OR_EQUAL', async () => {
+      const today = new Date();
+      const filters = JSON.stringify([
+        { field: 'createdAt', operator: FilterOperator.GREATER_THAN_OR_EQUAL, value: today.toISOString() },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+    });
+
+    it('deve filtrar com LESS_THAN_OR_EQUAL', async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      const filters = JSON.stringify([
+        { field: 'createdAt', operator: FilterOperator.LESS_THAN_OR_EQUAL, value: futureDate.toISOString() },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+    });
+
+    it('deve filtrar com BETWEEN (data)', async () => {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 20);
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 20);
+      const filters = JSON.stringify([
+        { field: 'birthDate', operator: FilterOperator.BETWEEN, value: [startDate.toISOString(), endDate.toISOString()] },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+    });
+
+    it('deve filtrar com IN', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: FilterOperator.IN, value: ['ACTIVE', 'INACTIVE'] },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(['ACTIVE', 'INACTIVE']).toContain(c.status);
+      });
+    });
+
+    it('deve filtrar com NOT_IN', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: FilterOperator.NOT_IN, value: ['ARCHIVED'] },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.status).not.toBe('ARCHIVED');
+      });
+    });
+
+    it('deve filtrar com IS_NULL', async () => {
+      const filters = JSON.stringify([
+        { field: 'companyId', operator: FilterOperator.IS_NULL },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.companyId).toBeNull();
+      });
+    });
+
+    it('deve filtrar com IS_NOT_NULL', async () => {
+      const filters = JSON.stringify([
+        { field: 'companyId', operator: FilterOperator.IS_NOT_NULL },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((c: any) => {
+        expect(c.companyId).not.toBeNull();
+      });
+    });
+  });
+
+  describe('Filtros em relacionamentos', () => {
+    let contact1: { id: string };
+    let company1: { id: string };
+    let tag1: { id: string };
+
+    beforeAll(async () => {
+      company1 = await prisma.company.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Relationship Test Company',
+          status: 'ACTIVE',
+        },
+      });
+
+      tag1 = await prisma.tag.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'VIP',
+          color: '#FF0000',
+        },
+      });
+
+      contact1 = await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Relationship',
+          lastName: 'Test',
+          status: 'ACTIVE',
+          companyId: company1.id,
+          tags: {
+            create: {
+              tagId: tag1.id,
+            },
+          },
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.contact.deleteMany({ where: { tenantId: tenant1.id, firstName: 'Relationship' } });
+      await prisma.company.deleteMany({ where: { tenantId: tenant1.id, name: 'Relationship Test Company' } });
+      await prisma.tag.deleteMany({ where: { tenantId: tenant1.id, name: 'VIP' } });
+    });
+
+    it('deve filtrar por campo de relacionamento (tags.name)', async () => {
+      const filters = JSON.stringify([
+        { field: 'tags.name', operator: FilterOperator.EQUALS, value: 'VIP' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.some((c: any) => c.id === contact1.id)).toBe(true);
+    });
+  });
+
+  describe('Filtros aninhados complexos', () => {
+    beforeAll(async () => {
+      // Criar dados variados para testes complexos
+      await prisma.contact.createMany({
+        data: [
+          {
+            tenantId: tenant1.id,
+            firstName: 'Complex',
+            lastName: 'Test1',
+            status: 'ACTIVE',
+          },
+          {
+            tenantId: tenant1.id,
+            firstName: 'Complex',
+            lastName: 'Test2',
+            status: 'INACTIVE',
+          },
+          {
+            tenantId: tenant1.id,
+            firstName: 'Simple',
+            lastName: 'Test3',
+            status: 'ACTIVE',
+          },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.contact.deleteMany({ where: { tenantId: tenant1.id, lastName: { startsWith: 'Test' } } });
+    });
+
+    it('deve aplicar múltiplos filtros avançados combinados', async () => {
+      const filters = JSON.stringify([
+        { field: 'status', operator: FilterOperator.EQUALS, value: 'ACTIVE' },
+        { field: 'firstName', operator: FilterOperator.CONTAINS, value: 'Complex' },
+        { field: 'lastName', operator: FilterOperator.CONTAINS, value: 'Test' },
+      ]);
+
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Id', tenant1.id)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .query({ filters });
+
+      expect(response.status).toBe(200);
+      response.body.data.forEach((contact: any) => {
+        expect(contact.status).toBe('ACTIVE');
+        expect(contact.firstName).toContain('Complex');
+        expect(contact.lastName).toContain('Test');
+      });
+    });
+  });
 });

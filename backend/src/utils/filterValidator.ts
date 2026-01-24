@@ -110,7 +110,24 @@ export function validateFilter(filter: Filter, entityType: string): void {
 
     // Converter valor para tipo correto (validação de tipo)
     try {
-      convertFilterValue(filter.value, fieldMetadata.type, filter.operator as FilterOperator);
+      // Para operadores que usam arrays (BETWEEN, IN, NOT_IN), validar cada elemento
+      if (
+        filter.operator === FilterOperator.BETWEEN ||
+        filter.operator === FilterOperator.IN ||
+        filter.operator === FilterOperator.NOT_IN
+      ) {
+        if (Array.isArray(filter.value)) {
+          for (const item of filter.value) {
+            convertFilterValue(item, fieldMetadata.type, FilterOperator.EQUALS);
+          }
+        } else {
+          // Se não for array, converter normalmente (irá falhar na validação)
+          convertFilterValue(filter.value, fieldMetadata.type, filter.operator as FilterOperator);
+        }
+      } else {
+        // Para outros operadores, converter normalmente
+        convertFilterValue(filter.value, fieldMetadata.type, filter.operator as FilterOperator);
+      }
     } catch (error: any) {
       if (error instanceof FilterError) {
         throw error;

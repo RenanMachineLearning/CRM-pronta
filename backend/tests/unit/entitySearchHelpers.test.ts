@@ -110,7 +110,7 @@ describe('entitySearchHelpers', () => {
       const conditions = buildSearchConditions('contact', '  joão  ');
 
       expect(conditions[0]).toEqual({
-        firstName: { contains: 'joão', mode: 'insensitive' },
+        firstName: { contains: 'joao', mode: 'insensitive' },
       });
     });
   });

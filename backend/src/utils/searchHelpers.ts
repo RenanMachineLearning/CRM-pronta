@@ -115,12 +115,14 @@ export function calculateRelevance(text: string, query: string): number {
     if (exactMatches > 0) {
       termMatches++;
       // Mais pontos por mais ocorrências
-      score += Math.min(exactMatches * 0.3, 0.5);
+      score += Math.min(exactMatches * 0.2, 0.4); // Reduzido para permitir mais espaço para outros fatores
 
       // Bônus por termo no início do texto
       const firstPosition = normalizedText.indexOf(term);
-      if (firstPosition >= 0 && firstPosition < 20) {
-        score += 0.2;
+      if (firstPosition >= 0 && firstPosition < 10) {
+        score += 0.3; // Aumentado o bônus para início do texto
+      } else if (firstPosition >= 10 && firstPosition < 30) {
+        score += 0.15; // Bônus menor para posições intermediárias
       }
     }
   }

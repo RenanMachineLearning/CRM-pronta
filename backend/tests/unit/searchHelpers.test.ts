@@ -32,9 +32,10 @@ describe('searchHelpers', () => {
       expect(normalizeText('JOSÉ')).toBe('jose');
     });
 
-    it('deve remover caracteres especiais', () => {
+    it('deve remover caracteres especiais (preserva hífens e espaços)', () => {
       expect(normalizeText('joão@silva.com')).toBe('joaosilvacom');
-      expect(normalizeText('(11) 99999-9999')).toBe('11999999999');
+      // normalizeText preserva hífens e espaços, então parênteses e @ são removidos mas hífen permanece
+      expect(normalizeText('(11) 99999-9999')).toBe('11 99999-9999');
       expect(normalizeText('josé.silva@empresa.com.br')).toBe('josesilvaempresacombr');
     });
 
@@ -64,6 +65,66 @@ describe('searchHelpers', () => {
     it('deve preservar hífens', () => {
       expect(normalizeText('São-Paulo')).toBe('sao-paulo');
       expect(normalizeText('João-Silva')).toBe('joao-silva');
+    });
+
+    it('deve normalizar textos muito longos', () => {
+      const longText = 'João Silva é gerente de vendas na empresa São Paulo Tech Corp'.repeat(100);
+      const normalized = normalizeText(longText);
+      
+      expect(normalized.length).toBeLessThanOrEqual(longText.length);
+      expect(normalized).not.toContain('São');
+      expect(normalized).toContain('sao');
+      expect(normalized).not.toContain('João');
+      expect(normalized).toContain('joao');
+    });
+
+    it('deve normalizar caracteres Unicode especiais', () => {
+      expect(normalizeText('Müller')).toBe('muller');
+      expect(normalizeText('François')).toBe('francois');
+      expect(normalizeText('Zürich')).toBe('zurich');
+      expect(normalizeText('Español')).toBe('espanol');
+    });
+
+    it('deve normalizar números misturados com texto', () => {
+      expect(normalizeText('João123')).toBe('joao123');
+      expect(normalizeText('Empresa 2024')).toBe('empresa 2024');
+      expect(normalizeText('São Paulo 2024')).toBe('sao paulo 2024');
+    });
+
+    it('deve normalizar emails e URLs', () => {
+      expect(normalizeText('joão@empresa.com.br')).toBe('joaoempresacombr');
+      expect(normalizeText('https://www.empresa.com.br')).toBe('httpswwwempresacombr');
+      expect(normalizeText('contato@empresa-são-paulo.com')).toBe('contatoempresa-sao-paulocom');
+    });
+
+    it('deve normalizar pontuação complexa (preserva hífens)', () => {
+      expect(normalizeText('João, Silva; Santos.')).toBe('joao silva santos');
+      // normalizeText preserva hífens, então o hífen em "São Paulo) - Tech" permanece
+      expect(normalizeText('Empresa (São Paulo) - Tech')).toBe('empresa sao paulo - tech');
+      expect(normalizeText('João "Silva" \'Santos\'')).toBe('joao silva santos');
+    });
+
+    it('deve normalizar caracteres especiais extremos', () => {
+      expect(normalizeText('João@#$%Silva')).toBe('joaosilva');
+      expect(normalizeText('Empresa***Tech')).toBe('empresatech');
+      expect(normalizeText('São!!!Paulo???')).toBe('saopaulo');
+    });
+
+    it('deve normalizar múltiplas palavras acentuadas', () => {
+      expect(normalizeText('José Antônio da Conceição')).toBe('jose antonio da conceicao');
+      expect(normalizeText('São Paulo do Sul')).toBe('sao paulo do sul');
+      expect(normalizeText('Ação e Reação')).toBe('acao e reacao');
+    });
+
+    it('deve normalizar textos com quebras de linha', () => {
+      expect(normalizeText('João\nSilva')).toBe('joao silva');
+      expect(normalizeText('São\r\nPaulo')).toBe('sao paulo');
+      expect(normalizeText('Empresa\tTech')).toBe('empresa tech');
+    });
+
+    it('deve normalizar textos com caracteres de controle', () => {
+      expect(normalizeText('João\u0000Silva')).toBe('joaosilva');
+      expect(normalizeText('São\u0001Paulo')).toBe('saopaulo');
     });
   });
 
