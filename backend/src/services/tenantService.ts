@@ -5,9 +5,8 @@
  * Toda lógica de validação (existência + status) fica centralizada aqui.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 export class TenantService {
   /**

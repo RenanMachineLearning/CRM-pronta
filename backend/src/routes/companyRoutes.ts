@@ -18,6 +18,7 @@ import { addAddressToCompany } from '../controllers/addressController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -32,18 +33,51 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Company.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/companies?page=1&limit=20
+ * - GET /api/companies?page=2&limit=10
+ * - GET /api/companies?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - industry: string (opcional: busca parcial case-insensitive)
  * - size: string (opcional: SMALL, MEDIUM, LARGE, ENTERPRISE)
- * - orderBy: string (opcional: name, createdAt, default: name)
- * - order: string (opcional: asc, desc, default: asc para name, desc para createdAt)
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "sao paulo" encontra "São Paulo"
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=name
+ *   Exemplo múltiplo: ?sortBy=status,name
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
+ * - hasContacts: boolean (opcional) - Filtrar empresas com/sem contatos (true/false)
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"ACTIVE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
  * 
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Nota: Contatos são incluídos apenas como contagem (contactsCount) para performance.
@@ -174,6 +208,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Company', 'create'),
+  invalidateEntityCache('company'),
   createCompany
 );
 
@@ -228,6 +263,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Company', 'delete'),
+  invalidateEntityCache('company'),
   deleteCompany
 );
 

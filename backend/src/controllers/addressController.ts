@@ -12,9 +12,8 @@
 import { Request, Response } from 'express';
 import { AddressService } from '../services/addressService';
 import { checkPermission } from '../utils/permissions';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 /**
  * Adiciona endereço a um contato

@@ -13,5 +13,6 @@ export interface ApiRequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
   body?: any;
+  signal?: AbortSignal; // Suporte para cancelamento de requisições
 }
 

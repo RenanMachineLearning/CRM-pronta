@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, OpportunityStatus, Prisma } from '@prisma/client';
+import { OpportunityStatus, Prisma } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validatePositiveNumber, validateDateNotPast, validateProbability } from '../utils/validators';
@@ -15,8 +16,15 @@ import { validateUniqueField } from '../utils/uniqueFieldValidator';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
+import { buildSearchConditions } from '../utils/entitySearchHelpers';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface OpportunityFilters {
@@ -24,14 +32,19 @@ export interface OpportunityFilters {
   status?: OpportunityStatus;
   contactId?: string;
   companyId?: string;
+  q?: string; // Termo de busca
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
 export interface PaginationParams {
   limit?: number;
-  offset?: number;
-  orderBy?: 'value' | 'closeDate' | 'createdAt';
-  order?: 'asc' | 'desc';
+  offset?: number; // Manter para compatibilidade
+  page?: number; // NOVO
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para dados de criação
@@ -135,14 +148,57 @@ export class OpportunityService {
   ): Promise<{
     data: OpportunityResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listOpportunities', { tenantId, filters, pagination, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<{
+        data: OpportunityResponse[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          offset?: number;
+        };
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -166,70 +222,131 @@ export class OpportunityService {
       where.companyId = filters.companyId;
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'value' || orderByField === 'closeDate' || orderByField === 'createdAt') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      orderBy.createdAt = 'desc'; // Fallback
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'opportunity');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'opportunity');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
+      }
     }
 
-    // Buscar oportunidades com relacionamentos
-    const [opportunities, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        include: {
-          stage: {
-            select: {
-              id: true,
-              name: true,
-              order: true,
-              probability: true,
-              color: true,
-              pipelineId: true,
+    // Adicionar condição de busca se `q` for fornecido
+    if (filters?.q) {
+      const searchConditions = buildSearchConditions('opportunity', filters.q);
+      if (searchConditions.length > 0) {
+        if (Object.keys(where).length > 2 || where.AND) {
+          const andConditions: any[] = [];
+          andConditions.push({ tenantId });
+          andConditions.push({ deletedAt: null });
+
+          if (where.stageId) {
+            andConditions.push({ stageId: where.stageId });
+            delete where.stageId;
+          }
+          if (where.status) {
+            andConditions.push({ status: where.status });
+            delete where.status;
+          }
+          if (where.contactId) {
+            andConditions.push({ contactId: where.contactId });
+            delete where.contactId;
+          }
+          if (where.companyId) {
+            andConditions.push({ companyId: where.companyId });
+            delete where.companyId;
+          }
+
+          const advancedFields = Object.keys(where).filter(
+            key => key !== 'tenantId' && key !== 'deletedAt' && key !== 'AND'
+          );
+          if (advancedFields.length > 0) {
+            const advancedConditions: any = {};
+            for (const field of advancedFields) {
+              advancedConditions[field] = where[field];
+              delete where[field];
+            }
+            andConditions.push(advancedConditions);
+          }
+
+          andConditions.push({ OR: searchConditions });
+          where.AND = andConditions;
+        } else {
+          where.OR = searchConditions;
+        }
+      }
+    }
+
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'opportunity'
+    );
+
+    // Buscar oportunidades com relacionamentos (usando timeout)
+    const [opportunities, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.opportunity.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            stage: {
+              select: {
+                id: true,
+                name: true,
+                order: true,
+                probability: true,
+                color: true,
+                pipelineId: true,
+              },
             },
-          },
-          contact: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+            contact: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
-          },
-          company: {
-            select: {
-              id: true,
-              name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
-          },
-          lead: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+            lead: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
-          },
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy,
-      }),
-      prisma.opportunity.count({ where }),
-    ]);
+          orderBy,
+        }),
+        prisma.opportunity.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listOpportunities'
+    );
+
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
     // Formatar resposta (converter Decimal para number)
     let data: OpportunityResponse[] = opportunities.map((opp) => ({
@@ -314,14 +431,26 @@ export class OpportunityService {
       )) as OpportunityResponse[];
     }
 
-    return {
+    const result = {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('opportunity'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**

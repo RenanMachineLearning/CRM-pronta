@@ -14,12 +14,29 @@ import { OpportunityStatus } from '@prisma/client';
 import { validatePositiveNumber, validateDateNotPast, validateProbability } from '../utils/validators';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { validateSearchQuery } from '../utils/entitySearchHelpers';
+import { SearchError } from '../types/search.types';
+import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
+import { processPaginationParams, PaginationError } from '../utils/paginationHelper';
 
 /**
  * Lista oportunidades com paginação e filtros
  * 
- * @param req - Request com query params (limit, offset, stageId, status, contactId, companyId, orderBy, order)
+ * @param req - Request com query params (limit, offset, stageId, status, contactId, companyId, orderBy, order, q)
  * @param res - Response para retornar lista de oportunidades
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - stageId: string (opcional: UUID do estágio)
+ * - status: string (opcional: OPEN, WON, LOST, ARCHIVED)
+ * - contactId: string (opcional: UUID do contato)
+ * - companyId: string (opcional: UUID da empresa)
+ * - orderBy: string (opcional: value, closeDate, createdAt, default: createdAt)
+ * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca em nome
+ * - filters: JSON (opcional) - Filtros avançados
  */
 export async function listOpportunities(req: Request, res: Response): Promise<void> {
   try {
@@ -28,31 +45,26 @@ export async function listOpportunities(req: Request, res: Response): Promise<vo
     const userId = req.userId!;
 
     // Extrair query params
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
     const stageId = req.query.stageId as string | undefined;
     const status = req.query.status as string | undefined;
     const contactId = req.query.contactId as string | undefined;
     const companyId = req.query.companyId as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
+    const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
 
-    // Validar limit
-    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'limit deve ser um número entre 1 e 100',
-      });
-      return;
-    }
-
-    // Validar offset
-    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'offset deve ser um número maior ou igual a 0',
-      });
-      return;
+    // Processar e validar parâmetros de paginação usando helper centralizado
+    let paginationParams;
+    try {
+      paginationParams = processPaginationParams(req.query);
+    } catch (error: any) {
+      if (error instanceof PaginationError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar status
@@ -89,43 +101,105 @@ export async function listOpportunities(req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Validar orderBy
-    if (orderBy && !['value', 'closeDate', 'createdAt'].includes(orderBy)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser value, closeDate ou createdAt',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'opportunity');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Validar parâmetro de busca
+    let searchQuery: string | undefined;
+    if (q !== undefined) {
+      try {
+        searchQuery = validateSearchQuery(q);
+      } catch (error: any) {
+        if (error instanceof SearchError) {
+          res.status(error.statusCode).json({
+            error: 'Parâmetro inválido',
+            message: error.message,
+            code: error.code,
+          });
+        } else {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: error.message || 'Query inválida',
+          });
+        }
+        return;
+      }
+    }
+
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
     }
 
     // Chamar service
-    const result = await OpportunityService.listOpportunities(
-      tenantId,
+    try {
+      const result = await OpportunityService.listOpportunities(
+        tenantId,
+        {
+          stageId,
+          status: status as OpportunityStatus | undefined,
+          contactId,
+          companyId,
+          q: searchQuery,
+          advancedFilters, // NOVO: Filtros avançados
+        },
       {
-        stageId,
-        status: status as OpportunityStatus | undefined,
-        contactId,
-        companyId,
-      },
-      {
-        limit,
-        offset,
-        orderBy: orderBy as 'value' | 'closeDate' | 'createdAt' | undefined,
-        order: order as 'asc' | 'desc' | undefined,
+        page: paginationParams.page,
+        limit: paginationParams.limit,
+        offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined, // Legado
+        // Passar parâmetros de ordenação do query string para o service
+        sortBy: req.query.sortBy as string | string[] | undefined,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+        orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+        order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
       },
       userId
     );
 
-    res.status(200).json(result);
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof FilterError) {
+        res.status(error.statusCode).json({
+          error: 'Filtro inválido',
+          code: error.code,
+          details: error.details,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   } catch (error: any) {
     console.error('Erro ao listar oportunidades:', error);
     res.status(500).json({

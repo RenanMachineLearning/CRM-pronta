@@ -14,6 +14,11 @@ import { ContactLookup } from './ContactLookup';
 import { CompanyLookup } from './CompanyLookup';
 import { LeadLookup } from './LeadLookup';
 import { OpportunityLookup } from './OpportunityLookup';
+import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
+import { Pagination } from './Pagination/Pagination';
+import { useSorting } from '../hooks/useSorting';
+import { usePagination } from '../hooks/usePagination';
+import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
 import type {
   Note,
   NoteFilters,
@@ -45,34 +50,49 @@ export function NoteList({
   // Estado para filtros
   const [filters, setFilters] = useState<NoteFilters>(initialFilters || {});
   
-  // Estado para ordenação
-  const [orderBy, setOrderBy] = useState<'createdAt'>('createdAt');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // Estado para paginação
-  const [page, setPage] = useState(1);
-  const limit = 20;
+  // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar notes da prop)
+  const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
+  const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
 
   // Estado para deletar nota
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sincronizar ordenação e paginação com URL (sempre chamar, mas callbacks só fazem algo se não usar notes da prop)
+  useSortPaginationUrlSync(
+    sorting,
+    paginationState,
+    (newSort) => {
+      if (!notesProp && (newSort.sortBy !== sorting.sortBy || newSort.sortOrder !== sorting.sortOrder)) {
+        setSortingState(newSort);
+      }
+    },
+    (newPagination) => {
+      if (!notesProp) {
+        if (newPagination.page !== undefined && newPagination.page !== paginationState.page) {
+          updatePage(newPagination.page);
+        }
+        if (newPagination.limit !== undefined && newPagination.limit !== paginationState.limit) {
+          updateLimit(newPagination.limit as any);
+        }
+      }
+    }
+  );
 
   // Se notes fornecido como prop, usar; senão, buscar com hook
   const {
     notes: notesFromHook,
     loading,
     error,
-    pagination,
+    pagination: paginationInfo,
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
   } = useNotes(
     initialFilters || filters,
     initialPagination || {
-      limit,
-      offset: (page - 1) * limit,
-      orderBy,
-      order,
+      ...toPaginationParams(),
+      ...toSortParams(),
     }
   );
   
@@ -83,44 +103,48 @@ export function NoteList({
   const showLoading = notesProp ? false : loading;
   const showError = notesProp ? null : error;
 
-  // Atualizar paginação quando page, orderBy ou order mudarem
+  // Atualizar total quando receber resposta da API (apenas se não usar notes da prop)
+  useEffect(() => {
+    if (!notesProp) {
+      updateTotal(paginationInfo.total);
+    }
+  }, [paginationInfo.total, updateTotal, notesProp]);
+
+  // Atualizar paginação e ordenação na API quando mudarem (apenas se não usar notes da prop)
   useEffect(() => {
     if (!notesProp) {
       updatePagination({
-        limit,
-        offset: (page - 1) * limit,
-        orderBy,
-        order,
+        ...toPaginationParams(),
+        ...toSortParams(),
       });
     }
-  }, [page, orderBy, order, limit, updatePagination, notesProp]);
+  }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, notesProp]);
 
-  // Handlers
-  const handleSort = () => {
-    setOrder(order === 'asc' ? 'desc' : 'asc');
-    setPage(1);
+  // Handler para ordenação
+  const handleSort = (field: string) => {
+    if (!notesProp) {
+      updateSorting(field);
+      updatePage(1);
+    }
   };
 
   const handleFilterChange = (key: keyof NoteFilters, value: string | undefined) => {
-    const newFilters = { ...filters };
-    if (value !== undefined && value !== '') {
-      newFilters[key] = value as any;
-    } else {
-      delete newFilters[key];
+    if (!notesProp) {
+      const newFilters = { ...filters };
+      if (value !== undefined && value !== '') {
+        newFilters[key] = value as any;
+      } else {
+        delete newFilters[key];
+      }
+      updateFilters(newFilters);
+      updatePage(1);
     }
-    updateFilters(newFilters);
-    setPage(1);
   };
 
   const handleClearFilters = () => {
-    updateFilters({});
-    setPage(1);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
     if (!notesProp) {
-      updatePagination({ offset: (newPage - 1) * limit });
+      updateFilters({});
+      updatePage(1);
     }
   };
 
@@ -171,8 +195,6 @@ export function NoteList({
     }
   };
 
-  // Calcular número de páginas
-  const totalPages = Math.ceil(pagination.total / limit);
 
   // Funções auxiliares
   const formatDate = (dateString: string | null | undefined): string => {
@@ -281,22 +303,6 @@ export function NoteList({
     return Object.keys(filters).length > 0;
   };
 
-  const renderTableHeader = (label: string) => {
-    const isActive = orderBy === 'createdAt';
-    return (
-      <th
-        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50"
-        onClick={handleSort}
-      >
-        <div className="flex items-center space-x-1">
-          <span>{label}</span>
-          {isActive && (
-            <span>{order === 'asc' ? '↑' : '↓'}</span>
-          )}
-        </div>
-      </th>
-    );
-  };
 
   // Renderizar lookup dinâmico baseado no tipo de entidade
   const renderEntityLookup = () => {
@@ -442,7 +448,18 @@ export function NoteList({
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Criado por
               </th>
-              {renderTableHeader('Data')}
+              {notesProp ? (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data
+                </th>
+              ) : (
+                <SortableTableHeader
+                  fieldName="createdAt"
+                  displayName="Data"
+                  currentSort={sorting}
+                  onSort={handleSort}
+                />
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
               </th>
@@ -513,90 +530,13 @@ export function NoteList({
         </table>
       </div>
 
-      {/* Paginação */}
-      {showPagination && pagination.total > 0 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-          <div className="flex flex-1 justify-between sm:hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages}
-            >
-              Próxima
-            </Button>
-          </div>
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">{pagination.offset + 1}</span> a{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.offset + limit, pagination.total)}
-                </span>{' '}
-                de <span className="font-medium">{pagination.total}</span> notas
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
-                  className="rounded-l-md"
-                >
-                  Anterior
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => {
-                    return (
-                      p === 1 ||
-                      p === totalPages ||
-                      (p >= page - 1 && p <= page + 1)
-                    );
-                  })
-                  .map((p, index, array) => {
-                    const prev = array[index - 1];
-                    const showEllipsis = prev && p - prev > 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && (
-                          <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                            ...
-                          </span>
-                        )}
-                        <Button
-                          variant={p === page ? 'primary' : 'secondary'}
-                          size="sm"
-                          onClick={() => handlePageChange(p)}
-                          className="rounded-none"
-                        >
-                          {p}
-                        </Button>
-                      </React.Fragment>
-                    );
-                  })}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page >= totalPages}
-                  className="rounded-r-md"
-                >
-                  Próxima
-                </Button>
-              </nav>
-            </div>
-          </div>
-        </div>
+      {/* Paginação - apenas se não usar notes da prop */}
+      {showPagination && !notesProp && (
+        <Pagination
+          pagination={paginationState}
+          onPageChange={updatePage}
+          onLimitChange={updateLimit}
+        />
       )}
     </div>
   );

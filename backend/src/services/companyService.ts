@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, CompanyStatus, CompanySize } from '@prisma/client';
+import { CompanyStatus, CompanySize } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateUrl, normalizeUrl } from '../utils/validators';
@@ -14,21 +15,34 @@ import { validateUniqueField } from '../utils/uniqueFieldValidator';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
+import { buildSearchConditions } from '../utils/entitySearchHelpers';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface CompanyFilters {
   industry?: string;
   size?: CompanySize;
+  q?: string; // Termo de busca
+  hasContacts?: boolean; // NOVO: Empresa tem contatos?
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
 export interface PaginationParams {
   limit?: number;
-  offset?: number;
-  orderBy?: 'name' | 'createdAt';
-  order?: 'asc' | 'desc';
+  offset?: number; // Manter para compatibilidade
+  page?: number; // NOVO
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para criação de empresa
@@ -106,14 +120,57 @@ export class CompanyService {
   ): Promise<{
     data: CompanyResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listCompanies', { tenantId, filters, pagination, userId }, tenantId);
+    
+    // Tentar obter do cache
+    try {
+      const cached = await cacheManager.get<{
+        data: CompanyResponse[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          offset?: number;
+        };
+      }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao buscar do cache:', error);
+    }
+
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, QUERY_LIMITS.MAX_PAGE_SIZE);
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -134,51 +191,125 @@ export class CompanyService {
       where.size = filters.size;
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'name';
-    const orderDirection = pagination?.order || (orderByField === 'name' ? 'asc' : 'desc');
-
-    const orderBy: any = {};
-    if (orderByField === 'name' || orderByField === 'createdAt') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      // Fallback para name asc se campo inválido
-      orderBy.name = 'asc';
+    // Filtros específicos por entidade
+    // hasContacts - Empresa tem contatos?
+    if (filters?.hasContacts !== undefined) {
+      if (filters.hasContacts) {
+        // Tem contatos
+        where.contacts = {
+          some: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      } else {
+        // Não tem contatos
+        where.contacts = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
     }
 
-    // Buscar empresas com relacionamentos e contagem de contatos
-    const [companies, total] = await Promise.all([
-      prisma.company.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        include: {
-          addresses: true,
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'company');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'company');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Adicionar condição de busca se `q` for fornecido
+    if (filters?.q) {
+      const searchConditions = buildSearchConditions('company', filters.q);
+      if (searchConditions.length > 0) {
+        if (Object.keys(where).length > 2 || where.AND) {
+          const andConditions: any[] = [];
+          andConditions.push({ tenantId });
+          andConditions.push({ deletedAt: null });
+
+          if (where.industry) {
+            andConditions.push({ industry: where.industry });
+            delete where.industry;
+          }
+          if (where.size) {
+            andConditions.push({ size: where.size });
+            delete where.size;
+          }
+
+          const advancedFields = Object.keys(where).filter(
+            key => key !== 'tenantId' && key !== 'deletedAt' && key !== 'AND'
+          );
+          if (advancedFields.length > 0) {
+            const advancedConditions: any = {};
+            for (const field of advancedFields) {
+              advancedConditions[field] = where[field];
+              delete where[field];
+            }
+            andConditions.push(advancedConditions);
+          }
+
+          andConditions.push({ OR: searchConditions });
+          where.AND = andConditions;
+        } else {
+          where.OR = searchConditions;
+        }
+      }
+    }
+
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'company'
+    );
+
+    // Buscar empresas com relacionamentos e contagem de contatos (usando timeout)
+    const [companies, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.company.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            addresses: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                contacts: {
+                  where: {
+                    deletedAt: null, // Apenas contatos não deletados
+                  },
                 },
               },
             },
           },
-          _count: {
-            select: {
-              contacts: {
-                where: {
-                  deletedAt: null, // Apenas contatos não deletados
-                },
-              },
-            },
-          },
-        },
-        orderBy,
-      }),
-      prisma.company.count({ where }),
-    ]);
+          orderBy,
+        }),
+        prisma.company.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listCompanies'
+    );
+
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
     // Formatar resposta
     let data: CompanyResponse[] = companies.map((company) => ({
@@ -241,14 +372,26 @@ export class CompanyService {
       )) as CompanyResponse[];
     }
 
-    return {
+    const result = {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('company'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**

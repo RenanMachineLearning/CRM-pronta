@@ -13,12 +13,15 @@
  * - Filtros e paginação avançados
  */
 
-import { PrismaClient, TaskType, TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskType, TaskStatus, TaskPriority } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { isValidDateNotPast } from '../utils/validators';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface TaskFilters {
@@ -32,14 +35,18 @@ export interface TaskFilters {
   // Filtros avançados
   overdue?: boolean; // Tarefas vencidas (dueDate < hoje e status != COMPLETED)
   completed?: boolean; // Apenas concluídas ou não concluídas
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
 export interface PaginationParams {
   limit?: number;
-  offset?: number;
-  orderBy?: 'dueDate' | 'priority' | 'createdAt' | 'title';
-  order?: 'asc' | 'desc';
+  offset?: number; // Manter para compatibilidade
+  page?: number; // NOVO
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para dados de criação
@@ -314,14 +321,34 @@ export class TaskService {
   ): Promise<{
     data: TaskResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -379,24 +406,31 @@ export class TaskService {
       }
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'dueDate' || orderByField === 'priority' || orderByField === 'createdAt' || orderByField === 'title') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      // Fallback para createdAt desc se campo inválido
-      orderBy.createdAt = 'desc';
+    // Adicionar filtros avançados (após filtros simples)
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        validateFilters(filters.advancedFilters, 'task');
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'task');
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        throw error;
+      }
     }
+
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'task'
+    );
 
     // Buscar tarefas com relacionamentos
     const [tasks, total] = await Promise.all([
       prisma.task.findMany({
         where,
         take: limit,
-        skip: offset,
+        skip: skip,
         include: {
           assignedTo: {
             select: {
@@ -417,6 +451,9 @@ export class TaskService {
       }),
       prisma.task.count({ where }),
     ]);
+
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
     // Formatar resposta e buscar informações de entidades relacionadas
     let data: TaskResponse[] = await Promise.all(
@@ -475,9 +512,11 @@ export class TaskService {
     return {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
   }

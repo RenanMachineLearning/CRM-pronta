@@ -11,22 +11,25 @@ import type {
   ContactFormData,
   ContactLookup,
 } from '../types/contact';
+import type { Filter } from '../types/filter';
 
 /**
  * Lista contatos com filtros e paginação
  * 
  * @param filters - Filtros opcionais (companyId, status, tagId)
  * @param pagination - Parâmetros de paginação (limit, offset, orderBy, order)
+ * @param advancedFilters - Filtros avançados opcionais
  * @returns Promise com lista de contatos e informações de paginação
  */
 export async function listContacts(
   filters?: ContactFilters,
-  pagination?: PaginationParams
+  pagination?: PaginationParams,
+  advancedFilters?: Filter[]
 ): Promise<ContactListResponse> {
   // Construir query params
   const params = new URLSearchParams();
 
-  // Adicionar filtros
+  // Adicionar filtros básicos
   if (filters?.companyId) {
     params.append('companyId', filters.companyId);
   }
@@ -35,6 +38,11 @@ export async function listContacts(
   }
   if (filters?.tagId) {
     params.append('tagId', filters.tagId);
+  }
+
+  // Adicionar filtros avançados
+  if (advancedFilters && advancedFilters.length > 0) {
+    params.append('filters', JSON.stringify(advancedFilters));
   }
 
   // Adicionar paginação

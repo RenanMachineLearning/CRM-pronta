@@ -5,7 +5,8 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, ContactStatus } from '@prisma/client';
+import { ContactStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { filterFieldsByPermission, validateFieldPermissionsForUpdate } from '../utils/fieldPermissions';
 import { logAudit } from '../utils/auditLog';
 import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
@@ -14,22 +15,36 @@ import { validateUniqueField } from '../utils/uniqueFieldValidator';
 import { EntityService } from './entityService';
 import { FieldService } from './fieldService';
 import { EntityDataService } from './entityDataService';
+import { buildSearchConditions } from '../utils/entitySearchHelpers';
+import { validateFilters } from '../utils/filterValidator';
+import { buildFilterQuery } from '../utils/filterBuilder';
+import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
-const prisma = new PrismaClient();
 
 // Interface para filtros de listagem
 export interface ContactFilters {
   companyId?: string;
   status?: ContactStatus;
   tagId?: string;
+  q?: string; // Termo de busca
+  hasEmail?: boolean; // NOVO: Contato tem email?
+  hasPhone?: boolean; // NOVO: Contato tem telefone?
+  advancedFilters?: import('../types/filter.types').Filter[]; // Filtros avançados
 }
 
 // Interface para paginação
 export interface PaginationParams {
   limit?: number;
-  offset?: number;
-  orderBy?: 'firstName' | 'lastName' | 'createdAt';
-  order?: 'asc' | 'desc';
+  offset?: number; // Manter para compatibilidade
+  page?: number; // NOVO
+  orderBy?: string | string[]; // Manter para compatibilidade
+  order?: 'asc' | 'desc' | ('asc' | 'desc')[]; // Manter para compatibilidade
+  sortBy?: string | string[]; // NOVO
+  sortOrder?: 'asc' | 'desc' | ('asc' | 'desc')[]; // NOVO
 }
 
 // Interface para criação de contato
@@ -132,14 +147,34 @@ export class ContactService {
   ): Promise<{
     data: ContactResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -169,50 +204,169 @@ export class ContactService {
       };
     }
 
-    // Configurar ordenação
-    const orderByField = pagination?.orderBy || 'createdAt';
-    const orderDirection = pagination?.order || 'desc';
-
-    const orderBy: any = {};
-    if (orderByField === 'firstName' || orderByField === 'lastName' || orderByField === 'createdAt') {
-      orderBy[orderByField] = orderDirection;
-    } else {
-      // Fallback para createdAt desc se campo inválido
-      orderBy.createdAt = 'desc';
+    // Filtros específicos por entidade
+    // hasEmail - Contato tem email?
+    if (filters?.hasEmail !== undefined) {
+      if (filters.hasEmail) {
+        // Tem email
+        where.emails = {
+          some: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      } else {
+        // Não tem email
+        where.emails = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
     }
 
-    // Buscar contatos com relacionamentos
-    const [contacts, total] = await Promise.all([
-      prisma.contact.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        include: {
-          company: {
-            select: {
-              id: true,
-              name: true,
-            },
+    // hasPhone - Contato tem telefone?
+    if (filters?.hasPhone !== undefined) {
+      if (filters.hasPhone) {
+        // Tem telefone
+        where.phones = {
+          some: {
+            tenantId,
+            deletedAt: null,
           },
-          emails: true,
-          phones: true,
-          addresses: true,
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
+        };
+      } else {
+        // Não tem telefone
+        where.phones = {
+          none: {
+            tenantId,
+            deletedAt: null,
+          },
+        };
+      }
+    }
+
+    // Adicionar filtros avançados (após filtros simples)
+    // IMPORTANTE: Filtros simples têm prioridade se houver conflito
+    if (filters?.advancedFilters && filters.advancedFilters.length > 0) {
+      try {
+        // Validar filtros avançados
+        validateFilters(filters.advancedFilters, 'contact');
+
+        // Construir query Prisma
+        const advancedWhere = buildFilterQuery(filters.advancedFilters, 'contact');
+
+        // Mesclar com where (filtros simples têm prioridade se conflito)
+        // Object.assign sobrescreve, então filtros simples já aplicados não serão sobrescritos
+        Object.assign(where, advancedWhere);
+      } catch (error) {
+        // Re-throw para controller tratar
+        throw error;
+      }
+    }
+
+    // Adicionar condição de busca se `q` for fornecido
+    // IMPORTANTE: Busca textual combina com filtros usando AND
+    if (filters?.q) {
+      const searchConditions = buildSearchConditions('contact', filters.q);
+      if (searchConditions.length > 0) {
+        // Se já temos condições complexas, usar AND
+        // Caso contrário, adicionar OR diretamente
+        if (Object.keys(where).length > 2 || where.AND) {
+          // Já temos filtros, combinar tudo com AND
+          const andConditions: any[] = [];
+
+          // Adicionar condições base
+          andConditions.push({ tenantId });
+          andConditions.push({ deletedAt: null });
+
+          // Adicionar filtros simples (se não foram movidos para AND)
+          if (where.companyId) {
+            andConditions.push({ companyId: where.companyId });
+            delete where.companyId;
+          }
+          if (where.status) {
+            andConditions.push({ status: where.status });
+            delete where.status;
+          }
+          if (where.tags) {
+            andConditions.push({ tags: where.tags });
+            delete where.tags;
+          }
+
+          // Adicionar filtros avançados (todos os outros campos em where)
+          const advancedFields = Object.keys(where).filter(
+            key => key !== 'tenantId' && key !== 'deletedAt' && key !== 'AND'
+          );
+          if (advancedFields.length > 0) {
+            const advancedConditions: any = {};
+            for (const field of advancedFields) {
+              advancedConditions[field] = where[field];
+              delete where[field];
+            }
+            andConditions.push(advancedConditions);
+          }
+
+          // Adicionar busca como OR dentro do AND
+          andConditions.push({ OR: searchConditions });
+
+          // Usar estrutura AND para combinar tudo
+          where.AND = andConditions;
+        } else {
+          // Apenas busca, sem outros filtros
+          where.OR = searchConditions;
+        }
+      }
+    }
+
+    // Configurar ordenação usando helper centralizado
+    // Priorizar sortBy/sortOrder (novo) sobre orderBy/order (legado)
+    const orderBy = buildOrderBy(
+      pagination?.sortBy || pagination?.orderBy,
+      pagination?.sortOrder || pagination?.order,
+      'contact'
+    );
+
+    // Gerar chave de cache
+    const cacheKey = generateCacheKey('listContacts', { tenantId, filters, pagination, userId }, tenantId);
+
+    // Buscar contatos com relacionamentos (usando timeout)
+    const [contacts, total] = await withQueryTimeout(
+      Promise.all([
+        prisma.contact.findMany({
+          where,
+          take: limit,
+          skip: skip,
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            emails: true,
+            phones: true,
+            addresses: true,
+            tags: {
+              include: {
+                tag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy,
-      }),
-      prisma.contact.count({ where }),
-    ]);
+          orderBy,
+        }),
+        prisma.contact.count({ where }),
+      ]),
+      QUERY_TIMEOUTS.LIST,
+      'listContacts'
+    );
 
     // Formatar resposta
     let data: ContactResponse[] = contacts.map((contact) => ({
@@ -294,14 +448,29 @@ export class ContactService {
       )) as ContactResponse[];
     }
 
-    return {
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+
+    const result = {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
+
+    // Armazenar em cache
+    try {
+      await cacheManager.set(cacheKey, result, CACHE_TTL.LIST, getEntityCacheTags('contact'));
+    } catch (error) {
+      // Falha no cache não deve quebrar a aplicação
+      console.error('[Cache] Erro ao armazenar no cache:', error);
+    }
+
+    return result;
   }
 
   /**
@@ -458,9 +627,11 @@ export class ContactService {
   ): Promise<{
     data: ContactResponse[];
     pagination: {
-      total: number;
+      page: number;
       limit: number;
-      offset: number;
+      total: number;
+      totalPages: number;
+      offset?: number; // Manter para compatibilidade
     };
   }> {
     // Validar formato UUID (se aplicável)
@@ -485,9 +656,27 @@ export class ContactService {
       throw new Error('Empresa não encontrada, não pertence ao seu tenant ou foi deletada');
     }
 
-    // Valores padrão para paginação
-    const limit = Math.min(pagination?.limit || 20, 100); // Máximo 100
-    const offset = pagination?.offset || 0;
+    // Calcular paginação: priorizar page sobre offset
+    let limit: number;
+    let skip: number;
+    let page: number;
+
+    if (pagination?.page !== undefined) {
+      // Usar page/limit (novo)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      page = pagination.page;
+      skip = (page - 1) * limit;
+    } else if (pagination?.offset !== undefined) {
+      // Usar offset (legado)
+      limit = Math.min(pagination.limit || 20, 100); // Máximo 100
+      skip = pagination.offset;
+      page = Math.floor(skip / limit) + 1;
+    } else {
+      // Valores padrão
+      limit = 20;
+      skip = 0;
+      page = 1;
+    }
 
     // Construir condições de filtro
     const where: any = {
@@ -530,7 +719,7 @@ export class ContactService {
       prisma.contact.findMany({
         where,
         take: limit,
-        skip: offset,
+        skip: skip,
         include: {
           company: {
             select: {
@@ -618,12 +807,17 @@ export class ContactService {
       )) as ContactResponse[];
     }
 
+    // Calcular totalPages
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+
     return {
       data,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
+        total,
+        totalPages,
+        offset: skip, // Manter para compatibilidade
       },
     };
   }

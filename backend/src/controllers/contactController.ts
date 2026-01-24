@@ -14,12 +14,31 @@ import { ContactStatus } from '@prisma/client';
 import { validateEmail, validatePhone, validateDateNotFuture } from '../utils/validators';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { validateSearchQuery } from '../utils/entitySearchHelpers';
+import { SearchError } from '../types/search.types';
+import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
+import { processPaginationParams, PaginationError } from '../utils/paginationHelper';
 
 /**
  * Lista contatos com paginação e filtros
  * 
- * @param req - Request com query params (limit, offset, companyId, status, tagId, orderBy, order)
+ * @param req - Request com query params (limit, offset, companyId, status, tagId, orderBy, order, q)
  * @param res - Response para retornar lista de contatos
+ * 
+ * Query params:
+ * - limit: número (opcional, default: 20, max: 100)
+ * - offset: número (opcional, default: 0)
+ * - companyId: string (opcional: UUID da empresa)
+ * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
+ * - tagId: string (opcional: UUID da tag)
+ * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
+ * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca em nome, email, telefone, etc.
+ * - filters: JSON (opcional) - Filtros avançados
+ *
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"ACTIVE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
  */
 export async function listContacts(req: Request, res: Response): Promise<void> {
   try {
@@ -27,30 +46,31 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
     const tenantId = req.tenantId!;
 
     // Extrair query params
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
     const companyId = req.query.companyId as string | undefined;
     const status = req.query.status as string | undefined;
     const tagId = req.query.tagId as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
+    const q = req.query.q as string | undefined; // NOVO: Parâmetro de busca
+    const hasEmail = req.query.hasEmail !== undefined 
+      ? req.query.hasEmail === 'true' 
+      : undefined; // NOVO: Contato tem email?
+    const hasPhone = req.query.hasPhone !== undefined 
+      ? req.query.hasPhone === 'true' 
+      : undefined; // NOVO: Contato tem telefone?
 
-    // Validar limit
-    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'limit deve ser um número entre 1 e 100',
-      });
-      return;
-    }
-
-    // Validar offset
-    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'offset deve ser um número maior ou igual a 0',
-      });
-      return;
+    // Processar e validar parâmetros de paginação usando helper centralizado
+    let paginationParams;
+    try {
+      paginationParams = processPaginationParams(req.query);
+    } catch (error: any) {
+      if (error instanceof PaginationError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar status
@@ -62,22 +82,66 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Validar orderBy
-    if (orderBy && !['firstName', 'lastName', 'createdAt'].includes(orderBy)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser firstName, lastName ou createdAt',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'contact');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Validar parâmetro de busca
+    let searchQuery: string | undefined;
+    if (q !== undefined) {
+      try {
+        searchQuery = validateSearchQuery(q);
+      } catch (error: any) {
+        if (error instanceof SearchError) {
+          res.status(error.statusCode).json({
+            error: 'Parâmetro inválido',
+            message: error.message,
+            code: error.code,
+          });
+        } else {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: error.message || 'Query inválida',
+          });
+        }
+        return;
+      }
+    }
+
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        // Validar que é array
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
     }
 
     // userId já validado pelo middleware
@@ -90,18 +154,36 @@ export async function listContacts(req: Request, res: Response): Promise<void> {
         companyId,
         status: status as ContactStatus | undefined,
         tagId,
+        q: searchQuery,
+        hasEmail, // NOVO: Filtro específico
+        hasPhone, // NOVO: Filtro específico
+        advancedFilters, // Filtros avançados
       },
       {
-        limit,
-        offset,
-        orderBy: orderBy as 'firstName' | 'lastName' | 'createdAt' | undefined,
-        order: order as 'asc' | 'desc' | undefined,
+        page: paginationParams.page,
+        limit: paginationParams.limit,
+        offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined, // Legado
+        // Passar parâmetros de ordenação do query string para o service
+        sortBy: req.query.sortBy as string | string[] | undefined,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+        orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+        order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
       },
       userId
     );
 
     res.status(200).json(result);
   } catch (error: any) {
+    if (error instanceof FilterError) {
+      res.status(error.statusCode).json({
+        error: 'Filtro inválido',
+        code: error.code,
+        details: error.details,
+        message: error.message,
+      });
+      return;
+    }
+
     console.error('Erro ao listar contatos:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',

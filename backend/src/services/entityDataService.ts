@@ -5,9 +5,8 @@
  * para entidades do sistema (Contact, Company) e customizadas.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 export interface EntityDataResponse {
   id: string;

@@ -9,11 +9,18 @@ import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
+import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
+import { Pagination } from './Pagination/Pagination';
+import { useSorting } from '../hooks/useSorting';
+import { usePagination } from '../hooks/usePagination';
+import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
 import type { Opportunity, OpportunityFilters, OpportunityStatus } from '../types/opportunity';
+import type { Filter } from '../types/filter';
 
 export interface OpportunityListProps {
   onOpportunityClick?: (opportunityId: string) => void;
   onNewOpportunity?: () => void;
+  advancedFilters?: Filter[];
 }
 
 /**
@@ -76,55 +83,75 @@ function getStatusColor(status: OpportunityStatus): string {
   }
 }
 
-export function OpportunityList({ onOpportunityClick, onNewOpportunity }: OpportunityListProps) {
+export function OpportunityList({ onOpportunityClick, onNewOpportunity, advancedFilters = [] }: OpportunityListProps) {
   // Estado para filtros
   const [filters, setFilters] = useState<OpportunityFilters>({});
   
-  // Estado para ordenação
-  const [orderBy, setOrderBy] = useState<'value' | 'closeDate' | 'createdAt' | 'name'>('createdAt');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // Estado para paginação
-  const [page, setPage] = useState(1);
-  const limit = 20;
+  // Hooks para ordenação e paginação
+  const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
+  const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
+
+  // Sincronizar ordenação e paginação com URL
+  useSortPaginationUrlSync(
+    sorting,
+    paginationState,
+    (newSort) => {
+      if (newSort.sortBy !== sorting.sortBy || newSort.sortOrder !== sorting.sortOrder) {
+        setSortingState(newSort);
+      }
+    },
+    (newPagination) => {
+      if (newPagination.page !== undefined && newPagination.page !== paginationState.page) {
+        updatePage(newPagination.page);
+      }
+      if (newPagination.limit !== undefined && newPagination.limit !== paginationState.limit) {
+        updateLimit(newPagination.limit as any);
+      }
+    }
+  );
 
   // Hook para buscar oportunidades
   const {
     opportunities,
     loading,
     error,
-    pagination,
+    pagination: paginationInfo,
     refetch,
     setFilters: updateFilters,
     setPagination: updatePagination,
-  } = useOpportunities(filters, {
-    limit,
-    offset: (page - 1) * limit,
-    orderBy,
-    order,
-  });
+    setAdvancedFilters: updateAdvancedFilters,
+  } = useOpportunities(
+    filters,
+    {
+      ...toPaginationParams(),
+      ...toSortParams(),
+    },
+    advancedFilters
+  );
 
-  // Atualizar paginação quando page, orderBy ou order mudarem
+  // Atualizar total quando receber resposta da API
+  useEffect(() => {
+    updateTotal(paginationInfo.total);
+  }, [paginationInfo.total, updateTotal]);
+
+  // Atualizar filtros avançados quando mudarem externamente
+  useEffect(() => {
+    updateAdvancedFilters(advancedFilters);
+    updatePage(1); // Resetar para primeira página
+  }, [advancedFilters, updateAdvancedFilters, updatePage]);
+
+  // Atualizar paginação e ordenação na API quando mudarem
   useEffect(() => {
     updatePagination({
-      limit,
-      offset: (page - 1) * limit,
-      orderBy,
-      order,
+      ...toPaginationParams(),
+      ...toSortParams(),
     });
-  }, [page, orderBy, order, limit, updatePagination]);
+  }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams]);
 
-  // Handlers
-  const handleSort = (column: 'value' | 'closeDate' | 'createdAt' | 'name') => {
-    if (orderBy === column) {
-      // Se já está ordenando por esta coluna, inverter ordem
-      setOrder(order === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Se é nova coluna, ordenar ascendente
-      setOrderBy(column);
-      setOrder('asc');
-    }
-    setPage(1); // Resetar para primeira página
+  // Handler para ordenação
+  const handleSort = (field: string) => {
+    updateSorting(field);
+    updatePage(1); // Resetar para primeira página
   };
 
   const handleFilterChange = (key: keyof OpportunityFilters, value: string | undefined) => {
@@ -135,12 +162,7 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity }: Opport
       delete newFilters[key];
     }
     updateFilters(newFilters);
-    setPage(1); // Resetar para primeira página
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    updatePagination({ offset: (newPage - 1) * limit });
+    updatePage(1); // Resetar para primeira página
   };
 
   // Calcular número de páginas
@@ -275,24 +297,25 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity }: Opport
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('name')}
-                >
-                  Nome{renderSortIndicator('name')}
-                </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('value')}
-                >
-                  Valor{renderSortIndicator('value')}
-                </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('closeDate')}
-                >
-                  Data de Fechamento{renderSortIndicator('closeDate')}
-                </th>
+                <SortableTableHeader
+                  fieldName="name"
+                  displayName="Nome"
+                  currentSort={sorting}
+                  onSort={handleSort}
+                />
+                <SortableTableHeader
+                  fieldName="value"
+                  displayName="Valor"
+                  currentSort={sorting}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTableHeader
+                  fieldName="closeDate"
+                  displayName="Data de Fechamento"
+                  currentSort={sorting}
+                  onSort={handleSort}
+                />
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Probabilidade
                 </th>
@@ -302,12 +325,12 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity }: Opport
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contato/Empresa
                 </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('createdAt')}
-                >
-                  Criado em{renderSortIndicator('createdAt')}
-                </th>
+                <SortableTableHeader
+                  fieldName="createdAt"
+                  displayName="Criado em"
+                  currentSort={sorting}
+                  onSort={handleSort}
+                />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -374,13 +397,11 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity }: Opport
       </div>
 
       {/* Paginação */}
-      {renderPagination()}
-
-      {/* Informações de paginação */}
-      <div className="text-sm text-gray-600 text-center">
-        Mostrando {opportunities.length > 0 ? (page - 1) * limit + 1 : 0} a{' '}
-        {Math.min(page * limit, pagination.total)} de {pagination.total} oportunidades
-      </div>
+      <Pagination
+        pagination={paginationState}
+        onPageChange={updatePage}
+        onLimitChange={updateLimit}
+      />
     </div>
   );
 }

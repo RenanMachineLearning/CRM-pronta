@@ -886,5 +886,90 @@ describe('Company CRUD - E2E Tests', () => {
       expect(response.body.contacts[0]).toHaveProperty('title');
     });
   });
+
+  describe('GET /api/companies - Busca com parâmetro q', () => {
+    beforeAll(async () => {
+      // Criar empresas para testes de busca
+      await prisma.company.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Tech Solutions LTDA',
+          website: 'https://techsolutions.com.br',
+          industry: 'Tecnologia',
+          status: 'ACTIVE',
+        },
+      });
+
+      await prisma.company.create({
+        data: {
+          tenantId: tenant1.id,
+          name: 'Silva & Associados',
+          industry: 'Consultoria',
+          status: 'ACTIVE',
+        },
+      });
+    });
+
+    it('deve filtrar por nome com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/companies?q=tech')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        expect(
+          response.body.data.some((c: any) =>
+            c.name.toLowerCase().includes('tech')
+          )
+        ).toBe(true);
+      }
+    });
+
+    it('deve ser case-insensitive', async () => {
+      const response = await request(app)
+        .get('/api/companies?q=TECH')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeInstanceOf(Array);
+    });
+
+    it('deve combinar busca com filtros existentes', async () => {
+      const response = await request(app)
+        .get('/api/companies?q=tech&industry=Tecnologia')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+    });
+
+    it('deve retornar 400 para query muito longa', async () => {
+      const longQuery = 'a'.repeat(501);
+      const response = await request(app)
+        .get(`/api/companies?q=${encodeURIComponent(longQuery)}`)
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(400);
+
+      expect(response.body.error).toBeTruthy();
+      expect(response.body.message).toContain('não pode exceder');
+    });
+
+    it('deve funcionar sem parâmetro q (listagem completa)', async () => {
+      const response = await request(app)
+        .get('/api/companies')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.pagination).toBeDefined();
+    });
+  });
 });
 

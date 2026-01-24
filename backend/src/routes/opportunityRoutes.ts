@@ -16,6 +16,7 @@ import {
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -30,20 +31,52 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Opportunity.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/opportunities?page=1&limit=20
+ * - GET /api/opportunities?page=2&limit=10
+ * - GET /api/opportunities?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - stageId: string (opcional: UUID do estágio do pipeline)
  * - status: string (opcional: OPEN, WON, LOST, ARCHIVED)
  * - contactId: string (opcional: UUID do contato)
  * - companyId: string (opcional: UUID da empresa)
- * - orderBy: string (opcional: value, closeDate, createdAt, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "acao" encontra "Ação"
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=value
+ *   Exemplo múltiplo: ?sortBy=status,value
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=desc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"OPEN"},{"field":"value","operator":"greaterThan","value":10000}]
  * 
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos
@@ -106,6 +139,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Opportunity', 'create'),
+  invalidateEntityCache('opportunity'),
   createOpportunity
 );
 
@@ -163,6 +197,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Opportunity', 'delete'),
+  invalidateEntityCache('opportunity'),
   deleteOpportunity
 );
 

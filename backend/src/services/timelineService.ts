@@ -12,10 +12,10 @@
  * - Isolamento multi-tenant
  */
 
-import { PrismaClient, TaskType, TaskStatus, TaskPriority, NoteType } from '@prisma/client';
+import { TaskType, TaskStatus, TaskPriority, NoteType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuditLogService, AuditLogResponse } from './auditLogService';
 
-const prisma = new PrismaClient();
 
 // Item da timeline (tarefa, nota ou auditoria)
 export interface TimelineItem {

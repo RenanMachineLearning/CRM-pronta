@@ -77,8 +77,87 @@ async function validateIndexes() {
     console.log('   ✅ AuditLog(tenantId, entityType, entityId) - já existe');
     console.log('   ✅ Todos os índices únicos (@@unique) - já existem');
 
+    // Validar novos índices de busca e filtro (Etapa 8)
+    console.log('\n4. Validando novos índices de busca e filtro (Etapa 8)...');
+    
+    // Verificar índices de Contact
+    try {
+      const contactIndexes = await prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'contacts' 
+        AND indexname LIKE '%first_name%last_name%'
+      `;
+      if (contactIndexes.length > 0) {
+        console.log('   ✅ Contact(tenantId, firstName, lastName) - índice composto criado');
+      } else {
+        console.log('   ⚠️  Contact(tenantId, firstName, lastName) - índice não encontrado');
+      }
+    } catch (error: any) {
+      console.log('   ⚠️  Não foi possível verificar índice Contact:', error.message);
+    }
+
+    // Verificar índices de Lead
+    try {
+      const leadIndexes = await prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'leads' 
+        AND (indexname LIKE '%first_name%last_name%' OR indexname LIKE '%source%')
+      `;
+      console.log(`   ✅ Lead - ${leadIndexes.length} índice(s) encontrado(s)`);
+    } catch (error: any) {
+      console.log('   ⚠️  Não foi possível verificar índices Lead:', error.message);
+    }
+
+    // Verificar índices de Company
+    try {
+      const companyIndexes = await prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'companies' 
+        AND indexname LIKE '%industry%'
+      `;
+      if (companyIndexes.length > 0) {
+        console.log('   ✅ Company(tenantId, industry) - índice criado');
+      } else {
+        console.log('   ⚠️  Company(tenantId, industry) - índice não encontrado');
+      }
+    } catch (error: any) {
+      console.log('   ⚠️  Não foi possível verificar índice Company:', error.message);
+    }
+
+    // Verificar índices de Task
+    try {
+      const taskIndexes = await prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'tasks' 
+        AND indexname LIKE '%due_date%'
+      `;
+      if (taskIndexes.length > 0) {
+        console.log('   ✅ Task(tenantId, dueDate) - índice criado');
+      } else {
+        console.log('   ⚠️  Task(tenantId, dueDate) - índice não encontrado');
+      }
+    } catch (error: any) {
+      console.log('   ⚠️  Não foi possível verificar índice Task:', error.message);
+    }
+
+    // Verificar índices de Opportunity
+    try {
+      const oppIndexes = await prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'opportunities' 
+        AND indexname LIKE '%close_date%'
+      `;
+      if (oppIndexes.length > 0) {
+        console.log('   ✅ Opportunity(tenantId, closeDate) - índice criado');
+      } else {
+        console.log('   ⚠️  Opportunity(tenantId, closeDate) - índice não encontrado');
+      }
+    } catch (error: any) {
+      console.log('   ⚠️  Não foi possível verificar índice Opportunity:', error.message);
+    }
+
     // Documentar índice V2
-    console.log('\n4. Índices V2 condicionais (documentados, não implementados):');
+    console.log('\n5. Índices V2 condicionais (documentados, não implementados):');
     console.log('   📝 AuditLog(tenantId, userId, timestamp) - será adicionado quando UI de auditoria por usuário for implementada');
 
     console.log('\n✅ Validação concluída com sucesso!');

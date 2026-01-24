@@ -11,6 +11,7 @@ import type {
   CompanyPaginationParams,
   CompanyFormData,
 } from '../types/company';
+import type { Filter } from '../types/filter';
 
 /**
  * Lista empresas com filtros e paginação
@@ -20,11 +21,13 @@ import type {
  * 
  * @param filters - Filtros (industry, size)
  * @param pagination - Parâmetros de paginação (limit, offset, orderBy, order)
+ * @param advancedFilters - Filtros avançados opcionais
  * @returns Promise com lista de empresas e paginação
  */
 export async function listCompanies(
   filters?: CompanyFilters,
-  pagination?: CompanyPaginationParams
+  pagination?: CompanyPaginationParams,
+  advancedFilters?: Filter[]
 ): Promise<CompanyListResponse> {
   const params = new URLSearchParams();
   
@@ -33,6 +36,11 @@ export async function listCompanies(
   }
   if (filters?.size) {
     params.append('size', filters.size);
+  }
+  
+  // Adicionar filtros avançados
+  if (advancedFilters && advancedFilters.length > 0) {
+    params.append('filters', JSON.stringify(advancedFilters));
   }
   
   if (pagination?.limit) {

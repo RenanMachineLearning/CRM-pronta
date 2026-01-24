@@ -5,10 +5,10 @@
  * Regra de ouro: Controller orquestra, Service decide.
  */
 
-import { PrismaClient, User } from '@prisma/client';
+import { User } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { comparePassword } from '../utils/password';
 
-const prisma = new PrismaClient();
 
 export class AuthService {
   /**

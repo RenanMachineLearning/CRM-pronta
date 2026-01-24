@@ -30,9 +30,19 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Task.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/tasks?page=1&limit=20
+ * - GET /api/tasks?page=2&limit=10
+ * - GET /api/tasks?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - status: string (opcional: PENDING, IN_PROGRESS, COMPLETED, CANCELLED)
  * - type: string (opcional: CALL, EMAIL, MEETING, OTHER)
  * - assignedToId: string (opcional: UUID do usuário atribuído)
@@ -40,15 +50,35 @@ router.use(tenantContextMiddleware, authMiddleware);
  * - relatedEntityId: string (opcional: UUID da entidade relacionada)
  * - dueDateFrom: string (opcional: data ISO para filtrar tarefas com dueDate >= esta data)
  * - dueDateTo: string (opcional: data ISO para filtrar tarefas com dueDate <= esta data)
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"PENDING"},{"field":"dueDate","operator":"greaterThan","value":"2024-01-01"}]
  * - overdue: boolean (opcional: true para tarefas vencidas não concluídas)
  * - completed: boolean (opcional: true para apenas concluídas, false para não concluídas)
- * - orderBy: string (opcional: dueDate, priority, createdAt, title, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=dueDate
+ *   Exemplo múltiplo: ?sortBy=priority,dueDate
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
  * 
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos

@@ -7,13 +7,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PipelineView } from '../components/PipelineView';
 import { OpportunityList } from '../components/OpportunityList';
+import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { Button } from '../components/Button';
+import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
+import type { Filter } from '../types/filter';
 
 type ViewMode = 'kanban' | 'list';
 
 export function OpportunitiesPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+  const [advancedFilters, setAdvancedFilters] = useFilterUrlSync([]);
 
   const handleOpportunityClick = (opportunityId: string) => {
     navigate(`/opportunities/${opportunityId}`);
@@ -69,6 +73,15 @@ export function OpportunitiesPage() {
         </div>
       </div>
 
+      {/* Filtros avançados */}
+      <div className="mb-6">
+        <AdvancedFilters
+          entity="opportunity"
+          filters={advancedFilters}
+          onFiltersChange={setAdvancedFilters}
+        />
+      </div>
+
       {/* Conteúdo: Kanban ou Lista */}
       <div className="bg-white shadow rounded-lg p-6">
         {viewMode === 'kanban' ? (
@@ -77,6 +90,7 @@ export function OpportunitiesPage() {
           <OpportunityList
             onOpportunityClick={handleOpportunityClick}
             onNewOpportunity={handleNewOpportunity}
+            advancedFilters={advancedFilters}
           />
         )}
       </div>

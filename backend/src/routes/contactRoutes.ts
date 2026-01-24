@@ -28,6 +28,7 @@ import { addTagToContact, removeTagFromContact } from '../controllers/contactTag
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { authorizationMiddleware } from '../middleware/authorizationMiddleware';
+import { invalidateEntityCache } from '../middleware/cacheInvalidation';
 
 const router = express.Router();
 
@@ -42,19 +43,60 @@ router.use(tenantContextMiddleware, authMiddleware);
  * 
  * Requer autenticação e permissão "Contact.list"
  * 
- * Query params:
- * - limit: número (opcional, default: 20, max: 100)
- * - offset: número (opcional, default: 0)
+ * Query params de paginação:
+ * - page: número (opcional, default: 1) - Número da página (>= 1)
+ * - limit: número (opcional, default: 20, max: 100) - Itens por página
+ * - offset: número (opcional, legado) - Offset para paginação (compatibilidade)
+ * 
+ * Paginação padrão: page=1, limit=20
+ * 
+ * Exemplos de paginação:
+ * - GET /api/contacts?page=1&limit=20
+ * - GET /api/contacts?page=2&limit=10
+ * - GET /api/contacts?offset=20&limit=20 (legado, ainda funciona)
+ * 
+ * Query params de filtros:
  * - companyId: string (opcional: UUID da empresa)
  * - status: string (opcional: ACTIVE, INACTIVE, ARCHIVED)
  * - tagId: string (opcional: UUID da tag)
- * - orderBy: string (opcional: firstName, lastName, createdAt, default: createdAt)
- * - order: string (opcional: asc, desc, default: desc)
+ * - q: string (opcional) - Termo de busca textual (tolerante a diacríticos)
+ *   A busca é tolerante a acentos: buscar "jose" encontra "José", buscar "sao paulo" encontra "São Paulo"
+ * - hasEmail: boolean (opcional) - Filtrar contatos com/sem email (true/false)
+ * - hasPhone: boolean (opcional) - Filtrar contatos com/sem telefone (true/false)
+ * - filters: JSON (opcional) - Filtros avançados (array de objetos Filter)
+ * 
+ * Exemplo de filtros avançados:
+ * ?filters=[{"field":"status","operator":"equals","value":"ACTIVE"},{"field":"createdAt","operator":"greaterThan","value":"2024-01-01"}]
+ * 
+ * Operadores disponíveis: equals, notEquals, contains, notContains, greaterThan, lessThan,
+ * greaterThanOrEqual, lessThanOrEqual, between, in, notIn, isNull, isNotNull
+ * 
+ * Query params de ordenação:
+ * - sortBy: string | string[] (opcional) - Campo(s) para ordenação
+ *   Exemplo simples: ?sortBy=firstName
+ *   Exemplo múltiplo: ?sortBy=companyId,firstName
+ * - sortOrder: 'asc' | 'desc' | ('asc' | 'desc')[] (opcional, default: 'asc')
+ *   Exemplo simples: ?sortOrder=asc
+ *   Exemplo múltiplo: ?sortOrder=asc,desc
+ * - orderBy: string (opcional, legado) - Campo para ordenação (compatibilidade)
+ * - order: 'asc' | 'desc' (opcional, legado) - Direção (compatibilidade)
+ * 
+ * Ordenação padrão: createdAt desc
+ * 
+ * Exemplos de ordenação:
+ * - GET /api/contacts?sortBy=firstName&sortOrder=asc
+ * - GET /api/contacts?sortBy=companyId,firstName&sortOrder=asc,asc
  * 
  * Response 200:
  * {
  *   "data": [...],
- *   "pagination": { "total": 100, "limit": 20, "offset": 0 }
+ *   "pagination": {
+ *     "page": 1,
+ *     "limit": 20,
+ *     "total": 100,
+ *     "totalPages": 5,
+ *     "offset": 0
+ *   }
  * }
  * 
  * Response 400: Parâmetros inválidos
@@ -303,6 +345,7 @@ router.get(
 router.post(
   '/',
   authorizationMiddleware('Contact', 'create'),
+  invalidateEntityCache('contact'),
   createContact
 );
 
@@ -406,6 +449,7 @@ router.put(
 router.delete(
   '/:id',
   authorizationMiddleware('Contact', 'delete'),
+  invalidateEntityCache('contact'),
   deleteContact
 );
 

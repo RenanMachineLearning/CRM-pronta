@@ -8,9 +8,8 @@
  * Esta função nunca lança erros que interrompam o fluxo.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
-const prisma = new PrismaClient();
 
 /**
  * Tipos para auditoria

@@ -62,6 +62,43 @@ const config: Config = {
       lines: 70,
       statements: 70,
     },
+    // Arquivos de busca/filtros devem ter cobertura > 75%
+    'src/services/searchService.ts': {
+      branches: 75,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
+    'src/utils/searchHelpers.ts': {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+    'src/utils/filterBuilder.ts': {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+    'src/utils/filterValidator.ts': {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+    'src/utils/orderByHelpers.ts': {
+      branches: 75,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
+    'src/utils/paginationHelper.ts': {
+      branches: 75,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

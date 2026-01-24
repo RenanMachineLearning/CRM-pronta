@@ -12,9 +12,8 @@
  * - Quando as tabelas existirem, a busca real será implementada
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
-const prisma = new PrismaClient();
 
 /**
  * Exceção customizada para erros de validação de unicidade

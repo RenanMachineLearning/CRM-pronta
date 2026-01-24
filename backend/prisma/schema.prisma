@@ -521,6 +521,10 @@ model Company {
 
   // Índice composto obrigatório para performance (convenção multi-tenant)
   @@index([tenantId, id])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, name])
+  // Índice para filtro por indústria (Etapa 8 - Índices para Performance)
+  @@index([tenantId, industry])
   @@map("companies")
 }
 
@@ -558,6 +562,13 @@ model Contact {
   @@index([tenantId, id])
   // Índice para busca por empresa
   @@index([tenantId, companyId])
+  // Índices para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, firstName])
+  @@index([tenantId, lastName])
+  // Índice composto para busca por nome completo (Etapa 8 - Índices para Performance)
+  @@index([tenantId, firstName, lastName])
+  // Índice para filtragem por status (Etapa 8 - Filtros Avançados)
+  @@index([tenantId, status])
   @@map("contacts")
 }
 
@@ -581,6 +592,8 @@ model ContactEmail {
   @@index([tenantId, id])
   // Índice para busca por contato
   @@index([tenantId, contactId])
+  // Índice para busca por email (Etapa 8 - Busca Global)
+  @@index([tenantId, email])
   @@map("contact_emails")
 }
 
@@ -728,6 +741,12 @@ model Lead {
   @@index([tenantId, id])
   // Índice para busca por status (conforme checklist)
   @@index([tenantId, status])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, email])
+  // Índice composto para busca por nome completo (Etapa 8 - Índices para Performance)
+  @@index([tenantId, firstName, lastName])
+  // Índice para filtro por origem (Etapa 8 - Índices para Performance)
+  @@index([tenantId, source])
   @@map("leads")
 }
 
@@ -815,6 +834,10 @@ model Opportunity {
   // Índices adicionais para performance em filtros
   @@index([tenantId, contactId])
   @@index([tenantId, companyId])
+  // Índice para otimização de busca (Etapa 8 - Busca Global)
+  @@index([tenantId, name])
+  // Índice para filtro por data de fechamento (Etapa 8 - Índices para Performance)
+  @@index([tenantId, closeDate])
   @@map("opportunities")
 }
 
@@ -898,6 +921,8 @@ model Task {
   // Índice para busca por usuário atribuído e status (conforme checklist)
   // Otimiza queries: SELECT * FROM tasks WHERE tenantId = ? AND assignedToId = ? AND status = ?
   @@index([tenantId, assignedToId, status])
+  // Índice para filtro por data de vencimento (Etapa 8 - Índices para Performance)
+  @@index([tenantId, dueDate])
   @@map("tasks")
 }
 

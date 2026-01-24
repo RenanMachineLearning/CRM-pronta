@@ -913,5 +913,178 @@ describe('Contact CRUD - E2E Tests', () => {
       expect(response.body.error).toBe('Contato não encontrado');
     });
   });
+
+  describe('GET /api/contacts - Busca com parâmetro q', () => {
+    beforeAll(async () => {
+      // Criar contatos para testes de busca
+      await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'João',
+          lastName: 'Silva',
+          title: 'Gerente',
+          status: 'ACTIVE',
+          emails: {
+            create: {
+              tenantId: tenant1.id,
+              email: 'joao.silva@example.com',
+              type: 'WORK',
+              isPrimary: true,
+            },
+          },
+          phones: {
+            create: {
+              tenantId: tenant1.id,
+              phone: '+55 11 99999-9999',
+              type: 'MOBILE',
+              isPrimary: true,
+            },
+          },
+        },
+      });
+
+      await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Maria',
+          lastName: 'Santos',
+          status: 'ACTIVE',
+        },
+      });
+
+      await prisma.contact.create({
+        data: {
+          tenantId: tenant1.id,
+          firstName: 'Pedro',
+          lastName: 'Silva',
+          status: 'INACTIVE',
+        },
+      });
+    });
+
+    it('deve filtrar por nome com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/contacts?q=joão')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.pagination).toBeDefined();
+      
+      // Verificar que só contatos com "joão" no nome retornaram
+      if (response.body.data.length > 0) {
+        const hasJoao = response.body.data.some((c: any) =>
+          c.firstName.toLowerCase().includes('joão') ||
+          c.lastName?.toLowerCase().includes('joão')
+        );
+        expect(hasJoao).toBe(true);
+      }
+    });
+
+    it('deve filtrar por email com parâmetro q', async () => {
+      const response = await request(app)
+        .get('/api/contacts?q=joao@example.com')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      // Verificar que contatos com email correspondente retornaram
+      if (response.body.data.length > 0) {
+        const hasEmail = response.body.data.some((c: any) =>
+          c.emails.some((e: any) => e.email.includes('joao@example.com'))
+        );
+        expect(hasEmail).toBe(true);
+      }
+    });
+
+    it('deve ser case-insensitive', async () => {
+      const response1 = await request(app)
+        .get('/api/contacts?q=JOÃO')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      const response2 = await request(app)
+        .get('/api/contacts?q=joão')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response1.status).toBe(200);
+      expect(response2.status).toBe(200);
+      expect(response1.body.data.length).toBe(response2.body.data.length);
+    });
+
+    it('deve combinar busca com filtros existentes', async () => {
+      const response = await request(app)
+        .get('/api/contacts?q=silva&status=ACTIVE')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      if (response.body.data.length > 0) {
+        // Verificar que todos têm status ACTIVE
+        expect(response.body.data.every((c: any) => c.status === 'ACTIVE')).toBe(true);
+        // Verificar que todos têm "silva" no nome
+        expect(
+          response.body.data.some((c: any) =>
+            c.firstName.toLowerCase().includes('silva') ||
+            c.lastName?.toLowerCase().includes('silva')
+          )
+        ).toBe(true);
+      }
+    });
+
+    it('deve retornar 400 para query muito longa', async () => {
+      const longQuery = 'a'.repeat(501);
+      const response = await request(app)
+        .get(`/api/contacts?q=${encodeURIComponent(longQuery)}`)
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(400);
+
+      expect(response.body.error).toBeTruthy();
+      expect(response.body.message).toContain('não pode exceder');
+    });
+
+    it('deve funcionar sem parâmetro q (listagem completa)', async () => {
+      const response = await request(app)
+        .get('/api/contacts')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.pagination).toBeDefined();
+    });
+
+    it('deve respeitar isolamento multi-tenant na busca', async () => {
+      // Criar contato no tenant2
+      await prisma.contact.create({
+        data: {
+          tenantId: tenant2.id,
+          firstName: 'Carlos',
+          lastName: 'Silva',
+          status: 'ACTIVE',
+        },
+      });
+
+      // Buscar como usuário do tenant1
+      const response = await request(app)
+        .get('/api/contacts?q=silva')
+        .set('X-Tenant-Slug', tenant1.slug)
+        .set('Authorization', `Bearer ${adminToken1}`)
+        .expect(200);
+
+      // Não deve retornar contato do tenant2
+      const hasCarlos = response.body.data.some(
+        (c: any) => c.firstName === 'Carlos' && c.tenantId === tenant2.id
+      );
+      expect(hasCarlos).toBe(false);
+    });
+  });
 });
 

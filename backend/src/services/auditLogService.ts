@@ -7,9 +7,8 @@
  * Garante isolamento multi-tenant em todas as queries.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 /**
  * Enum de entidades auditáveis

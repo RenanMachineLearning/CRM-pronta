@@ -61,7 +61,11 @@ npm test
 ### Testes com Cobertura
 
 ```bash
+# Cobertura completa
 npm run test:coverage
+
+# Cobertura apenas de busca/filtros
+npm run test:coverage:search
 ```
 
 ### Testes Específicos
@@ -97,6 +101,13 @@ A cobertura está configurada em `jest.config.ts` com thresholds mínimos:
   - `src/services/fieldService.ts`
   - `src/utils/fieldValueValidator.ts`
   - `src/utils/uniqueFieldValidator.ts`
+- **Arquivos de busca/filtros**: 75-80% (quality gate)
+  - `src/services/searchService.ts` (75%)
+  - `src/utils/searchHelpers.ts` (80%)
+  - `src/utils/filterBuilder.ts` (80%)
+  - `src/utils/filterValidator.ts` (80%)
+  - `src/utils/orderByHelpers.ts` (75%)
+  - `src/utils/paginationHelper.ts` (75%)
 - **Controllers e Middleware**: 70% (podem ter cobertura menor)
 
 ### Nota sobre Cobertura
@@ -268,6 +279,68 @@ Após executar `npm run test:coverage`, o relatório será gerado em:
 - Testes E2E complementam cobertura de integração
 - Não forçar cobertura de código defensivo se não agregar valor
 
+## Testes de Busca e Filtros
+
+### Estrutura
+
+- **Unitários**: `tests/unit/`
+  - `searchService.test.ts` - Busca global e lógica de agregação
+  - `searchHelpers.test.ts` - Normalização de texto, snippets, relevância, validação
+  - `filterBuilder.test.ts` - Construção de queries Prisma a partir de filtros
+  - `filterValidator.test.ts` - Validação de filtros (campos, operadores, tipos)
+  - `orderByHelpers.test.ts` - Construção de ordenação Prisma
+  - `paginationHelper.test.ts` - Processamento de parâmetros de paginação
+  - `services/filterService.test.ts` - Testes agrupados de validação + construção
+  - `controllers/searchController.test.ts` - Controller de busca (mocks)
+
+- **Integração**: `tests/integration/`
+  - `search/searchRoutes.test.ts` - Busca global E2E (múltiplas entidades, isolamento, permissões)
+  - `search/multiEntitySearch.test.ts` - Busca simultânea, agregação, limites por entidade
+  - `search/diacriticsSearch.test.ts` - Normalização de texto (acentos, case-insensitive)
+  - `filters/advancedFilters.test.ts` - Todos os 13 operadores, relacionamentos, multi-tenant
+  - `filters/combinedFiltersWithSearch.test.ts` - Filtros + busca textual, precedência, combinações
+  - `filters/entitySpecificFilters.test.ts` - Filtros específicos por entidade
+  - `pagination/pagination.test.ts` - Paginação com volume alto, filtros complexos, ordenação múltipla
+  - `orderBy/orderBy.test.ts` - Ordenação simples e múltipla, todas as entidades
+  - `performance/volumePerformance.test.ts` - Performance com 1000+ registros (< 500ms)
+  - `performance/queryPerformance.test.ts` - Performance básica de queries, limites, timeouts
+
+### Executando Testes de Busca/Filtros
+
+```bash
+# Todos os testes de busca/filtros
+npm test -- --testPathPattern='search|filter|orderBy|pagination'
+
+# Apenas busca
+npm test -- --testPathPattern='search'
+
+# Apenas filtros
+npm test -- --testPathPattern='filter'
+
+# Com cobertura
+npm run test:coverage:search
+
+# Teste específico
+npm test -- tests/integration/search/multiEntitySearch.test.ts
+npm test -- tests/integration/performance/volumePerformance.test.ts
+```
+
+### Cobertura Esperada
+
+- **Global**: 70% (branches, functions, lines, statements)
+- **Busca/Filtros**: 75-80%
+  - `searchService.ts`: 75%
+  - `searchHelpers.ts`: 80%
+  - `filterBuilder.ts`: 80%
+  - `filterValidator.ts`: 80%
+  - `orderByHelpers.ts`: 75%
+  - `paginationHelper.ts`: 75%
+
+### Helpers
+
+- `helpers/testData.ts` - Funções para criar dados de teste reutilizáveis
+- `helpers/mockData.ts` - Mocks reutilizáveis para serviços
+
 ## Troubleshooting
 
 ### Testes Falhando
@@ -283,6 +356,7 @@ Após executar `npm run test:coverage`, o relatório será gerado em:
 2. Avaliar se são críticas (lógica de negócio) ou não (código defensivo)
 3. Adicionar testes apenas para lacunas críticas
 4. Não forçar cobertura de código que não agrega valor
+5. Executar `npm run test:coverage:search` para focar em busca/filtros
 
 ### Testes Lentos
 
@@ -290,4 +364,5 @@ Após executar `npm run test:coverage`, o relatório será gerado em:
 2. Usar `beforeAll` em vez de `beforeEach` quando possível
 3. Limpar banco apenas quando necessário
 4. Executar testes específicos durante desenvolvimento
+5. Testes de volume podem ser lentos - executar separadamente se necessário
 

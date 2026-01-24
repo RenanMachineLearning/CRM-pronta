@@ -12,9 +12,8 @@
  * listUsers que verificam permissões para cada item.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
-const prisma = new PrismaClient();
 
 /**
  * Verifica se um usuário tem permissão para realizar uma ação em uma entidade

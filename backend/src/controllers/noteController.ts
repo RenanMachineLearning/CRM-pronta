@@ -14,6 +14,9 @@ import { NoteType } from '@prisma/client';
 import { logAudit } from '../utils/auditLog';
 import { FieldValidationError } from '../utils/fieldValueValidator';
 import { UniqueFieldValidationError } from '../utils/uniqueFieldValidator';
+import { Filter, FilterError } from '../types/filter.types';
+import { processOrderByParams, OrderByError } from '../utils/orderByHelpers';
+import { processPaginationParams, PaginationError } from '../utils/paginationHelper';
 
 /**
  * Lista notas com paginação e filtros
@@ -28,30 +31,24 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
     const userId = req.userId!;
 
     // Extrair query params
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
     const type = req.query.type as string | undefined;
     const relatedEntityType = req.query.relatedEntityType as string | undefined;
     const relatedEntityId = req.query.relatedEntityId as string | undefined;
-    const orderBy = req.query.orderBy as string | undefined;
-    const order = req.query.order as string | undefined;
 
-    // Validar limit
-    if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'limit deve ser um número entre 1 e 100',
-      });
-      return;
-    }
-
-    // Validar offset
-    if (offset !== undefined && (isNaN(offset) || offset < 0)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'offset deve ser um número maior ou igual a 0',
-      });
-      return;
+    // Processar e validar parâmetros de paginação usando helper centralizado
+    let paginationParams;
+    try {
+      paginationParams = processPaginationParams(req.query);
+    } catch (error: any) {
+      if (error instanceof PaginationError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
     // Validar type
@@ -91,22 +88,43 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Validar orderBy (apenas createdAt permitido)
-    if (orderBy && orderBy !== 'createdAt') {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'orderBy deve ser createdAt',
-      });
-      return;
+    // Processar e validar parâmetros de ordenação usando helper centralizado
+    try {
+      processOrderByParams(req.query, 'note');
+    } catch (error: any) {
+      if (error instanceof OrderByError) {
+        res.status(error.statusCode).json({
+          error: 'Parâmetro inválido',
+          message: error.message,
+          code: error.code,
+        });
+        return;
+      }
+      throw error;
     }
 
-    // Validar order
-    if (order && !['asc', 'desc'].includes(order)) {
-      res.status(400).json({
-        error: 'Parâmetro inválido',
-        message: 'order deve ser asc ou desc',
-      });
-      return;
+    // Parsear filtros avançados
+    let advancedFilters: Filter[] | undefined;
+    const filtersParam = req.query.filters as string | undefined;
+
+    if (filtersParam) {
+      try {
+        advancedFilters = JSON.parse(filtersParam);
+
+        if (!Array.isArray(advancedFilters)) {
+          res.status(400).json({
+            error: 'Parâmetro inválido',
+            message: 'filters deve ser um array JSON',
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(400).json({
+          error: 'Parâmetro inválido',
+          message: 'filters deve ser um JSON válido',
+        });
+        return;
+      }
     }
 
     // Montar filtros
@@ -114,19 +132,37 @@ export async function listNotes(req: Request, res: Response): Promise<void> {
     if (type) filters.type = type as NoteType;
     if (relatedEntityType) filters.relatedEntityType = relatedEntityType as 'Contact' | 'Company' | 'Lead' | 'Opportunity' | 'Task';
     if (relatedEntityId) filters.relatedEntityId = relatedEntityId;
+    if (advancedFilters) filters.advancedFilters = advancedFilters; // NOVO: Filtros avançados
 
     // Montar paginação
     const pagination: PaginationParams = {
-      limit,
-      offset,
-      orderBy: orderBy as 'createdAt' | undefined || 'createdAt',
-      order: order as 'asc' | 'desc' | undefined || 'desc',
+      page: paginationParams.page,
+      limit: paginationParams.limit,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined, // Legado
+      // Passar parâmetros de ordenação do query string para o service
+      sortBy: req.query.sortBy as string | string[] | undefined,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined,
+      orderBy: req.query.orderBy as string | string[] | undefined, // Legado
+      order: req.query.order as 'asc' | 'desc' | ('asc' | 'desc')[] | undefined, // Legado
     };
 
     // Chamar service
-    const result = await NoteService.listNotes(tenantId, filters, pagination, userId);
+    try {
+      const result = await NoteService.listNotes(tenantId, filters, pagination, userId);
 
-    res.status(200).json(result);
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof FilterError) {
+        res.status(error.statusCode).json({
+          error: 'Filtro inválido',
+          code: error.code,
+          details: error.details,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   } catch (error: any) {
     console.error('Erro ao listar notas:', error);
     res.status(500).json({
@@ -483,8 +519,8 @@ export async function updateNote(req: Request, res: Response): Promise<void> {
     // Capturar changes para auditoria (comparar valores após trim)
     const changes: Record<string, { old: any; new: any }> = {};
     if (content !== undefined) {
-      const oldContent = noteBefore.content.trim();
-      const newContent = noteAfter.content.trim();
+      const oldContent = noteBefore.content?.trim() || '';
+      const newContent = noteAfter.content?.trim() || '';
       if (oldContent !== newContent) {
         changes.content = { old: oldContent, new: newContent };
       }

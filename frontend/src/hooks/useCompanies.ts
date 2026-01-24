@@ -11,6 +11,7 @@ import type {
   CompanyPaginationParams,
   CompanyListResponse,
 } from '../types/company';
+import type { Filter } from '../types/filter';
 
 interface UseCompaniesResult {
   companies: Company[];
@@ -24,6 +25,7 @@ interface UseCompaniesResult {
   refetch: () => Promise<void>;
   setFilters: (filters: CompanyFilters | undefined) => void;
   setPagination: (pagination: CompanyPaginationParams) => void;
+  setAdvancedFilters: (filters: Filter[]) => void;
 }
 
 /**
@@ -31,16 +33,19 @@ interface UseCompaniesResult {
  * 
  * @param initialFilters - Filtros iniciais (opcional)
  * @param initialPagination - Paginação inicial (opcional)
+ * @param initialAdvancedFilters - Filtros avançados iniciais (opcional)
  * @returns Objeto com empresas, loading, error, pagination e funções de controle
  */
 export function useCompanies(
   initialFilters?: CompanyFilters,
-  initialPagination?: CompanyPaginationParams
+  initialPagination?: CompanyPaginationParams,
+  initialAdvancedFilters?: Filter[]
 ): UseCompaniesResult {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<CompanyFilters | undefined>(initialFilters);
+  const [advancedFilters, setAdvancedFilters] = useState<Filter[]>(initialAdvancedFilters || []);
   const [pagination, setPaginationState] = useState<CompanyPaginationParams>(
     initialPagination || { limit: 20, offset: 0, orderBy: 'name', order: 'asc' }
   );
@@ -56,7 +61,7 @@ export function useCompanies(
     setError(null);
 
     try {
-      const response: CompanyListResponse = await listCompanies(filters, pagination);
+      const response: CompanyListResponse = await listCompanies(filters, pagination, advancedFilters);
       setCompanies(response.data);
       setPaginationInfo(response.pagination);
     } catch (err) {
@@ -66,7 +71,7 @@ export function useCompanies(
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, [filters, pagination, advancedFilters]);
 
   // Buscar empresas quando filters ou pagination mudarem
   useEffect(() => {
@@ -85,6 +90,13 @@ export function useCompanies(
     setPaginationState((prev) => ({ ...prev, ...newPagination }));
   }, []);
 
+  // Função para atualizar filtros avançados
+  const updateAdvancedFilters = useCallback((newAdvancedFilters: Filter[]) => {
+    setAdvancedFilters(newAdvancedFilters);
+    // Resetar offset quando filtros avançados mudarem
+    setPaginationState((prev) => ({ ...prev, offset: 0 }));
+  }, []);
+
   return {
     companies,
     loading,
@@ -93,6 +105,7 @@ export function useCompanies(
     refetch: fetchCompanies,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   };
 }
 

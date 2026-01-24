@@ -11,6 +11,7 @@ import type {
   PaginationParams,
   ContactListResponse,
 } from '../types/contact';
+import type { Filter } from '../types/filter';
 
 interface UseContactsResult {
   contacts: Contact[];
@@ -24,6 +25,7 @@ interface UseContactsResult {
   refetch: () => Promise<void>;
   setFilters: (filters: ContactFilters | undefined) => void;
   setPagination: (pagination: PaginationParams) => void;
+  setAdvancedFilters: (filters: Filter[]) => void;
 }
 
 /**
@@ -31,16 +33,19 @@ interface UseContactsResult {
  * 
  * @param initialFilters - Filtros iniciais (opcional)
  * @param initialPagination - Paginação inicial (opcional)
+ * @param initialAdvancedFilters - Filtros avançados iniciais (opcional)
  * @returns Objeto com contatos, loading, error, pagination e funções de controle
  */
 export function useContacts(
   initialFilters?: ContactFilters,
-  initialPagination?: PaginationParams
+  initialPagination?: PaginationParams,
+  initialAdvancedFilters?: Filter[]
 ): UseContactsResult {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ContactFilters | undefined>(initialFilters);
+  const [advancedFilters, setAdvancedFilters] = useState<Filter[]>(initialAdvancedFilters || []);
   const [pagination, setPaginationState] = useState<PaginationParams>(
     initialPagination || { limit: 20, offset: 0, orderBy: 'createdAt', order: 'desc' }
   );
@@ -56,7 +61,7 @@ export function useContacts(
     setError(null);
 
     try {
-      const response: ContactListResponse = await listContacts(filters, pagination);
+      const response: ContactListResponse = await listContacts(filters, pagination, advancedFilters);
       setContacts(response.data);
       setPaginationInfo(response.pagination);
     } catch (err) {
@@ -66,7 +71,7 @@ export function useContacts(
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, [filters, pagination, advancedFilters]);
 
   // Buscar contatos quando filters ou pagination mudarem
   useEffect(() => {
@@ -85,6 +90,13 @@ export function useContacts(
     setPaginationState((prev) => ({ ...prev, ...newPagination }));
   }, []);
 
+  // Função para atualizar filtros avançados
+  const updateAdvancedFilters = useCallback((newAdvancedFilters: Filter[]) => {
+    setAdvancedFilters(newAdvancedFilters);
+    // Resetar offset quando filtros avançados mudarem
+    setPaginationState((prev) => ({ ...prev, offset: 0 }));
+  }, []);
+
   return {
     contacts,
     loading,
@@ -93,6 +105,7 @@ export function useContacts(
     refetch: fetchContacts,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   };
 }
 

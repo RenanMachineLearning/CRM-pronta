@@ -11,6 +11,7 @@ import type {
   OpportunityPaginationParams,
   OpportunityListResponse,
 } from '../types/opportunity';
+import type { Filter } from '../types/filter';
 
 interface UseOpportunitiesResult {
   opportunities: Opportunity[];
@@ -24,6 +25,7 @@ interface UseOpportunitiesResult {
   refetch: () => Promise<void>;
   setFilters: (filters: OpportunityFilters | undefined) => void;
   setPagination: (pagination: OpportunityPaginationParams) => void;
+  setAdvancedFilters: (filters: Filter[]) => void;
 }
 
 /**
@@ -31,16 +33,19 @@ interface UseOpportunitiesResult {
  * 
  * @param initialFilters - Filtros iniciais (opcional)
  * @param initialPagination - Paginação inicial (opcional)
+ * @param initialAdvancedFilters - Filtros avançados iniciais (opcional)
  * @returns Objeto com opportunities, loading, error, pagination e funções de controle
  */
 export function useOpportunities(
   initialFilters?: OpportunityFilters,
-  initialPagination?: OpportunityPaginationParams
+  initialPagination?: OpportunityPaginationParams,
+  initialAdvancedFilters?: Filter[]
 ): UseOpportunitiesResult {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<OpportunityFilters | undefined>(initialFilters);
+  const [advancedFilters, setAdvancedFilters] = useState<Filter[]>(initialAdvancedFilters || []);
   const [pagination, setPaginationState] = useState<OpportunityPaginationParams>(
     initialPagination || { limit: 20, offset: 0, orderBy: 'createdAt', order: 'desc' }
   );
@@ -56,7 +61,7 @@ export function useOpportunities(
     setError(null);
 
     try {
-      const response: OpportunityListResponse = await listOpportunities(filters, pagination);
+      const response: OpportunityListResponse = await listOpportunities(filters, pagination, advancedFilters);
       setOpportunities(response.data);
       setPaginationInfo(response.pagination);
     } catch (err) {
@@ -66,7 +71,7 @@ export function useOpportunities(
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, [filters, pagination, advancedFilters]);
 
   // Buscar oportunidades quando filters ou pagination mudarem
   useEffect(() => {
@@ -85,6 +90,13 @@ export function useOpportunities(
     setPaginationState((prev) => ({ ...prev, ...newPagination }));
   }, []);
 
+  // Função para atualizar filtros avançados
+  const updateAdvancedFilters = useCallback((newAdvancedFilters: Filter[]) => {
+    setAdvancedFilters(newAdvancedFilters);
+    // Resetar offset quando filtros avançados mudarem
+    setPaginationState((prev) => ({ ...prev, offset: 0 }));
+  }, []);
+
   return {
     opportunities,
     loading,
@@ -93,5 +105,6 @@ export function useOpportunities(
     refetch: fetchOpportunities,
     setFilters: updateFilters,
     setPagination: updatePagination,
+    setAdvancedFilters: updateAdvancedFilters,
   };
 }
