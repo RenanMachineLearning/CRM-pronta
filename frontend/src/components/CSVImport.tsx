@@ -56,18 +56,65 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: FileIm
       setProgress({
         status: 'validating',
         progress: 10,
-        message: 'Validando arquivo...'
+        message: 'Fazendo upload do arquivo...'
       });
 
-      // Simular validação do arquivo
-      setTimeout(() => {
-        validateFile(selectedFile);
-      }, 500);
+      // Fazer upload do arquivo
+      uploadFile(selectedFile);
     }
   };
 
-  // Função para validar o arquivo (CSV ou Excel)
-  const validateFile = async (file: File) => {
+  // Função para fazer upload do arquivo
+  const uploadFile = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/import/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // O token de autenticação deve ser adicionado via interceptador ou manualmente
+          // 'Authorization': `Bearer ${getToken()}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setProgress({
+          status: 'mapping',
+          progress: 30,
+          message: result.message || 'Arquivo enviado. Mapeando campos...'
+        });
+
+        // Armazenar o fileId para uso posterior
+        // Em um cenário real, faríamos a validação e mapeamento usando o fileId
+        // Por enquanto, vamos continuar com o fluxo antigo para manter a funcionalidade
+        // mas idealmente, o novo fluxo usaria o fileId para as próximas etapas
+
+        // Para manter a compatibilidade, vamos validar o arquivo localmente também
+        validateFileLocally(file);
+      } else {
+        setProgress({
+          status: 'error',
+          progress: 0,
+          message: result.message || 'Erro ao fazer upload do arquivo',
+          error: result.error
+        });
+      }
+    } catch (error) {
+      setProgress({
+        status: 'error',
+        progress: 0,
+        message: 'Erro de rede ao fazer upload do arquivo',
+        error: (error as Error).message
+      });
+    }
+  };
+
+  // Função para validar o arquivo localmente (mantido para compatibilidade)
+  const validateFileLocally = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -177,6 +224,8 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: FileIm
       message: 'Iniciando importação...'
     });
 
+    // Para o novo fluxo, usar o fileId armazenado anteriormente
+    // Por enquanto, vamos manter o fluxo antigo para compatibilidade
     const formData = new FormData();
     formData.append('file', file);
     formData.append('entityType', entityType);

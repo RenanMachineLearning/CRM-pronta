@@ -12,8 +12,10 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { CsvImportService } from '../services/csvImportService';
 import { validateCsvFormat } from '../utils/csvValidator';
-import { validateExcelFile, validateExcelStructure } from '../utils/excelValidator';
+import { validateExcelFile } from '../utils/excelValidator';
 import { getExcelSheetsMetadata } from '../utils/excelParser';
+import { uploadImportFile, validateUploadedFile, checkImportPermission } from '../middleware/upload.middleware';
+import { temporaryFileStorage, validateFileContent, isPotentiallyMalicious } from '../services/uploadService';
 
 // Configuração do multer para upload de arquivos
 const upload = multer({
@@ -129,6 +131,7 @@ router.post('/validate', upload.single('file'), async (req: Request, res: Respon
       details: (error as Error).message
     });
   }
+  return; // Explicit return to satisfy TS7030
 });
 
 /**
@@ -252,6 +255,7 @@ router.post('/map-fields', upload.single('file'), async (req: Request, res: Resp
       details: (error as Error).message
     });
   }
+  return; // Explicit return to satisfy TS7030
 });
 
 /**
@@ -343,6 +347,7 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
       details: (error as Error).message
     });
   }
+  return; // Explicit return to satisfy TS7030
 });
 
 /**
@@ -352,12 +357,12 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
 router.get('/status/:jobId', async (req: Request, res: Response) => {
   try {
     const jobId = req.params.jobId;
-    
+
     // Por enquanto, retornamos um erro indicando que a funcionalidade
     // de importação assíncrona ainda não está implementada
     // Em uma implementação completa, isso consultaria um banco de dados
     // ou sistema de filas para obter o status do job
-    
+
     res.status(501).json({
       error: 'Funcionalidade não implementada',
       message: 'Consulta de status de importação assíncrona não está disponível na versão atual'
@@ -369,6 +374,97 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
       message: 'Falha ao consultar status de importação'
     });
   }
+  return; // Explicit return to satisfy TS7030
 });
+
+/**
+ * Endpoint para upload de arquivos para importação
+ *
+ * Requer autenticação e permissão "Import.create"
+ * Valida tipo de arquivo (CSV, XLSX, XLS)
+ * Valida tamanho máximo (ex: 10MB)
+ * Salva arquivo temporariamente
+ * Retorna fileId para processamento
+ */
+router.post('/upload',
+  checkImportPermission,  // Verificar permissão de importação
+  uploadImportFile,       // Fazer upload do arquivo
+  validateUploadedFile,   // Validar o arquivo após upload
+  async (req: Request, res: Response) => {
+    try {
+      // tenantId e userId já devem estar disponíveis via middleware
+      const tenantId = req.tenantId;
+      const userId = req.userId;
+
+      if (!tenantId || !userId) {
+        return res.status(401).json({
+          error: 'Não autorizado',
+          message: 'Tenant ou usuário não identificado'
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          error: 'Nenhum arquivo enviado',
+          message: 'Por favor, envie um arquivo para importação'
+        });
+      }
+
+      // Verificar se o buffer do arquivo existe
+      if (!req.file.buffer) {
+        return res.status(400).json({
+          error: 'Arquivo inválido',
+          message: 'O arquivo não contém dados válidos'
+        });
+      }
+
+      // Verificar se o arquivo é potencialmente malicioso
+      if (isPotentiallyMalicious(req.file.buffer, req.file.originalname)) {
+        return res.status(400).json({
+          error: 'Arquivo suspeito',
+          message: 'O arquivo enviado parece conter conteúdo malicioso e foi rejeitado'
+        });
+      }
+
+      // Validar conteúdo do arquivo
+      const contentValidation = await validateFileContent(req.file.buffer, req.file.originalname);
+      if (!contentValidation.valid) {
+        return res.status(400).json({
+          error: 'Conteúdo do arquivo inválido',
+          message: 'O arquivo enviado não está no formato esperado',
+          details: contentValidation.errors
+        });
+      }
+
+      // Armazenar arquivo temporariamente
+      const metadata = await temporaryFileStorage.storeFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        tenantId,
+        userId,
+        60 // TTL de 1 hora
+      );
+
+      // Retornar fileId e metadados
+      res.status(200).json({
+        message: 'Arquivo enviado com sucesso',
+        fileId: metadata.fileId,
+        originalName: metadata.originalName,
+        size: metadata.size,
+        mimeType: metadata.mimeType,
+        expiresAt: metadata.expiresAt
+      });
+    } catch (error) {
+      console.error('Erro ao fazer upload do arquivo:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: 'Falha ao processar o upload do arquivo',
+        details: (error as Error).message
+      });
+    }
+    return; // Explicit return to satisfy TS7030
+  }
+);
 
 export default router;
