@@ -284,26 +284,57 @@ Após executar `npm run test:coverage`, o relatório será gerado em:
 ### Estrutura
 
 - **Unitários**: `tests/unit/`
-  - `searchService.test.ts` - Busca global
-  - `searchHelpers.test.ts` - Normalização de texto
-  - `filterBuilder.test.ts` - Construção de filtros
-  - `filterValidator.test.ts` - Validação de filtros
-  - `orderByHelpers.test.ts` - Ordenação
-  - `paginationHelper.test.ts` - Paginação
-  - `services/filterService.test.ts` - Testes agrupados de filtros
-  - `controllers/searchController.test.ts` - Controller de busca
+  - `searchService.test.ts` - Busca global e lógica de agregação
+  - `searchHelpers.test.ts` - Normalização de texto, snippets, relevância, validação
+  - `filterBuilder.test.ts` - Construção de queries Prisma a partir de filtros
+  - `filterValidator.test.ts` - Validação de filtros (campos, operadores, tipos)
+  - `orderByHelpers.test.ts` - Construção de ordenação Prisma
+  - `paginationHelper.test.ts` - Processamento de parâmetros de paginação
+  - `services/filterService.test.ts` - Testes agrupados de validação + construção
+  - `controllers/searchController.test.ts` - Controller de busca (mocks)
 
 - **Integração**: `tests/integration/`
-  - `search/searchRoutes.test.ts` - Busca global E2E
-  - `search/multiEntitySearch.test.ts` - Busca simultânea em múltiplas entidades
-  - `search/diacriticsSearch.test.ts` - Normalização de texto
-  - `filters/advancedFilters.test.ts` - Filtros avançados (todos os 13 operadores)
-  - `filters/combinedFiltersWithSearch.test.ts` - Filtros combinados com busca textual
+  - `search/searchRoutes.test.ts` - Busca global E2E (múltiplas entidades, isolamento, permissões)
+  - `search/multiEntitySearch.test.ts` - Busca simultânea, agregação, limites por entidade
+  - `search/diacriticsSearch.test.ts` - Normalização de texto (acentos, case-insensitive)
+  - `filters/advancedFilters.test.ts` - Todos os 13 operadores, relacionamentos, multi-tenant
+  - `filters/combinedFiltersWithSearch.test.ts` - Filtros + busca textual, precedência, combinações
   - `filters/entitySpecificFilters.test.ts` - Filtros específicos por entidade
-  - `pagination/pagination.test.ts` - Paginação com volume e combinações
-  - `orderBy/orderBy.test.ts` - Ordenação
-  - `performance/volumePerformance.test.ts` - Performance com volume massivo
-  - `performance/queryPerformance.test.ts` - Performance de queries
+  - `pagination/pagination.test.ts` - Paginação com volume alto, filtros complexos, ordenação múltipla
+  - `orderBy/orderBy.test.ts` - Ordenação simples e múltipla, todas as entidades
+  - `performance/volumePerformance.test.ts` - Performance com 1000+ registros (< 500ms)
+  - `performance/queryPerformance.test.ts` - Performance básica de queries, limites, timeouts
+
+### Executando Testes de Busca/Filtros
+
+```bash
+# Todos os testes de busca/filtros
+npm test -- --testPathPattern='search|filter|orderBy|pagination'
+
+# Apenas busca
+npm test -- --testPathPattern='search'
+
+# Apenas filtros
+npm test -- --testPathPattern='filter'
+
+# Com cobertura
+npm run test:coverage:search
+
+# Teste específico
+npm test -- tests/integration/search/multiEntitySearch.test.ts
+npm test -- tests/integration/performance/volumePerformance.test.ts
+```
+
+### Cobertura Esperada
+
+- **Global**: 70% (branches, functions, lines, statements)
+- **Busca/Filtros**: 75-80%
+  - `searchService.ts`: 75%
+  - `searchHelpers.ts`: 80%
+  - `filterBuilder.ts`: 80%
+  - `filterValidator.ts`: 80%
+  - `orderByHelpers.ts`: 75%
+  - `paginationHelper.ts`: 75%
 
 ### Helpers
 
