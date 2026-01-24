@@ -6,7 +6,6 @@
  * e coleta de estatísticas e erros.
  */
 
-import { Prisma, Contact, Company, Lead, Opportunity } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { 
   ProcessImportResult, 
@@ -22,7 +21,48 @@ import { IMPORT_CONFIG, getEntityImportConfig } from '../config/importConfig';
 import { validateImportRow } from '../utils/importValidator';
 import { normalizeValue } from '../utils/valueNormalizer';
 import { mapFieldsToEntity } from '../utils/fieldMapper';
-// import { createAuditLog } from '../services/auditLogService'; // Temporarily commented out due to build errors
+import { logAudit } from '../utils/auditLog';
+import { FieldValidationRules } from '../types/validation.types';
+
+/**
+ * Mapeia uma única linha para a entidade
+ * Wrapper para mapFieldsToEntity que aceita uma única linha como objeto
+ */
+async function mapSingleRowToEntity(
+  row: any,
+  mappings: FieldMapping[],
+  entityType: string,
+  tenantId: string,
+  userId?: string
+): Promise<Record<string, any>> {
+  // Converter objeto para array de valores baseado nos mapeamentos
+  const rowArray: any[] = [];
+  const maxColumnIndex = Math.max(...mappings.map(m => m.columnIndex));
+  
+  // Criar array com valores nas posições corretas
+  for (let i = 0; i <= maxColumnIndex; i++) {
+    // Se row é um objeto, tentar acessar por índice ou chave
+    if (Array.isArray(row)) {
+      rowArray[i] = row[i];
+    } else if (typeof row === 'object' && row !== null) {
+      // Tentar encontrar valor por índice de coluna ou por nome de campo
+      const mapping = mappings.find(m => m.columnIndex === i);
+      if (mapping) {
+        rowArray[i] = row[mapping.fieldName] ?? row[i] ?? null;
+      } else {
+        rowArray[i] = row[i] ?? null;
+      }
+    } else {
+      rowArray[i] = null;
+    }
+  }
+  
+  // Chamar mapFieldsToEntity com array de uma linha
+  const mappedRows = await mapFieldsToEntity([rowArray], mappings, entityType, tenantId, userId);
+  
+  // Retornar apenas os dados mapeados da primeira (e única) linha
+  return mappedRows[0]?.mappedData || {};
+}
 
 // Interface para dados de criação de entidade
 interface EntityCreationData {
@@ -129,21 +169,23 @@ export async function processImportBatch(
       stats.recordsPerSecond = Math.round((stats.processedRows / stats.durationMs) * 1000);
     }
 
-    // Registrar auditoria - função não disponível no momento
-    // await createAuditLog({
-    //   tenantId,
-    //   userId,
-    //   action: 'IMPORT',
-    //   entity: entityType,
-    //   entityId: importId,
-    //   details: {
-    //     totalRows: stats.totalRows,
-    //     processedRows: stats.processedRows,
-    //     successCount: stats.successCount,
-    //     errorCount: stats.errorCount,
-    //     durationMs: stats.durationMs,
-    //   },
-    // });
+    // Registrar auditoria (não bloqueia se falhar)
+    logAudit(
+      entityType as any,
+      importId,
+      'create',
+      userId,
+      tenantId,
+      {
+        totalRows: { new: stats.totalRows },
+        processedRows: { new: stats.processedRows },
+        successCount: { new: stats.successCount },
+        errorCount: { new: stats.errorCount },
+        durationMs: { new: stats.durationMs },
+      }
+    ).catch(() => {
+      // Erro na auditoria não deve impedir o retorno do resultado
+    });
 
     return {
       importId,
@@ -209,6 +251,18 @@ async function processSingleBatch(
   errors: ImportError[];
   warnings: ImportWarning[];
 }> {
+  // Verificar token de cancelamento se fornecido
+  if (cancellationToken?.isCancelled) {
+    return {
+      successCount: 0,
+      errorCount: 0,
+      skippedCount: 0,
+      duplicateCount: 0,
+      errors: [],
+      warnings: [],
+    };
+  }
+
   const result = {
     successCount: 0,
     errorCount: 0,
@@ -369,9 +423,10 @@ async function validateAndNormalizeBatch(
   mappings: FieldMapping[],
   entityType: string,
   tenantId: string,
-  options: ProcessOptions,
-  entityConfig: ReturnType<typeof getEntityImportConfig>
+  _options: ProcessOptions, // Prefixo _ indica intencionalmente não usado (pode ser usado no futuro)
+  _entityConfig: ReturnType<typeof getEntityImportConfig> // Prefixo _ indica intencionalmente não usado
 ): Promise<BatchValidationResult> {
+  // options e entityConfig podem ser usados no futuro para validações específicas
   const validRows: any[] = [];
   const invalidRows: Array<{
     rowIndex: number;
@@ -387,24 +442,38 @@ async function validateAndNormalizeBatch(
 
     try {
       // Mapear campos da linha
-      const mappedRow = mapFieldsToEntity(row, mappings, entityType);
+      const mappedRow = await mapSingleRowToEntity(row, mappings, entityType, tenantId, undefined);
+      
+      // Converter FieldMapping[] para Record<string, FieldValidationRules>
+      const fieldRules: Record<string, FieldValidationRules> = {};
+      for (const mapping of mappings) {
+        fieldRules[mapping.fieldName] = {
+          required: mapping.required,
+          unique: mapping.unique,
+        };
+      }
       
       // Validar a linha
-      const validationErrors = await validateImportRow(
+      const validationResult = await validateImportRow(
         mappedRow,
         entityType,
-        mappings,
+        fieldRules,
         tenantId,
-        options
+        undefined, // userId opcional
+        undefined // normalizationOptions opcional
       );
 
-      if (validationErrors.length > 0) {
+      if (!validationResult.isValid && validationResult.errors.length > 0) {
         // Adicionar erros de validação
         invalidRows.push({
           rowIndex,
-          errors: validationErrors.map(error => ({
-            ...error,
+          errors: validationResult.errors.map((error: any) => ({
             row: rowIndex,
+            field: error.field,
+            code: error.code,
+            message: error.message,
+            severity: error.severity || 'error',
+            value: error.value,
           })),
           originalRow: row,
         });
@@ -456,11 +525,11 @@ function normalizeRowValues(row: any, mappings: FieldMapping[]): any {
  */
 async function processValidRows(
   validRows: any[],
-  mappings: FieldMapping[],
+  _mappings: FieldMapping[], // Prefixo _ indica intencionalmente não usado
   entityType: string,
   tenantId: string,
   userId: string,
-  options: ProcessOptions,
+  _options: ProcessOptions, // Prefixo _ indica intencionalmente não usado
   result: {
     successCount: number;
     errorCount: number;
@@ -623,7 +692,9 @@ class ErrorCollector {
 
 /**
  * Função auxiliar para coletar erros de forma padronizada
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function collectError(
   collector: ErrorCollector,
   rowIndex: number,
@@ -677,7 +748,7 @@ async function updateExistingRecords(
   for (const dup of duplicates) {
     try {
       // Mapear campos da linha duplicada
-      const mappedRow = mapFieldsToEntity(dup.originalRow, mappings, entityType);
+      const mappedRow = await mapSingleRowToEntity(dup.originalRow, mappings, entityType, tenantId, userId);
       
       // Normalizar valores
       const normalizedRow = normalizeRowValues(mappedRow, mappings);
@@ -714,7 +785,7 @@ async function createRecordsInBatch(
   entityDataList: EntityCreationData[],
   entityType: string,
   tenantId: string,
-  userId: string
+  _userId: string // Prefixo _ indica intencionalmente não usado (pode ser usado para auditoria futura)
 ): Promise<any[]> {
   if (entityDataList.length === 0) {
     return [];
@@ -740,18 +811,16 @@ async function createRecordsInBatch(
               data: {
                 ...entityData,
                 tenantId,
-                userId,
-              },
+              } as any,
             });
             break;
 
           case 'company':
             createdRecord = await tx.company.create({
-              data: {
+              data: ({
                 ...entityData,
                 tenantId,
-                userId,
-              },
+              }) as any,
             });
             break;
 
@@ -760,8 +829,7 @@ async function createRecordsInBatch(
               data: {
                 ...entityData,
                 tenantId,
-                userId,
-              },
+              } as any,
             });
             break;
 
@@ -770,8 +838,7 @@ async function createRecordsInBatch(
               data: {
                 ...entityData,
                 tenantId,
-                userId,
-              },
+              } as any,
             });
             break;
 
@@ -797,7 +864,9 @@ async function createRecordsInBatch(
 
 /**
  * Cria registros em lote usando createMany (mais eficiente para grandes volumes)
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function createRecordsInBatchOptimized(
   entityDataList: EntityCreationData[],
   entityType: string,
@@ -888,76 +957,84 @@ async function updateRecordByUniqueField(
       updatedBy: userId, // Adicionando usuário que atualizou
     };
 
+    // Construir where clause dinâmico
+    const whereClause: any = {
+      tenantId,
+      [uniqueField]: uniqueValue,
+    };
+
     switch (entityType.toLowerCase()) {
-      case 'contact':
-        // Usar upsert para criar ou atualizar
-        updatedRecord = await tx.contact.upsert({
-          where: {
-            // Criar condição única com tenantId e campo único
-            [`${uniqueField}_tenantId`]: {
-              [uniqueField]: uniqueValue,
+      case 'contact': {
+        const existing = await tx.contact.findFirst({ where: whereClause });
+        if (existing) {
+          updatedRecord = await tx.contact.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+        } else {
+          updatedRecord = await tx.contact.create({
+            data: {
+              ...updateData,
               tenantId,
-            } as any,
-          },
-          update: updateData,
-          create: {
-            ...updateData,
-            tenantId,
-            userId, // Usuário que criou (também)
-          },
-        });
+            },
+          });
+        }
         break;
+      }
 
-      case 'company':
-        updatedRecord = await tx.company.upsert({
-          where: {
-            [`${uniqueField}_tenantId`]: {
-              [uniqueField]: uniqueValue,
+      case 'company': {
+        const existing = await tx.company.findFirst({ where: whereClause });
+        if (existing) {
+          updatedRecord = await tx.company.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+        } else {
+          updatedRecord = await tx.company.create({
+            data: {
+              ...updateData,
               tenantId,
-            } as any,
-          },
-          update: updateData,
-          create: {
-            ...updateData,
-            tenantId,
-            userId,
-          },
-        });
+            },
+          });
+        }
         break;
+      }
 
-      case 'lead':
-        updatedRecord = await tx.lead.upsert({
-          where: {
-            [`${uniqueField}_tenantId`]: {
-              [uniqueField]: uniqueValue,
+      case 'lead': {
+        const existing = await tx.lead.findFirst({ where: whereClause });
+        if (existing) {
+          updatedRecord = await tx.lead.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+        } else {
+          updatedRecord = await tx.lead.create({
+            data: {
+              ...updateData,
               tenantId,
-            } as any,
-          },
-          update: updateData,
-          create: {
-            ...updateData,
-            tenantId,
-            userId,
-          },
-        });
+            },
+          });
+        }
         break;
+      }
 
-      case 'opportunity':
-        updatedRecord = await tx.opportunity.upsert({
-          where: {
-            [`${uniqueField}_tenantId`]: {
-              [uniqueField]: uniqueValue,
+      case 'opportunity': {
+        const existing = await tx.opportunity.findFirst({ where: whereClause });
+        if (existing) {
+          updatedRecord = await tx.opportunity.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+        } else {
+          updatedRecord = await tx.opportunity.create({
+            data: {
+              ...updateData,
               tenantId,
-            } as any,
-          },
-          update: updateData,
-          create: {
-            ...updateData,
-            tenantId,
-            userId,
-          },
-        });
+            },
+          });
+        }
         break;
+      }
 
       default:
         throw new Error(`Tipo de entidade não suportado para atualização: ${entityType}`);
@@ -974,7 +1051,9 @@ async function updateRecordByUniqueField(
 
 /**
  * Atualiza múltiplos registros em lote com controle de concorrência
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function updateRecordsInBatch(
   updates: Array<{
     entityData: any;
@@ -1014,7 +1093,9 @@ async function updateRecordsInBatch(
 
 /**
  * Atualiza registros existentes com controle de versão otimista
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function updateExistingRecordsWithConcurrencyControl(
   duplicates: Array<{ rowIndex: number; field: string; value: any; originalRow: any }>,
   mappings: FieldMapping[],
@@ -1034,13 +1115,45 @@ async function updateExistingRecordsWithConcurrencyControl(
   for (const dup of duplicates) {
     try {
       // Mapear campos da linha duplicada
-      const mappedRow = mapFieldsToEntity(dup.originalRow, mappings, entityType);
+      const mappedRow = await mapSingleRowToEntity(dup.originalRow, mappings, entityType, tenantId, userId);
+
+      // Converter FieldMapping[] para Record<string, FieldValidationRules>
+      const fieldRules: Record<string, FieldValidationRules> = {};
+      for (const mapping of mappings) {
+        fieldRules[mapping.fieldName] = {
+          required: mapping.required,
+          unique: mapping.unique,
+        };
+      }
+
+      // Validar a linha antes de atualizar
+      const validationResult = await validateImportRow(
+        mappedRow,
+        entityType,
+        fieldRules,
+        tenantId,
+        userId
+      );
+
+      if (!validationResult.isValid && validationResult.errors.length > 0) {
+        // Pular linha com erros de validação
+        result.skippedCount++;
+        result.errors.push(...validationResult.errors.map((error: any) => ({
+          row: dup.rowIndex,
+          field: error.field,
+          code: error.code,
+          message: error.message,
+          severity: error.severity || 'error',
+          value: error.value,
+        })));
+        continue;
+      }
 
       // Normalizar valores
       const normalizedRow = normalizeRowValues(mappedRow, mappings);
 
       // Atualizar registro existente com controle de concorrência
-      const updatedRecord = await updateRecordByUniqueField(
+      await updateRecordByUniqueField(
         normalizedRow,
         dup.field,
         dup.value,
@@ -1245,7 +1358,9 @@ function getPeakMemoryUsage(): number {
 
 /**
  * Verifica uso de memória e lança erro se exceder o limite
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function checkMemoryUsage(): void {
   const usage = process.memoryUsage();
   if (usage.heapUsed > IMPORT_CONFIG.MEMORY_LIMIT) {
@@ -1255,7 +1370,9 @@ function checkMemoryUsage(): void {
 
 /**
  * Função para liberar memória entre batches
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function releaseMemory(): void {
   // Forçar garbage collection se disponível
   if (global.gc) {
@@ -1265,7 +1382,9 @@ function releaseMemory(): void {
 
 /**
  * Função para verificar timeout de processamento
+ * @deprecated Esta função não está sendo usada atualmente
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function checkTimeout(startTime: Date, maxDuration: number): boolean {
   return (Date.now() - startTime.getTime()) > maxDuration;
 }
