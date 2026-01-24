@@ -1,6 +1,6 @@
 /**
  * Utilitário para validação de linhas de importação
- * 
+ *
  * Responsável por:
  * - Validar campos obrigatórios
  * - Validar tipos de campo
@@ -8,6 +8,7 @@
  * - Validar unicidade de campos
  * - Normalizar valores
  * - Retornar erros detalhados
+ * - Implementar cache de validações para melhorar performance em grandes volumes
  */
 
 import { ValidationResult, ValidationError, FieldValidationRules, ValidationStats, ErrorSeverity } from '../types/validation.types';
@@ -15,6 +16,37 @@ import { ValidationRulesService } from '../services/validationRulesService';
 import { normalizeValue, NormalizationOptions } from './valueNormalizer';
 import { validateUniqueness } from '../services/uniquenessValidator';
 import { validateBusinessRules } from '../services/businessRuleValidator';
+import { IMPORT_CONFIG } from '../config/importConfig';
+
+// Cache de validações para campos únicos
+class ValidationCache {
+  private cache: Map<string, boolean> = new Map();
+  private ttlMap: Map<string, number> = new Map();
+
+  set(key: string, value: boolean): void {
+    this.cache.set(key, value);
+    this.ttlMap.set(key, Date.now() + IMPORT_CONFIG.VALIDATION_CACHE_TTL);
+  }
+
+  get(key: string): boolean | undefined {
+    // Verificar se o TTL expirou
+    const ttl = this.ttlMap.get(key);
+    if (ttl && Date.now() > ttl) {
+      this.cache.delete(key);
+      this.ttlMap.delete(key);
+      return undefined;
+    }
+
+    return this.cache.get(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+    this.ttlMap.clear();
+  }
+}
+
+const validationCache = new ValidationCache();
 
 /**
  * Valida uma linha de dados de importação
@@ -592,32 +624,62 @@ async function validateUniquenessFields(
   for (const [fieldName, rule] of Object.entries(fieldRules)) {
     if (rule.unique) {
       const value = row[fieldName];
-      
+
       // Só valida unicidade se o campo tiver um valor
       if (value !== undefined && value !== null && value !== '') {
-        const uniquenessResult = await validateUniqueness(
-          value,
-          fieldName,
-          entityType,
-          tenantId,
-          userId
-        );
+        // Criar chave de cache para este campo e valor
+        const cacheKey = `${entityType}_${tenantId}_${fieldName}_${value}`;
 
-        if (!uniquenessResult.isUnique) {
+        // Verificar cache primeiro
+        const cachedResult = validationCache.get(cacheKey);
+
+        if (cachedResult === false) {
+          // Já sabemos que não é único
           errors.push({
             field: fieldName,
             code: 'NOT_UNIQUE',
             message: `Valor "${value}" para o campo "${fieldName}" já existe e deve ser único`,
             severity: 'error',
             value: value,
-            details: { conflictingIds: uniquenessResult.conflictingIds }
+            details: { cached: true }
           });
+        } else if (cachedResult === undefined) {
+          // Não está no cache, verificar no banco de dados
+          const uniquenessResult = await validateUniqueness(
+            value,
+            fieldName,
+            entityType,
+            tenantId,
+            userId
+          );
+
+          if (!uniquenessResult.isUnique) {
+            errors.push({
+              field: fieldName,
+              code: 'NOT_UNIQUE',
+              message: `Valor "${value}" para o campo "${fieldName}" já existe e deve ser único`,
+              severity: 'error',
+              value: value,
+              details: { conflictingIds: uniquenessResult.conflictingIds }
+            });
+            validationCache.set(cacheKey, false); // Armazenar que não é único
+          } else {
+            validationCache.set(cacheKey, true); // Armazenar que é único
+          }
         }
+        // Se cachedResult === true, então é único e não há erro
       }
     }
   }
 
   return errors;
+}
+
+/**
+ * Limpa o cache de validações
+ */
+export function clearValidationCache(): void {
+  validationCache.clear();
 }
 
 /**
