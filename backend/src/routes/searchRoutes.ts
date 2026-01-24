@@ -6,7 +6,7 @@
  */
 
 import express from 'express';
-import { globalSearch } from '../controllers/searchController';
+import { searchGlobal } from '../controllers/searchController';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { authMiddleware } from '../middleware/authMiddleware';
 // Nota: Não usamos authorizationMiddleware para busca, pois permission check é feito no service
@@ -35,7 +35,7 @@ router.get(
   '/',
   tenantContextMiddleware,
   authMiddleware,
-  globalSearch
+  searchGlobal
 );
 
 export default router;

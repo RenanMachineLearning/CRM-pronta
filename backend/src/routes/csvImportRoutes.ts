@@ -259,6 +259,176 @@ router.post('/map-fields', upload.single('file'), async (req: Request, res: Resp
 });
 
 /**
+ * Endpoint para mapeamento de campos baseado em arquivo temporário
+ *
+ * Requer autenticação
+ * Recebe: entityType (Contact, Company, etc.), mappings (array de mapeamentos)
+ * Mapeamento: { columnIndex, fieldName, required }
+ * Valida que campos existem na entidade
+ * Retorna preview de mapeamento (primeiras 5 linhas)
+ */
+router.post('/:fileId/map', async (req: Request, res: Response) => {
+  try {
+    // tenantId e userId já devem estar disponíveis via middleware
+    const tenantId = req.tenantId;
+    const userId = req.userId;
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({
+        error: 'Não autorizado',
+        message: 'Tenant ou usuário não identificado'
+      });
+    }
+
+    const { fileId } = req.params;
+    const { entityType, mappings, previewRowCount = 5 } = req.body;
+
+    // Validar parâmetros
+    if (!fileId) {
+      return res.status(400).json({
+        error: 'fileId é obrigatório',
+        message: 'O ID do arquivo é necessário para o mapeamento'
+      });
+    }
+
+    if (!entityType) {
+      return res.status(400).json({
+        error: 'entityType é obrigatório',
+        message: 'O tipo da entidade é necessário para o mapeamento'
+      });
+    }
+
+    if (!mappings || !Array.isArray(mappings) || mappings.length === 0) {
+      return res.status(400).json({
+        error: 'mappings é obrigatório',
+        message: 'É necessário fornecer pelo menos um mapeamento de campo'
+      });
+    }
+
+    // Validar formato dos mapeamentos
+    for (const [index, mapping] of mappings.entries()) {
+      if (typeof mapping.columnIndex !== 'number' || mapping.columnIndex < 0) {
+        return res.status(400).json({
+          error: `Mapeamento inválido no índice ${index}`,
+          message: 'columnIndex deve ser um número inteiro não negativo'
+        });
+      }
+
+      if (!mapping.fieldName || typeof mapping.fieldName !== 'string') {
+        return res.status(400).json({
+          error: `Mapeamento inválido no índice ${index}`,
+          message: 'fieldName é obrigatório e deve ser uma string'
+        });
+      }
+
+      if (typeof mapping.required !== 'boolean') {
+        return res.status(400).json({
+          error: `Mapeamento inválido no índice ${index}`,
+          message: 'required deve ser um valor booleano'
+        });
+      }
+    }
+
+    // Obter arquivo temporário
+    const fileData = temporaryFileStorage.getFile(fileId);
+    if (!fileData) {
+      return res.status(404).json({
+        error: 'Arquivo não encontrado',
+        message: 'O arquivo especificado não existe ou expirou'
+      });
+    }
+
+    // Verificar se o usuário tem acesso ao arquivo
+    if (!temporaryFileStorage.validateAccess(fileId, userId, tenantId)) {
+      return res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Você não tem permissão para acessar este arquivo'
+      });
+    }
+
+    // Determinar tipo de arquivo
+    const fileName = fileData.metadata.originalName.toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isXlsx = fileName.endsWith('.xlsx');
+    const isXls = fileName.endsWith('.xls');
+
+    if (!isCsv && !isXlsx && !isXls) {
+      return res.status(400).json({
+        error: 'Tipo de arquivo não suportado',
+        message: 'Apenas arquivos CSV, XLSX e XLS são permitidos'
+      });
+    }
+
+    // Parsear o arquivo para obter as linhas
+    let rows: any[][] = [];
+    if (isCsv) {
+      // Parsear CSV
+      const content = fileData.buffer.toString('utf8');
+      const Papa = await import('papaparse');
+      const result = Papa.default.parse(content, {
+        header: false, // Não usar cabeçalhos para obter todas as linhas como arrays
+        skipEmptyLines: true
+      });
+      rows = result.data as any[][];
+    } else {
+      // Parsear Excel
+      const { parseExcel } = await import('../utils/excelParser');
+      const result = await parseExcel(fileData.buffer, {
+        sheetIndex: 0, // Usar primeira planilha por padrão
+        header: false // Obter dados como arrays
+      });
+      rows = result.data as any[][];
+    }
+
+    // Validar mapeamento
+    const { isValid: mappingValid, errors: mappingErrors } = await import('../utils/fieldMapper').then(fm =>
+      fm.validateMapping(mappings, entityType, tenantId, userId)
+    );
+
+    if (!mappingValid) {
+      return res.status(400).json({
+        error: 'Mapeamento inválido',
+        message: 'Os mapeamentos fornecidos contêm erros',
+        details: mappingErrors
+      });
+    }
+
+    // Gerar preview de mapeamento
+    const { generateMappingPreview } = await import('../utils/fieldMapper');
+    const preview = await generateMappingPreview(
+      rows,
+      mappings,
+      entityType,
+      tenantId,
+      userId,
+      previewRowCount
+    );
+
+    res.status(200).json({
+      success: true,
+      fileId,
+      entityType,
+      mappings,
+      preview,
+      validation: {
+        isValid: true,
+        errors: [],
+        warnings: []
+      },
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error('Erro no mapeamento de campos:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao processar o mapeamento de campos',
+      details: (error as Error).message
+    });
+  }
+  return; // Explicit return to satisfy TS7030
+});
+
+/**
  * Endpoint para processamento de importação (CSV ou Excel)
  */
 router.post('/process', upload.single('file'), async (req: Request, res: Response) => {

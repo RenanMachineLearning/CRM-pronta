@@ -11,15 +11,17 @@
  */
 
 import { parseCSV, CsvParseResult } from '../utils/csvParser';
-import { validateCsvData, ValidationError } from '../utils/csvValidator';
+import { validateCsvData } from '../utils/csvValidator';
 import { parseExcel, ExcelParseResult } from '../utils/excelParser';
-import { validateExcelData, ExcelValidationError } from '../utils/excelValidator';
+import { validateExcelData } from '../utils/excelValidator';
 import { ContactService } from './contactService';
 import { CompanyService } from './companyService';
 import { CreateContactData } from './contactService';
 import { CreateCompanyData } from './companyService';
-import { prisma } from '../utils/prisma';
 import { Contact, Company, Lead, Opportunity } from '@prisma/client';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { prisma } from '../utils/prisma';
 
 export interface ImportResult {
   success: boolean;
@@ -140,7 +142,7 @@ export class CsvImportService {
         if (!validation.valid) {
           // Converter erros para o formato padrão
           const validationErrors = (validation as any).errors || [];
-          validationErrors.forEach(validationError => {
+          validationErrors.forEach((validationError: any) => {
             errors.push({
               rowIndex: validationError.rowIndex,
               message: `Erro de validação: ${validationError.message}`,
@@ -202,7 +204,7 @@ export class CsvImportService {
       summary.processedRows = summary.totalRows - summary.failedRows;
 
       return {
-        success: errors.length === 0 || options.continueOnError,
+        success: errors.length === 0 || (options.continueOnError ?? false),
         importedCount,
         errorCount: errors.length,
         errors,
@@ -438,11 +440,22 @@ export class CsvImportService {
    */
   private static async importContact(contactData: CreateContactData, options: ImportOptions): Promise<Contact> {
     // Adicionar tenantId e userId ao dados de criação
-    return await ContactService.createContact(
+    const contact = await ContactService.createContact(
       contactData,
       options.tenantId,
       options.userId
     );
+    // Ensure required fields are defined
+    return {
+      ...contact,
+      lastName: contact.lastName || null,
+      title: contact.title || null,
+      gender: contact.gender || null,
+      birthDate: contact.birthDate || null,
+      notes: contact.notes || null,
+      companyId: contact.companyId || null,
+      deletedAt: contact.deletedAt || null
+    };
   }
 
   /**
@@ -450,17 +463,25 @@ export class CsvImportService {
    */
   private static async importCompany(companyData: CreateCompanyData, options: ImportOptions): Promise<Company> {
     // Adicionar tenantId e userId ao dados de criação
-    return await CompanyService.createCompany(
+    const company = await CompanyService.createCompany(
       companyData,
       options.tenantId,
       options.userId
     );
+    // Ensure required fields are defined
+    return {
+      ...company,
+      website: company.website || null,
+      industry: company.industry || null,
+      size: company.size || null,
+      deletedAt: company.deletedAt || null
+    };
   }
 
   /**
    * Importa um lead
    */
-  private static async importLead(leadData: any, options: ImportOptions): Promise<Lead> {
+  private static async importLead(_leadData: any, _options: ImportOptions): Promise<Lead> {
     // Implementação para importação de lead
     // Esta é uma implementação simplificada - a completa dependeria do serviço de Lead
     throw new Error('Serviço de importação de Lead não implementado');
@@ -469,7 +490,7 @@ export class CsvImportService {
   /**
    * Importa uma oportunidade
    */
-  private static async importOpportunity(opportunityData: any, options: ImportOptions): Promise<Opportunity> {
+  private static async importOpportunity(_opportunityData: any, _options: ImportOptions): Promise<Opportunity> {
     // Implementação para importação de oportunidade
     // Esta é uma implementação simplificada - a completa dependeria do serviço de Opportunity
     throw new Error('Serviço de importação de Oportunidade não implementado');

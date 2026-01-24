@@ -201,11 +201,9 @@ async function validateContactRelations(data: any[], tenantId: string): Promise<
           tenantId,
           emails: {
             some: {
-              email: String(row.email).toLowerCase(),
-              deletedAt: null
+              email: String(row.email).toLowerCase()
             }
-          },
-          deletedAt: null
+          }
         }
       });
 

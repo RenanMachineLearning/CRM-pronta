@@ -163,8 +163,10 @@ async function validateExcelField(
   }
 
   // Verificar validador padrão (reutilizando os do CSV)
-  const { DEFAULT_FIELD_VALIDATORS } = await import('./csvValidator');
-  const defaultValidator = DEFAULT_FIELD_VALIDATORS[fieldName.toLowerCase()];
+  // Importar e usar os validadores padrão
+  const csvValidatorModule = await import('./csvValidator');
+  const defaultValidators = (csvValidatorModule as any).DEFAULT_FIELD_VALIDATORS || {};
+  const defaultValidator = defaultValidators[fieldName.toLowerCase()];
   if (defaultValidator) {
     if (!defaultValidator(value)) {
       return {
@@ -217,11 +219,9 @@ async function validateContactRelations(data: any[], tenantId: string, sheetName
           tenantId,
           emails: {
             some: {
-              email: String(row.email).toLowerCase(),
-              deletedAt: null
+              email: String(row.email).toLowerCase()
             }
-          },
-          deletedAt: null
+          }
         }
       });
 
@@ -254,8 +254,7 @@ async function validateCompanyRelations(data: any[], tenantId: string, sheetName
       const existingCompany = await prisma.company.findFirst({
         where: {
           tenantId,
-          name: String(row.name),
-          deletedAt: null
+          name: String(row.name)
         }
       });
 
