@@ -1,10 +1,10 @@
 /**
- * Serviço para importação de dados CSV
- * 
+ * Serviço para importação de dados (CSV e Excel)
+ *
  * Responsável por:
- * - Processar arquivos CSV em lotes
+ * - Processar arquivos CSV e Excel em lotes
  * - Validar dados antes da importação
- * - Converter dados CSV para modelos do sistema
+ * - Converter dados para modelos do sistema
  * - Executar importação com tratamento de erros
  * - Manter consistência dos dados
  * - Implementar rollback em caso de falhas críticas
@@ -12,6 +12,8 @@
 
 import { parseCSV, CsvParseResult } from '../utils/csvParser';
 import { validateCsvData, ValidationError } from '../utils/csvValidator';
+import { parseExcel, ExcelParseResult } from '../utils/excelParser';
+import { validateExcelData, ExcelValidationError } from '../utils/excelValidator';
 import { ContactService } from './contactService';
 import { CompanyService } from './companyService';
 import { CreateContactData } from './contactService';
@@ -47,10 +49,13 @@ export interface ImportOptions {
   batchSize?: number; // Número de registros por lote
   validateBeforeImport?: boolean; // Validar antes de importar
   continueOnError?: boolean; // Continuar importando mesmo com erros
-  fieldMapping?: { [csvField: string]: string }; // Mapeamento de campos CSV para campos do modelo
+  fieldMapping?: { [originalField: string]: string }; // Mapeamento de campos para campos do modelo
   tenantId: string;
   userId: string;
   entityType: 'contact' | 'company' | 'lead' | 'opportunity';
+  fileType: 'csv' | 'xlsx' | 'xls'; // Tipo de arquivo sendo importado
+  sheetName?: string; // Nome da planilha a ser usada (para Excel)
+  sheetIndex?: number; // Índice da planilha a ser usada (para Excel)
 }
 
 export class CsvImportService {
@@ -58,9 +63,9 @@ export class CsvImportService {
   private static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   /**
-   * Importa dados de um arquivo CSV
+   * Importa dados de um arquivo (CSV ou Excel)
    */
-  static async importFromCsv(
+  static async importFromFile(
     fileBuffer: Buffer,
     options: ImportOptions
   ): Promise<ImportResult> {
@@ -81,29 +86,61 @@ export class CsvImportService {
         throw new Error(`Arquivo muito grande. Tamanho máximo permitido: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
       }
 
-      // Parsear o CSV
-      const parseResult: CsvParseResult = await parseCSV(fileBuffer);
-      summary.totalRows = parseResult.data.length;
+      let parseResult: CsvParseResult | ExcelParseResult;
+      let parsedData: any[];
 
-      if (parseResult.errors.length > 0) {
-        parseResult.errors.forEach(error => {
-          errors.push({
-            rowIndex: error.row,
-            message: `Erro de parsing na linha ${error.row}: ${error.message}`,
-            originalData: error
+      // Parsear o arquivo com base no tipo
+      if (options.fileType === 'csv') {
+        parseResult = await parseCSV(fileBuffer);
+        parsedData = (parseResult as CsvParseResult).data;
+        summary.totalRows = parsedData.length;
+
+        // Processar erros de parsing CSV
+        if ((parseResult as CsvParseResult).errors && (parseResult as CsvParseResult).errors.length > 0) {
+          (parseResult as CsvParseResult).errors.forEach(error => {
+            errors.push({
+              rowIndex: error.row,
+              message: `Erro de parsing na linha ${error.row}: ${error.message}`,
+              originalData: error
+            });
           });
+        }
+      } else if (options.fileType === 'xlsx' || options.fileType === 'xls') {
+        parseResult = await parseExcel(fileBuffer, {
+          sheetName: options.sheetName,
+          sheetIndex: options.sheetIndex,
+          header: true
         });
+        parsedData = (parseResult as ExcelParseResult).data;
+        summary.totalRows = parsedData.length;
+
+        // Adicionar informações sobre a planilha processada
+        console.log(`Processando planilha: ${(parseResult as ExcelParseResult).activeSheet}`);
+      } else {
+        throw new Error(`Tipo de arquivo não suportado: ${options.fileType}`);
       }
 
       // Validar dados se solicitado
       if (options.validateBeforeImport) {
-        const validation = await validateCsvData(parseResult.data, {
-          tenantId: options.tenantId,
-          entityType: options.entityType
-        });
+        let validation;
+        if (options.fileType === 'csv') {
+          validation = await validateCsvData(parsedData, {
+            tenantId: options.tenantId,
+            entityType: options.entityType
+          });
+        } else {
+          // Para Excel, usamos a validação específica
+          validation = await validateExcelData(parsedData,
+            (parseResult as ExcelParseResult).activeSheet || 'Sheet1', {
+            tenantId: options.tenantId,
+            entityType: options.entityType
+          });
+        }
 
         if (!validation.valid) {
-          validation.errors.forEach(validationError => {
+          // Converter erros para o formato padrão
+          const validationErrors = (validation as any).errors || [];
+          validationErrors.forEach(validationError => {
             errors.push({
               rowIndex: validationError.rowIndex,
               message: `Erro de validação: ${validationError.message}`,
@@ -112,11 +149,11 @@ export class CsvImportService {
           });
 
           // Se não for para continuar com erros e houver erros de validação, interromper
-          if (!options.continueOnError && validation.errors.length > 0) {
+          if (!options.continueOnError && validationErrors.length > 0) {
             return {
               success: false,
               importedCount: 0,
-              errorCount: validation.errors.length,
+              errorCount: validationErrors.length,
               errors,
               summary
             };
@@ -125,7 +162,7 @@ export class CsvImportService {
       }
 
       // Aplicar mapeamento de campos se fornecido
-      let mappedData = parseResult.data;
+      let mappedData = parsedData;
       if (options.fieldMapping) {
         mappedData = this.applyFieldMapping(mappedData, options.fieldMapping);
       }
@@ -136,11 +173,11 @@ export class CsvImportService {
 
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
-        
+
         try {
           const batchResult = await this.processBatch(batch, options, summary);
           importedCount += batchResult.importedCount;
-          
+
           if (batchResult.errors.length > 0) {
             errors.push(...batchResult.errors);
             summary.failedRows += batchResult.errors.length;
@@ -152,7 +189,7 @@ export class CsvImportService {
             rowIndex: batchStartIndex,
             message: `Erro crítico ao processar lote começando na linha ${batchStartIndex}: ${(batchError as Error).message}`
           });
-          
+
           if (!options.continueOnError) {
             break; // Interromper se não for para continuar com erros
           }
@@ -174,7 +211,7 @@ export class CsvImportService {
     } catch (error) {
       summary.endTime = new Date();
       summary.durationMs = summary.endTime.getTime() - summary.startTime.getTime();
-      
+
       errors.push({
         rowIndex: -1, // Erro geral, não específico de linha
         message: `Erro crítico durante a importação: ${(error as Error).message}`
@@ -188,6 +225,23 @@ export class CsvImportService {
         summary
       };
     }
+  }
+
+  /**
+   * Importa dados de um arquivo CSV (mantido para compatibilidade)
+   * @deprecated Use importFromFile em vez disso
+   */
+  static async importFromCsv(
+    fileBuffer: Buffer,
+    options: ImportOptions
+  ): Promise<ImportResult> {
+    // Configurar opções para arquivo CSV
+    const csvOptions: ImportOptions = {
+      ...options,
+      fileType: 'csv'
+    };
+
+    return this.importFromFile(fileBuffer, csvOptions);
   }
 
   /**

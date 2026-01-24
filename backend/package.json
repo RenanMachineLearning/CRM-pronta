@@ -36,7 +36,8 @@
     "iconv-lite": "^0.7.2",
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^3.0.3",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -47,6 +48,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/papaparse": "^5.5.2",
     "@types/supertest": "^6.0.3",
+    "@types/xlsx": "^0.0.35",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
     "eslint": "^9.18.0",

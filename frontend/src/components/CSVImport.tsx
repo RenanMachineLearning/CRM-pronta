@@ -1,14 +1,14 @@
 /**
- * Componente CSVImport
- * 
- * Interface para upload e importação de arquivos CSV
+ * Componente FileImport
+ *
+ * Interface para upload e importação de arquivos (CSV e Excel)
  */
 
 import React, { useState, useRef, ChangeEvent } from 'react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 
-interface CSVImportProps {
+interface FileImportProps {
   entityType: 'contact' | 'company' | 'lead' | 'opportunity';
   onImportSuccess?: (result: any) => void;
   onImportError?: (error: any) => void;
@@ -22,7 +22,7 @@ interface ImportProgress {
   error?: string;
 }
 
-export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImportProps) {
+export function CSVImport({ entityType, onImportSuccess, onImportError }: FileImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<ImportProgress>({ 
     status: 'idle', 
@@ -37,11 +37,16 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
+      const fileName = selectedFile.name.toLowerCase();
+      const isCsv = fileName.endsWith('.csv');
+      const isXlsx = fileName.endsWith('.xlsx');
+      const isXls = fileName.endsWith('.xls');
+
+      if (!isCsv && !isXlsx && !isXls) {
         setProgress({
           status: 'error',
           progress: 0,
-          message: 'Por favor, selecione um arquivo CSV válido.',
+          message: 'Por favor, selecione um arquivo CSV ou Excel válido.',
           error: 'Formato de arquivo inválido'
         });
         return;
@@ -61,7 +66,7 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
     }
   };
 
-  // Função para validar o arquivo CSV
+  // Função para validar o arquivo (CSV ou Excel)
   const validateFile = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -82,12 +87,19 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
         setProgress({
           status: 'mapping',
           progress: 30,
-          message: 'Arquivo válido. Mapeando campos...'
+          message: result.message || 'Arquivo válido. Mapeando campos...'
         });
 
         // Obter sugestões de mapeamento
         setTimeout(() => {
-          suggestFieldMapping(result.headers);
+          if (result.fileType === 'csv') {
+            suggestFieldMapping(result.headers);
+          } else {
+            // Para Excel, usar os headers da primeira planilha
+            suggestFieldMapping(result.sheets && result.sheets.length > 0 ?
+              Object.keys(result.sheets[0]).filter(key => key !== 'name' && key !== 'rowCount' && key !== 'colCount' && key !== 'range')
+              : []);
+          }
         }, 500);
       } else {
         setProgress({
@@ -154,7 +166,7 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
         status: 'error',
         progress: 0,
         message: 'Nenhum arquivo selecionado',
-        error: 'Selecione um arquivo CSV primeiro'
+        error: 'Selecione um arquivo CSV ou Excel primeiro'
       });
       return;
     }
@@ -169,6 +181,14 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
     formData.append('file', file);
     formData.append('entityType', entityType);
     formData.append('fieldMapping', JSON.stringify(fieldMapping));
+
+    // Se for um arquivo Excel, adicionar informações da planilha
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      // Aqui poderíamos adicionar informações da planilha específica se necessário
+      // formData.append('sheetName', selectedSheetName);
+      // formData.append('sheetIndex', selectedSheetIndex.toString());
+    }
 
     try {
       const response = await fetch('/api/import/process', {
@@ -246,7 +266,7 @@ export function CSVImport({ entityType, onImportSuccess, onImportError }: CSVImp
         <div className="flex items-center space-x-4">
           <input
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
             ref={fileInputRef}
             className="block w-full text-sm text-gray-500

@@ -1,8 +1,8 @@
 /**
- * Rotas de importação de CSV
- * 
+ * Rotas de importação de arquivos (CSV e Excel)
+ *
  * Implementa endpoints para:
- * - Upload e validação de arquivos CSV
+ * - Upload e validação de arquivos CSV e Excel
  * - Mapeamento de campos
  * - Processamento de importação
  * - Consulta de status de importação
@@ -12,6 +12,8 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { CsvImportService } from '../services/csvImportService';
 import { validateCsvFormat } from '../utils/csvValidator';
+import { validateExcelFile, validateExcelStructure } from '../utils/excelValidator';
+import { getExcelSheetsMetadata } from '../utils/excelParser';
 
 // Configuração do multer para upload de arquivos
 const upload = multer({
@@ -35,7 +37,7 @@ const upload = multer({
 const router = Router();
 
 /**
- * Endpoint para upload e validação inicial de arquivo CSV
+ * Endpoint para upload e validação inicial de arquivo (CSV ou Excel)
  */
 router.post('/validate', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -43,7 +45,7 @@ router.post('/validate', upload.single('file'), async (req: Request, res: Respon
     if (!req.file) {
       return res.status(400).json({
         error: 'Nenhum arquivo enviado',
-        message: 'Por favor, envie um arquivo CSV'
+        message: 'Por favor, envie um arquivo CSV ou Excel'
       });
     }
 
@@ -56,49 +58,89 @@ router.post('/validate', upload.single('file'), async (req: Request, res: Respon
       });
     }
 
-    // Validar formato do CSV
-    const content = file.buffer.toString('utf8');
-    const formatValidation = validateCsvFormat(content);
+    // Determinar tipo de arquivo com base na extensão
+    const fileName = file.originalname.toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isXlsx = fileName.endsWith('.xlsx');
+    const isXls = fileName.endsWith('.xls');
 
-    if (!formatValidation.valid) {
+    if (!isCsv && !isXlsx && !isXls) {
       return res.status(400).json({
-        error: 'Formato de CSV inválido',
-        message: 'O arquivo CSV não está no formato correto',
-        details: formatValidation.errors
+        error: 'Tipo de arquivo não suportado',
+        message: 'Apenas arquivos CSV, XLSX e XLS são permitidos'
       });
     }
 
-    // Parsear o CSV para obter informações básicas
-    // (esta implementação assume que temos uma função parseCSV que já foi implementada)
-    // Por enquanto, retornaremos apenas uma confirmação básica
-    const lines = content.split('\n');
-    const headers = lines[0].split(',');
-    
-    res.status(200).json({
-      message: 'Arquivo CSV válido',
-      rows: lines.length - 1, // Menos 1 para desconsiderar o cabeçalho
-      columns: headers.length,
-      headers: headers.map(h => h.trim())
-    });
+    if (isCsv) {
+      // Validar formato do CSV
+      const content = file.buffer.toString('utf8');
+      const formatValidation = validateCsvFormat(content);
+
+      if (!formatValidation.valid) {
+        return res.status(400).json({
+          error: 'Formato de CSV inválido',
+          message: 'O arquivo CSV não está no formato correto',
+          details: formatValidation.errors
+        });
+      }
+
+      // Parsear o CSV para obter informações básicas
+      const lines = content.split('\n');
+      const headers = lines[0].split(',');
+
+      res.status(200).json({
+        message: 'Arquivo CSV válido',
+        fileType: 'csv',
+        rows: lines.length - 1, // Menos 1 para desconsiderar o cabeçalho
+        columns: headers.length,
+        headers: headers.map(h => h.trim())
+      });
+    } else {
+      // Validar arquivo Excel
+      const validation = await validateExcelFile(file.buffer, file.originalname);
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: 'Formato de Excel inválido',
+          message: 'O arquivo Excel não está no formato correto ou está corrompido',
+          details: validation.errors
+        });
+      }
+
+      // Obter metadados das planilhas
+      const sheetsMetadata = await getExcelSheetsMetadata(file.buffer);
+
+      res.status(200).json({
+        message: 'Arquivo Excel válido',
+        fileType: isXlsx ? 'xlsx' : 'xls',
+        sheets: sheetsMetadata.map(sheet => ({
+          name: sheet.name,
+          rowCount: sheet.rowCount,
+          colCount: sheet.colCount,
+          range: sheet.range
+        }))
+      });
+    }
   } catch (error) {
-    console.error('Erro ao validar arquivo CSV:', error);
+    console.error('Erro ao validar arquivo:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
-      message: 'Falha ao validar arquivo CSV'
+      message: 'Falha ao validar arquivo',
+      details: (error as Error).message
     });
   }
 });
 
 /**
  * Endpoint para mapeamento de campos
- * Retorna sugestões de mapeamento com base nos headers do CSV
+ * Retorna sugestões de mapeamento com base nos headers do CSV ou colunas do Excel
  */
 router.post('/map-fields', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
         error: 'Nenhum arquivo enviado',
-        message: 'Por favor, envie um arquivo CSV'
+        message: 'Por favor, envie um arquivo CSV ou Excel'
       });
     }
 
@@ -110,18 +152,48 @@ router.post('/map-fields', upload.single('file'), async (req: Request, res: Resp
       });
     }
 
-    // Parsear o CSV para obter os headers
-    const content = file.buffer.toString('utf8');
-    const lines = content.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
+    // Determinar tipo de arquivo com base na extensão
+    const fileName = file.originalname.toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isXlsx = fileName.endsWith('.xlsx');
+    const isXls = fileName.endsWith('.xls');
+
+    if (!isCsv && !isXlsx && !isXls) {
+      return res.status(400).json({
+        error: 'Tipo de arquivo não suportado',
+        message: 'Apenas arquivos CSV, XLSX e XLS são permitidos'
+      });
+    }
+
+    let headers: string[] = [];
+
+    if (isCsv) {
+      // Parsear o CSV para obter os headers
+      const content = file.buffer.toString('utf8');
+      const lines = content.split('\n');
+      headers = lines[0].split(',').map(h => h.trim());
+    } else {
+      // Para Excel, pegamos os headers da primeira linha da primeira planilha
+      // Parseamos o Excel para obter os dados da primeira planilha
+      const { parseExcel } = await import('../utils/excelParser');
+      const result = await parseExcel(file.buffer, {
+        sheetIndex: req.body.sheetIndex || 0,
+        header: true
+      });
+
+      // Os headers são as chaves do primeiro objeto retornado
+      if (result.data.length > 0) {
+        headers = Object.keys(result.data[0]);
+      }
+    }
 
     // Mapeamento sugerido com base nos nomes dos campos
-    const suggestedMapping: { [csvField: string]: string } = {};
-    
+    const suggestedMapping: { [originalField: string]: string } = {};
+
     headers.forEach(header => {
       // Normalizar o nome do campo para comparação
       const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '');
-      
+
       // Tentar encontrar correspondência com campos comuns
       if (normalizedHeader.includes('nome') || normalizedHeader.includes('firstname') || normalizedHeader.includes('first')) {
         suggestedMapping[header] = 'firstName';
@@ -143,28 +215,47 @@ router.post('/map-fields', upload.single('file'), async (req: Request, res: Resp
         suggestedMapping[header] = 'state';
       } else if (normalizedHeader.includes('cep') || normalizedHeader.includes('zipcode') || normalizedHeader.includes('postalcode')) {
         suggestedMapping[header] = 'zipCode';
+      } else if (normalizedHeader.includes('pais') || normalizedHeader.includes('country')) {
+        suggestedMapping[header] = 'country';
+      } else if (normalizedHeader.includes('site') || normalizedHeader.includes('website') || normalizedHeader.includes('url')) {
+        suggestedMapping[header] = 'website';
+      } else if (normalizedHeader.includes('industria') || normalizedHeader.includes('industry') || normalizedHeader.includes('setor')) {
+        suggestedMapping[header] = 'industry';
+      } else if (normalizedHeader.includes('porte') || normalizedHeader.includes('size')) {
+        suggestedMapping[header] = 'size';
       } else {
         // Campo não reconhecido, manter o mesmo nome
         suggestedMapping[header] = header;
       }
     });
 
+    let sheetName = undefined;
+    if (!isCsv) {
+      const { getExcelSheetsMetadata } = await import('../utils/excelParser');
+      const sheetsMetadata = await getExcelSheetsMetadata(file.buffer);
+      const sheetIndex = req.body.sheetIndex || 0;
+      sheetName = sheetsMetadata[sheetIndex]?.name;
+    }
+
     res.status(200).json({
       headers,
       suggestedMapping,
-      entityType: 'contact' // Tipo padrão, pode ser alterado pelo usuário
+      entityType: 'contact', // Tipo padrão, pode ser alterado pelo usuário
+      fileType: isCsv ? 'csv' : isXlsx ? 'xlsx' : 'xls',
+      sheetName: sheetName
     });
   } catch (error) {
-    console.error('Erro ao mapear campos CSV:', error);
+    console.error('Erro ao mapear campos:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
-      message: 'Falha ao mapear campos do CSV'
+      message: 'Falha ao mapear campos do arquivo',
+      details: (error as Error).message
     });
   }
 });
 
 /**
- * Endpoint para processamento de importação
+ * Endpoint para processamento de importação (CSV ou Excel)
  */
 router.post('/process', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -182,7 +273,7 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
     if (!req.file) {
       return res.status(400).json({
         error: 'Nenhum arquivo enviado',
-        message: 'Por favor, envie um arquivo CSV'
+        message: 'Por favor, envie um arquivo CSV ou Excel'
       });
     }
 
@@ -192,7 +283,9 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
       batchSize = 100,
       validateBeforeImport = true,
       continueOnError = true,
-      fieldMapping = {}
+      fieldMapping = {},
+      sheetName,
+      sheetIndex = 0
     } = req.body;
 
     // Validar tipo de entidade
@@ -212,23 +305,41 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
       });
     }
 
+    // Determinar tipo de arquivo com base na extensão
+    const fileName = file.originalname.toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isXlsx = fileName.endsWith('.xlsx');
+    const isXls = fileName.endsWith('.xls');
+
+    if (!isCsv && !isXlsx && !isXls) {
+      return res.status(400).json({
+        error: 'Tipo de arquivo não suportado',
+        message: 'Apenas arquivos CSV, XLSX e XLS são permitidos'
+      });
+    }
+
+    const fileType: 'csv' | 'xlsx' | 'xls' = isCsv ? 'csv' : isXlsx ? 'xlsx' : 'xls';
+
     // Executar importação
-    const importResult = await CsvImportService.importFromCsv(file.buffer, {
+    const importResult = await CsvImportService.importFromFile(file.buffer, {
       batchSize: parseInt(batchSize, 10) || 100,
       validateBeforeImport: validateBeforeImport === true,
       continueOnError: continueOnError !== false, // Valor padrão é true
       fieldMapping: fieldMapping || {},
       tenantId,
       userId,
-      entityType
+      entityType,
+      fileType,
+      sheetName,
+      sheetIndex: parseInt(sheetIndex, 10) || 0
     });
 
     res.status(200).json(importResult);
   } catch (error) {
-    console.error('Erro ao processar importação CSV:', error);
+    console.error('Erro ao processar importação:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
-      message: 'Falha ao processar importação CSV',
+      message: 'Falha ao processar importação',
       details: (error as Error).message
     });
   }

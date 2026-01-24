@@ -1,7 +1,7 @@
 /**
- * Página de Importação de CSV
- * 
- * Página que permite aos usuários importar dados via arquivos CSV
+ * Página de Importação de Dados
+ *
+ * Página que permite aos usuários importar dados via arquivos CSV ou Excel
  */
 
 import React, { useState } from 'react';
@@ -79,10 +79,10 @@ export function ImportPage() {
 
         <div className="mb-4">
           <p className="text-gray-600">
-            Selecione o tipo de entidade acima e clique no botão abaixo para iniciar a importação de dados via CSV.
+            Selecione o tipo de entidade acima e clique no botão abaixo para iniciar a importação de dados via CSV ou Excel.
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            O arquivo CSV deve conter colunas com cabeçalhos correspondentes aos campos da entidade selecionada.
+            O arquivo (CSV ou Excel) deve conter colunas com cabeçalhos correspondentes aos campos da entidade selecionada.
           </p>
         </div>
 
@@ -97,8 +97,8 @@ export function ImportPage() {
           <div className="mt-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">
-                Importando {entityType === 'contact' ? 'Contatos' : 
-                         entityType === 'company' ? 'Empresas' : 
+                Importando {entityType === 'contact' ? 'Contatos' :
+                         entityType === 'company' ? 'Empresas' :
                          entityType === 'lead' ? 'Leads' : 'Oportunidades'}
               </h3>
               <Button
@@ -108,7 +108,7 @@ export function ImportPage() {
                 Voltar
               </Button>
             </div>
-            
+
             <CSVImport
               entityType={entityType}
               onImportSuccess={handleImportSuccess}
@@ -171,11 +171,12 @@ export function ImportPage() {
               </>
             )}
           </ul>
-          
+
           <div className="mt-4 p-4 bg-gray-50 rounded-md">
-            <h4 className="font-medium mb-2">Exemplo de CSV:</h4>
+            <h4 className="font-medium mb-2">Exemplo de CSV/Excel:</h4>
+            <p className="text-sm mb-2">Os arquivos Excel devem ter os dados na primeira planilha, com os cabeçalhos na primeira linha.</p>
             <pre className="text-sm bg-gray-800 text-gray-100 p-3 rounded overflow-x-auto">
-              {entityType === 'contact' 
+              {entityType === 'contact'
                 ? '"firstName","lastName","email","phone","title","company"\n"João","Silva","joao@example.com","(11) 99999-9999","Gerente","Empresa ABC"'
                 : entityType === 'company'
                 ? '"name","website","industry","size","status"\n"Empresa ABC","www.empresaabc.com","Tecnologia","MEDIUM","ACTIVE"'
