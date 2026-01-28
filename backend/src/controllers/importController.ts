@@ -13,6 +13,8 @@ import { ProcessImportRequest } from '../types/importProcessing.types';
 import { parseCSV } from '../utils/csvParser';
 import { parseExcel } from '../utils/excelParser';
 import { ImportJobService } from '../services/importJobService';
+import { formatImportReport } from '../utils/reportGenerator';
+import { reportCache } from '../services/reportCacheService';
 
 /**
  * Processa um arquivo de importação
@@ -191,6 +193,92 @@ export async function processImport(req: Request, res: Response): Promise<void> 
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: 'Falha ao processar importação',
+      details: (error as Error).message
+    });
+  }
+}
+
+/**
+ * Retorna o relatório completo de uma importação (spec itens 154-171).
+ * importId = jobId: relatório vem de ImportJob.result (apenas jobs assíncronos).
+ * Query: includeErrorSummary, includePerformanceMetrics, page, limit (paginação de erros).
+ *
+ * Endpoint: GET /api/import/:importId/report
+ */
+export async function getImportReport(req: Request, res: Response): Promise<void> {
+  try {
+    const { importId } = req.params;
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(500, Math.max(0, parseInt(String(req.query.limit), 10) || 0));
+    const includeErrorSummary = req.query.includeErrorSummary === 'true' || req.query.includeErrorSummary === '1';
+    const includePerformanceMetrics = req.query.includePerformanceMetrics === 'true' || req.query.includePerformanceMetrics === '1';
+
+    if (!importId) {
+      res.status(400).json({
+        error: 'importId é obrigatório',
+        message: 'O ID da importação é necessário para obter o relatório'
+      });
+      return;
+    }
+
+    const cacheKey = `${importId}:${page}:${limit}:${includeErrorSummary}:${includePerformanceMetrics}`;
+    const cached = reportCache.get(cacheKey);
+    if (cached) {
+      res.status(200).json(cached);
+      return;
+    }
+
+    const job = await ImportJobService.getJob(importId);
+
+    if (!job) {
+      res.status(404).json({
+        error: 'Relatório não encontrado',
+        message: 'O job de importação não existe ou o relatório não está disponível'
+      });
+      return;
+    }
+
+    if (job.tenantId !== req.tenantId) {
+      res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Você não tem permissão para acessar este relatório (tenant)'
+      });
+      return;
+    }
+
+    if (job.userId !== req.userId) {
+      res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Você não tem permissão para acessar este relatório (usuário)'
+      });
+      return;
+    }
+
+    const raw = job.result;
+    if (raw == null) {
+      res.status(404).json({
+        error: 'Relatório não disponível',
+        message: 'O relatório ainda não foi gerado para esta importação (job em processamento ou sem resultado)'
+      });
+      return;
+    }
+
+    const result = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const report = formatImportReport(result, importId, {
+      includeErrorSummary,
+      includePerformanceMetrics,
+      page: limit > 0 ? page : undefined,
+      limit: limit > 0 ? limit : undefined,
+    });
+
+    reportCache.set(cacheKey, report);
+
+    res.status(200).json(report);
+  } catch (error) {
+    console.error('Erro ao obter relatório de importação:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao obter relatório de importação',
       details: (error as Error).message
     });
   }

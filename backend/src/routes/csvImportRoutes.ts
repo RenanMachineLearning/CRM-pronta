@@ -16,6 +16,7 @@ import { validateExcelFile } from '../utils/excelValidator';
 import { getExcelSheetsMetadata } from '../utils/excelParser';
 import { uploadImportFile, validateUploadedFile, checkImportPermission } from '../middleware/upload.middleware';
 import { temporaryFileStorage, validateFileContent, isPotentiallyMalicious } from '../services/uploadService';
+import { getImportReport } from '../controllers/importController';
 
 // Configuração do multer para upload de arquivos
 const upload = multer({
@@ -24,7 +25,7 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB
     files: 1 // Apenas um arquivo por vez
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     // Permitir apenas arquivos CSV
     if (file.mimetype === 'text/csv' || 
         file.mimetype === 'application/csv' || 
@@ -524,10 +525,8 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
  * Endpoint para consulta de status de importação
  * (Implementação futura para importações assíncronas)
  */
-router.get('/status/:jobId', async (req: Request, res: Response) => {
+router.get('/status/:jobId', async (_req: Request, res: Response) => {
   try {
-    const jobId = req.params.jobId;
-
     // Por enquanto, retornamos um erro indicando que a funcionalidade
     // de importação assíncrona ainda não está implementada
     // Em uma implementação completa, isso consultaria um banco de dados
@@ -546,6 +545,12 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
   }
   return; // Explicit return to satisfy TS7030
 });
+
+/**
+ * Relatório completo de importação (spec itens 154-171).
+ * GET /api/import/:importId/report — importId = jobId; requer autenticação.
+ */
+router.get('/:importId/report', getImportReport);
 
 /**
  * Endpoint para upload de arquivos para importação

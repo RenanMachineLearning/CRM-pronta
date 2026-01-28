@@ -131,6 +131,15 @@ export async function processImportBatch(
         break;
       }
 
+      // Interromper se exceder o tempo máximo (ex.: TIMEOUT_SYNC)
+      if (checkTimeout(startTime, IMPORT_CONFIG.TIMEOUT_SYNC)) {
+        stats.status = 'cancelled';
+        break;
+      }
+
+      // Verificar uso de memória antes de processar o próximo batch
+      checkMemoryUsage();
+
       // Processar batch individual
       const batchResult = await processSingleBatch(
         batch,
@@ -154,6 +163,9 @@ export async function processImportBatch(
       // Adicionar erros e avisos
       errors.push(...batchResult.errors);
       warnings.push(...batchResult.warnings);
+
+      // Sugerir GC entre batches (efetivo apenas se Node rodar com --expose-gc)
+      releaseMemory();
 
       // Verificar limites de erros
       if (errors.length >= IMPORT_CONFIG.MAX_ERRORS_PER_IMPORT) {
@@ -574,156 +586,7 @@ async function processValidRows(
   }
 }
 
-/**
- * Coleção abrangente de erros e estatísticas
- */
-class ErrorCollector {
-  private errors: ImportError[] = [];
-  private warnings: ImportWarning[] = [];
-  private stats: ProcessingStats;
-  private readonly maxErrors: number;
-  private readonly maxWarnings: number;
 
-  constructor(initialStats: ProcessingStats, maxErrors?: number, maxWarnings?: number) {
-    this.stats = { ...initialStats };
-    this.maxErrors = maxErrors || IMPORT_CONFIG.MAX_ERRORS_PER_IMPORT;
-    this.maxWarnings = maxWarnings || IMPORT_CONFIG.MAX_WARNINGS_PER_IMPORT;
-  }
-
-  addError(error: ImportError): void {
-    if (this.errors.length < this.maxErrors) {
-      this.errors.push(error);
-      this.stats.errorCount++;
-    } else {
-      // Quando atinge o limite de erros, adicionar um erro indicando que há mais
-      if (!this.errors.some(e => e.code === 'ERROR_LIMIT_EXCEEDED')) {
-        this.errors.push({
-          row: -1,
-          code: 'ERROR_LIMIT_EXCEEDED',
-          message: `Limite de ${this.maxErrors} erros atingido. Mais erros podem existir.`,
-          severity: 'error',
-        });
-      }
-    }
-  }
-
-  addWarning(warning: ImportWarning): void {
-    if (this.warnings.length < this.maxWarnings) {
-      this.warnings.push(warning);
-      this.stats.errorCount++; // Avisos também contam como problemas
-    } else {
-      // Quando atinge o limite de avisos, adicionar um aviso indicando que há mais
-      if (!this.warnings.some(w => w.code === 'WARNING_LIMIT_EXCEEDED')) {
-        this.warnings.push({
-          row: -1,
-          code: 'WARNING_LIMIT_EXCEEDED',
-          message: `Limite de ${this.maxWarnings} avisos atingido. Mais avisos podem existir.`,
-          field: 'system',
-        });
-      }
-    }
-  }
-
-  incrementSuccessCount(count: number = 1): void {
-    this.stats.successCount += count;
-  }
-
-  incrementSkippedCount(count: number = 1): void {
-    this.stats.skippedCount += count;
-  }
-
-  incrementDuplicateCount(count: number = 1): void {
-    this.stats.duplicateCount += count;
-  }
-
-  updateProcessedCount(count: number = 1): void {
-    this.stats.processedRows += count;
-  }
-
-  getErrors(): ImportError[] {
-    return [...this.errors]; // Retornar cópia
-  }
-
-  getWarnings(): ImportWarning[] {
-    return [...this.warnings]; // Retornar cópia
-  }
-
-  getStats(): ProcessingStats {
-    return { ...this.stats }; // Retornar cópia
-  }
-
-  hasReachedErrorLimit(): boolean {
-    return this.errors.length >= this.maxErrors;
-  }
-
-  getTotalIssues(): number {
-    return this.errors.length + this.warnings.length;
-  }
-
-  /**
-   * Gera um relatório detalhado de erros e estatísticas
-   */
-  generateReport(): ProcessImportResult {
-    const endTime = new Date();
-    this.stats.endTime = endTime;
-    if (this.stats.startTime) {
-      this.stats.durationMs = endTime.getTime() - this.stats.startTime.getTime();
-      if (this.stats.processedRows > 0 && this.stats.durationMs > 0) {
-        this.stats.recordsPerSecond = Math.round((this.stats.processedRows / this.stats.durationMs) * 1000);
-      }
-    }
-
-    return {
-      importId: this.stats.hasOwnProperty('importId') ? (this.stats as any).importId : generateImportId(),
-      totalRows: this.stats.totalRows,
-      successCount: this.stats.successCount,
-      errorCount: this.stats.errorCount,
-      skippedCount: this.stats.skippedCount,
-      duplicateCount: this.stats.duplicateCount,
-      processedCount: this.stats.processedRows,
-      errors: this.getErrors(),
-      warnings: this.getWarnings(),
-      processingTime: this.stats.durationMs || 0,
-      status: this.stats.errorCount === 0 ? 'completed' :
-              (this.stats.successCount > 0 ? 'partial' : 'failed'),
-    };
-  }
-}
-
-/**
- * Função auxiliar para coletar erros de forma padronizada
- * @deprecated Esta função não está sendo usada atualmente
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function collectError(
-  collector: ErrorCollector,
-  rowIndex: number,
-  errorCode: string,
-  message: string,
-  severity: 'error' | 'warning' | 'info' = 'error',
-  field?: string,
-  value?: any,
-  originalRow?: any
-): void {
-  const error: ImportError = {
-    row: rowIndex,
-    field,
-    code: errorCode,
-    message,
-    severity,
-    value,
-    originalRow,
-  };
-
-  if (severity === 'error' || severity === 'info') {
-    collector.addError(error);
-  } else {
-    collector.addWarning({
-      ...error,
-      code: errorCode,
-    } as ImportWarning);
-  }
-}
 
 /**
  * Atualiza registros existentes
@@ -867,73 +730,6 @@ async function createRecordsInBatch(
  * @deprecated Esta função não está sendo usada atualmente
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function createRecordsInBatchOptimized(
-  entityDataList: EntityCreationData[],
-  entityType: string,
-  tenantId: string,
-  userId: string
-): Promise<any[]> {
-  if (entityDataList.length === 0) {
-    return [];
-  }
-
-  // Verificar limite de criação por batch
-  if (entityDataList.length > IMPORT_CONFIG.MAX_BATCH_SIZE) {
-    throw new Error(`Número de registros excede o limite por batch: ${IMPORT_CONFIG.MAX_BATCH_SIZE}`);
-  }
-
-  // Adicionar campos comuns a todos os registros
-  const recordsWithCommonFields = entityDataList.map(data => ({
-    ...data,
-    tenantId,
-    userId,
-  }));
-
-  try {
-    let createdRecords;
-
-    switch (entityType.toLowerCase()) {
-      case 'contact':
-        createdRecords = await prisma.contact.createMany({
-          data: recordsWithCommonFields as any,
-          skipDuplicates: true, // Ignorar duplicatas
-        });
-        break;
-
-      case 'company':
-        createdRecords = await prisma.company.createMany({
-          data: recordsWithCommonFields as any,
-          skipDuplicates: true, // Ignorar duplicatas
-        });
-        break;
-
-      case 'lead':
-        createdRecords = await prisma.lead.createMany({
-          data: recordsWithCommonFields as any,
-          skipDuplicates: true, // Ignorar duplicatas
-        });
-        break;
-
-      case 'opportunity':
-        createdRecords = await prisma.opportunity.createMany({
-          data: recordsWithCommonFields as any,
-          skipDuplicates: true, // Ignorar duplicatas
-        });
-        break;
-
-      default:
-        throw new Error(`Tipo de entidade não suportado para createMany: ${entityType}`);
-    }
-
-    // Para createMany, retornamos o número de registros criados
-    // Em vez dos registros em si, pois createMany não retorna os dados
-    return Array(createdRecords.count).fill({}); // Placeholder - precisaremos buscar os registros criados
-  } catch (error) {
-    // Em caso de erro, tentar criar registros individualmente para identificar o problema
-    console.warn(`createMany falhou para ${entityType}, revertendo para criação individual:`, error);
-    return createRecordsInBatch(entityDataList, entityType, tenantId, userId);
-  }
-}
 
 /**
  * Atualiza registro por campo único com controle de concorrência
@@ -1054,141 +850,12 @@ async function updateRecordByUniqueField(
  * @deprecated Esta função não está sendo usada atualmente
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function updateRecordsInBatch(
-  updates: Array<{
-    entityData: any;
-    uniqueField: string;
-    uniqueValue: any
-  }>,
-  entityType: string,
-  tenantId: string,
-  userId: string
-): Promise<{ success: number; errors: Array<{ index: number; error: Error }> }> {
-  if (updates.length === 0) {
-    return { success: 0, errors: [] };
-  }
-
-  let successCount = 0;
-  const errors: Array<{ index: number; error: Error }> = [];
-
-  // Processar atualizações individualmente para melhor controle de erros
-  for (const [index, update] of updates.entries()) {
-    try {
-      await updateRecordByUniqueField(
-        update.entityData,
-        update.uniqueField,
-        update.uniqueValue,
-        entityType,
-        tenantId,
-        userId
-      );
-      successCount++;
-    } catch (error) {
-      errors.push({ index, error: error as Error });
-    }
-  }
-
-  return { success: successCount, errors };
-}
 
 /**
  * Atualiza registros existentes com controle de versão otimista
  * @deprecated Esta função não está sendo usada atualmente
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function updateExistingRecordsWithConcurrencyControl(
-  duplicates: Array<{ rowIndex: number; field: string; value: any; originalRow: any }>,
-  mappings: FieldMapping[],
-  entityType: string,
-  tenantId: string,
-  userId: string,
-  result: {
-    successCount: number;
-    errorCount: number;
-    skippedCount: number;
-    duplicateCount: number;
-    errors: ImportError[];
-    warnings: ImportWarning[];
-  }
-) {
-  // Implementação para atualizar registros existentes com controle de concorrência
-  for (const dup of duplicates) {
-    try {
-      // Mapear campos da linha duplicada
-      const mappedRow = await mapSingleRowToEntity(dup.originalRow, mappings, entityType, tenantId, userId);
-
-      // Converter FieldMapping[] para Record<string, FieldValidationRules>
-      const fieldRules: Record<string, FieldValidationRules> = {};
-      for (const mapping of mappings) {
-        fieldRules[mapping.fieldName] = {
-          required: mapping.required,
-          unique: mapping.unique,
-        };
-      }
-
-      // Validar a linha antes de atualizar
-      const validationResult = await validateImportRow(
-        mappedRow,
-        entityType,
-        fieldRules,
-        tenantId,
-        userId
-      );
-
-      if (!validationResult.isValid && validationResult.errors.length > 0) {
-        // Pular linha com erros de validação
-        result.skippedCount++;
-        result.errors.push(...validationResult.errors.map((error: any) => ({
-          row: dup.rowIndex,
-          field: error.field,
-          code: error.code,
-          message: error.message,
-          severity: error.severity || 'error',
-          value: error.value,
-        })));
-        continue;
-      }
-
-      // Normalizar valores
-      const normalizedRow = normalizeRowValues(mappedRow, mappings);
-
-      // Atualizar registro existente com controle de concorrência
-      await updateRecordByUniqueField(
-        normalizedRow,
-        dup.field,
-        dup.value,
-        entityType,
-        tenantId,
-        userId
-      );
-
-      result.successCount++; // Considerar atualização como sucesso
-
-      // Adicionar aviso sobre atualização
-      result.warnings.push({
-        row: dup.rowIndex,
-        field: dup.field,
-        code: 'RECORD_UPDATED',
-        message: `Registro existente atualizado: ${dup.field} = ${dup.value}`,
-        value: dup.value,
-      });
-    } catch (error) {
-      const updateError: ImportError = {
-        row: dup.rowIndex,
-        code: 'RECORD_UPDATE_ERROR',
-        message: `Erro ao atualizar registro existente: ${(error as Error).message}`,
-        severity: 'error',
-        originalRow: dup.originalRow,
-      };
-      result.errors.push(updateError);
-      result.errorCount++;
-    }
-  }
-}
-
-/**
- * Verifica duplicatas em um batch
- */
 async function checkForDuplicates(
   validRows: any[],
   mappings: FieldMapping[],
@@ -1357,10 +1024,9 @@ function getPeakMemoryUsage(): number {
 }
 
 /**
- * Verifica uso de memória e lança erro se exceder o limite
- * @deprecated Esta função não está sendo usada atualmente
+ * Verifica uso de memória e lança erro se exceder o limite configurado.
+ * Chamada antes de cada batch em processImportBatch para evitar OOM.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function checkMemoryUsage(): void {
   const usage = process.memoryUsage();
   if (usage.heapUsed > IMPORT_CONFIG.MEMORY_LIMIT) {
@@ -1369,22 +1035,19 @@ function checkMemoryUsage(): void {
 }
 
 /**
- * Função para liberar memória entre batches
- * @deprecated Esta função não está sendo usada atualmente
+ * Tenta liberar memória entre batches.
+ * Só tem efeito se o Node estiver rodando com --expose-gc; caso contrário é no-op.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function releaseMemory(): void {
-  // Forçar garbage collection se disponível
   if (global.gc) {
     global.gc();
   }
 }
 
 /**
- * Função para verificar timeout de processamento
- * @deprecated Esta função não está sendo usada atualmente
+ * Verifica se o tempo decorrido desde startTime ultrapassou maxDuration (ms).
+ * Usado no loop de batches para interromper importações que excedem TIMEOUT_SYNC.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function checkTimeout(startTime: Date, maxDuration: number): boolean {
   return (Date.now() - startTime.getTime()) > maxDuration;
 }

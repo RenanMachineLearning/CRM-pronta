@@ -131,3 +131,59 @@ export interface CancellationToken {
   cancel(): void;
   onCancellationRequested(callback: () => void): void;
 }
+
+// --- Tipos para relatório de importação (API de report) ---
+
+/** Contagem de erros por código (ex.: VALIDATION_ERROR, DUPLICATE_KEY) */
+export interface ErrorSummaryByCode {
+  code: string;
+  count: number;
+  severity: ImportError['severity'];
+}
+
+/** Contagem de erros por severidade */
+export interface ErrorSummaryBySeverity {
+  severity: 'error' | 'warning' | 'info';
+  count: number;
+}
+
+/** Contagem de erros por campo */
+export interface ErrorSummaryByField {
+  field: string;
+  count: number;
+}
+
+/** Resumo agregado de erros (por tipo, severidade, campo) */
+export interface ErrorSummary {
+  byCode: ErrorSummaryByCode[];
+  bySeverity: ErrorSummaryBySeverity[];
+  byField: ErrorSummaryByField[];
+  total: number;
+}
+
+/** Métricas de performance do processamento */
+export interface PerformanceMetrics {
+  processingTimeMs: number;
+  recordsPerSecond: number;
+  successRate: number; // 0-1
+  errorRate: number;   // 0-1
+  totalProcessed: number;
+}
+
+/** Relatório completo de importação (formato API, com agregações opcionais) */
+export interface ImportReport {
+  importId: string;
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: Array<{ row: number; errors: Array<{ code?: string; message: string; field?: string; severity?: string }> }>;
+  warnings: ImportWarning[];
+  skippedCount?: number;
+  duplicateCount?: number;
+  processedCount?: number;
+  processingTime?: number;
+  status?: ProcessImportResult['status'];
+  errorSummary?: ErrorSummary;
+  performanceMetrics?: PerformanceMetrics;
+  pagination?: { page: number; limit: number; total: number };
+}
