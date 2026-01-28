@@ -102,3 +102,19 @@ export const checkImportPermission = (req: Request, res: Response, next: NextFun
   next();
   return; // Explicit return to satisfy TS7030
 };
+
+/**
+ * Middleware para verificar permissão de exportação (Export.create).
+ * Mesmo padrão de checkImportPermission: exige autenticação + tenant.
+ * Em implementação completa, validar permissão "Export.create" via ACL.
+ */
+export const checkExportPermission = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.userId || !req.tenantId) {
+    return res.status(401).json({
+      error: 'Não autorizado',
+      message: 'Usuário não autenticado ou sem contexto de tenant'
+    });
+  }
+  next();
+  return;
+};

@@ -310,10 +310,7 @@ export class ValidationRulesService {
       }
 
       const customFields = await prisma.field.findMany({
-        where: whereClause,
-        include: {
-          options: true
-        }
+        where: whereClause
       });
 
       const customRules: Record<string, FieldValidationRules> = {};
@@ -347,16 +344,10 @@ export class ValidationRulesService {
             rule.type = 'text';
         }
 
-        // Adiciona opções para campos select
-        if (field.options && field.options.length > 0) {
-          rule.options = field.options.map(opt => opt.value);
-        }
-
-        // Adiciona informações de relacionamento se aplicável
-        if (field.relationshipEntity) {
-          rule.type = 'relationship';
-          rule.relatedEntity = field.relationshipEntity;
-          rule.relatedField = field.relationshipField || 'id';
+        // Adiciona opções para campos select (options é Json? no schema; pode ser array de { value })
+        const opts = field.options;
+        if (opts != null && Array.isArray(opts) && opts.length > 0) {
+          rule.options = (opts as Array<{ value?: unknown }>).map((opt) => String(opt.value ?? ''));
         }
 
         customRules[field.name] = rule;
