@@ -9,7 +9,7 @@
  */
 
 import { prisma } from '../utils/prisma';
-import { FieldDefinition, FieldType, SelectOption, RelationshipInfo, FieldMappingSuggestion } from '../types/mapping.types';
+import { FieldDefinition, FieldType, FieldMappingSuggestion } from '../types/mapping.types';
 import { cacheManager } from '../cache/cacheManager';
 import { generateCacheKey } from '../cache/cacheKeys';
 
@@ -142,6 +142,14 @@ export class FieldMetadataService {
   private static readonly CACHE_PREFIX = 'field-metadata';
 
   /**
+   * Retorna apenas os campos padrão para uma entidade (sem campos customizados nem DB).
+   * Usado por templates de importação para Contact, Company, Lead, Opportunity.
+   */
+  static getDefaultFieldsForTemplate(entityType: string): FieldDefinition[] {
+    return [...(DEFAULT_FIELDS[entityType] || [])];
+  }
+
+  /**
    * Recupera todos os campos disponíveis para uma entidade
    */
   static async getEntityFields(
@@ -170,11 +178,11 @@ export class FieldMetadataService {
   }
 
   /**
-   * Recupera campos customizados para uma entidade e tenant
+   * Recupera campos customizados para uma entidade e tenant.
+   * Field.options é Json? no schema (não é relação); relationshipEntity/Field/Type não existem no schema.
    */
   private static async getCustomFields(entityType: string, tenantId: string): Promise<FieldDefinition[]> {
     try {
-      // Recupera campos customizados do banco de dados
       const customFields = await prisma.field.findMany({
         where: {
           entity: {
@@ -182,9 +190,6 @@ export class FieldMetadataService {
             tenantId: tenantId
           },
           tenantId: tenantId
-        },
-        include: {
-          options: true // Inclui opções para campos do tipo select
         }
       });
 
@@ -196,27 +201,17 @@ export class FieldMetadataService {
           required: field.required,
           unique: field.unique,
           defaultValue: field.defaultValue,
-          description: field.description || undefined,
           custom: true,
           tenantId: field.tenantId
         };
 
-        // Adiciona opções para campos do tipo select
-        if (field.options && field.options.length > 0) {
-          fieldDef.options = field.options.map(opt => ({
-            value: opt.value,
-            label: opt.label || opt.value,
-            description: opt.description || undefined
+        // options é Json? no schema; pode ser array de { value, label }
+        const opts = field.options;
+        if (opts != null && Array.isArray(opts) && opts.length > 0) {
+          fieldDef.options = (opts as Array<{ value?: string; label?: string }>).map((opt) => ({
+            value: opt.value ?? '',
+            label: opt.label ?? opt.value ?? ''
           }));
-        }
-
-        // Adiciona informações de relacionamento se aplicável
-        if (field.relationshipEntity) {
-          fieldDef.relationship = {
-            entity: field.relationshipEntity,
-            field: field.relationshipField || 'id',
-            type: field.relationshipType as 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many' || 'many-to-one'
-          };
         }
 
         return fieldDef;

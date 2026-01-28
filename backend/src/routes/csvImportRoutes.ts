@@ -16,7 +16,7 @@ import { validateExcelFile } from '../utils/excelValidator';
 import { getExcelSheetsMetadata } from '../utils/excelParser';
 import { uploadImportFile, validateUploadedFile, checkImportPermission } from '../middleware/upload.middleware';
 import { temporaryFileStorage, validateFileContent, isPotentiallyMalicious } from '../services/uploadService';
-import { getImportReport } from '../controllers/importController';
+import { getImportReport, getImportTemplate } from '../controllers/importController';
 
 // Configuração do multer para upload de arquivos
 const upload = multer({
@@ -545,6 +545,13 @@ router.get('/status/:jobId', async (_req: Request, res: Response) => {
   }
   return; // Explicit return to satisfy TS7030
 });
+
+/**
+ * Template de importação (Etapa 9 - Parte 9).
+ * GET /api/import/templates/:entityType?format=csv|excel — retorna CSV/Excel com headers e linha de exemplo.
+ * Requer autenticação (sem permissão especial).
+ */
+router.get('/templates/:entityType', getImportTemplate);
 
 /**
  * Relatório completo de importação (spec itens 154-171).

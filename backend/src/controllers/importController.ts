@@ -15,6 +15,8 @@ import { parseExcel } from '../utils/excelParser';
 import { ImportJobService } from '../services/importJobService';
 import { formatImportReport } from '../utils/reportGenerator';
 import { reportCache } from '../services/reportCacheService';
+import { generateImportTemplate } from '../utils/importTemplateHelpers';
+import { EXPORT_CONFIG, type ExportFormat } from '../config/exportConfig';
 
 /**
  * Processa um arquivo de importação
@@ -279,6 +281,52 @@ export async function getImportReport(req: Request, res: Response): Promise<void
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: 'Falha ao obter relatório de importação',
+      details: (error as Error).message
+    });
+  }
+}
+
+/**
+ * Retorna template de importação (CSV ou Excel) com headers e linha de exemplo.
+ * Endpoint: GET /api/import/templates/:entityType?format=csv|excel
+ */
+export async function getImportTemplate(req: Request, res: Response): Promise<void> {
+  try {
+    const entityType = (req.params.entityType || '').toString();
+    const format = ((req.query.format as string) || 'csv').toLowerCase() as ExportFormat;
+
+    if (!(EXPORT_CONFIG.ENTITY_TYPES as readonly string[]).includes(entityType)) {
+      res.status(400).json({
+        error: 'entityType inválido',
+        message: `Deve ser um de: ${EXPORT_CONFIG.ENTITY_TYPES.join(', ')}`
+      });
+      return;
+    }
+
+    if (!EXPORT_CONFIG.FORMATS.includes(format)) {
+      res.status(400).json({
+        error: 'format inválido',
+        message: 'Deve ser csv ou excel'
+      });
+      return;
+    }
+
+    const buffer = generateImportTemplate(entityType, format);
+    const ext = format === 'excel' ? 'xlsx' : 'csv';
+    const filename = `template-import-${entityType}-${Date.now()}.${ext}`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    if (format === 'excel') {
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    } else {
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    }
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erro ao gerar template de importação:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: 'Falha ao gerar template',
       details: (error as Error).message
     });
   }
