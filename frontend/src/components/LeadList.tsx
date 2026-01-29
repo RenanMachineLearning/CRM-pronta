@@ -11,11 +11,10 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
-import { Pagination } from './Pagination/Pagination';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
 import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
-import type { Lead, LeadFilters, LeadStatus } from '../types/lead';
+import type { Lead, LeadFilters, LeadPaginationParams, LeadStatus } from '../types/lead';
 import type { Filter } from '../types/filter';
 
 export interface LeadListProps {
@@ -28,7 +27,7 @@ export interface LeadListProps {
 
 export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead, advancedFilters = [] }: LeadListProps) {
   // Estado para filtros
-  const [filters, setFilters] = useState<LeadFilters>({});
+  const [filters, _setFilters] = useState<LeadFilters>({});
   
   // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar leads da prop)
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
@@ -70,7 +69,7 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
     {
       ...toPaginationParams(),
       ...toSortParams(),
-    },
+    } as LeadPaginationParams,
     advancedFilters
   );
 
@@ -102,9 +101,20 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
       updatePagination({
         ...toPaginationParams(),
         ...toSortParams(),
-      });
+      } as LeadPaginationParams);
     }
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, leadsProp]);
+
+  // Calcular variáveis de paginação
+  const page = paginationState.page;
+  const totalPages = Math.ceil(paginationInfo.total / paginationState.limit);
+
+  // Handler para mudança de página
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      updatePage(newPage);
+    }
+  };
 
   // Handler para ordenação
   const handleSort = (field: string) => {
@@ -177,15 +187,6 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
         currentSort={sorting}
         onSort={handleSort}
       />
-    );
-  };
-        <div className="flex items-center space-x-1">
-          <span>{label}</span>
-          {isActive && (
-            <span>{order === 'asc' ? '↑' : '↓'}</span>
-          )}
-        </div>
-      </th>
     );
   };
 
@@ -356,11 +357,11 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">{pagination.offset + 1}</span> a{' '}
+                Mostrando <span className="font-medium">{paginationInfo.offset + 1}</span> a{' '}
                 <span className="font-medium">
-                  {Math.min(pagination.offset + limit, pagination.total)}
+                  {Math.min(paginationInfo.offset + paginationState.limit, paginationInfo.total)}
                 </span>{' '}
-                de <span className="font-medium">{pagination.total}</span> leads
+                de <span className="font-medium">{paginationInfo.total}</span> leads
               </p>
             </div>
             <div>

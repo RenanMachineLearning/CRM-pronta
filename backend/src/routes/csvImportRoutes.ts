@@ -452,8 +452,8 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
       });
     }
 
-    // Obter opções de importação do body
-    const {
+    // Obter opções de importação do body (fieldMapping pode vir como JSON string no multipart)
+    let {
       entityType = 'contact',
       batchSize = 100,
       validateBeforeImport = true,
@@ -462,6 +462,13 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
       sheetName,
       sheetIndex = 0
     } = req.body;
+    if (typeof fieldMapping === 'string') {
+      try {
+        fieldMapping = JSON.parse(fieldMapping);
+      } catch {
+        fieldMapping = {};
+      }
+    }
 
     // Validar tipo de entidade
     const validEntityTypes = ['contact', 'company', 'lead', 'opportunity'];
