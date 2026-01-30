@@ -19,9 +19,10 @@ import { CompanyService } from './companyService';
 import { CreateContactData } from './contactService';
 import { CreateCompanyData } from './companyService';
 import { Contact, Company, Lead, Opportunity } from '@prisma/client';
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { prisma } from '../utils/prisma';
+import {
+  InsufficientMemoryError,
+  DatabaseError
+} from '../errors/ImportExportError';
 
 export interface ImportResult {
   success: boolean;
@@ -58,6 +59,7 @@ export interface ImportOptions {
   fileType: 'csv' | 'xlsx' | 'xls'; // Tipo de arquivo sendo importado
   sheetName?: string; // Nome da planilha a ser usada (para Excel)
   sheetIndex?: number; // Índice da planilha a ser usada (para Excel)
+  jobId?: string; // ID do job de importação (para rastreamento de erros)
 }
 
 export class CsvImportService {
@@ -129,14 +131,14 @@ export class CsvImportService {
           validation = await validateCsvData(parsedData, {
             tenantId: options.tenantId,
             entityType: options.entityType
-          });
+          }, options.jobId); // Passar o jobId para os erros
         } else {
           // Para Excel, usamos a validação específica
           validation = await validateExcelData(parsedData,
             (parseResult as ExcelParseResult).activeSheet || 'Sheet1', {
             tenantId: options.tenantId,
             entityType: options.entityType
-          });
+          }); // jobId não é suportado em validateExcelData
         }
 
         if (!validation.valid) {
@@ -283,6 +285,18 @@ export class CsvImportService {
     const errors: ImportError[] = [];
     let importedCount = 0;
 
+    // Verificar uso de memória antes de processar o lote
+    const usedMemory = process.memoryUsage().heapUsed;
+    const maxMemory = 512 * 1024 * 1024; // 512MB - pode ser configurável
+    if (usedMemory > maxMemory) {
+      throw new InsufficientMemoryError(
+        `Memória insuficiente para processar o lote. Memória usada: ${Math.round(usedMemory / 1024 / 1024)}MB`,
+        { batchSize: batch.length, usedMemory, maxMemory },
+        options.tenantId,
+        options.jobId
+      );
+    }
+
     // Processar cada registro no lote
     for (let i = 0; i < batch.length; i++) {
       const rowIndex = (summary.processedRows || 0) + i;
@@ -312,11 +326,23 @@ export class CsvImportService {
 
         importedCount++;
       } catch (error) {
-        errors.push({
-          rowIndex,
-          message: `Erro ao importar registro: ${(error as Error).message}`,
-          originalData: record
-        });
+        // Verificar se é um dos nossos erros personalizados
+        if (error instanceof DatabaseError) {
+          errors.push({
+            rowIndex,
+            message: `Erro de banco de dados: ${error.message}`,
+            originalData: record
+          });
+        } else if (error instanceof InsufficientMemoryError) {
+          // Se for erro de memória, propagar para interromper o processamento
+          throw error;
+        } else {
+          errors.push({
+            rowIndex,
+            message: `Erro ao importar registro: ${(error as Error).message}`,
+            originalData: record
+          });
+        }
       }
     }
 

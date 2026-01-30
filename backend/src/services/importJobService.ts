@@ -5,6 +5,11 @@
  */
 
 import { prisma } from '../utils/prisma';
+import {
+  ProcessingTimeoutError,
+  InsufficientMemoryError,
+  DatabaseError
+} from '../errors/ImportExportError';
 
 // Tipos para ImportJob (serão substituídos quando o modelo estiver disponível no Prisma Client)
 export type ImportJobStatus = 'PENDING' | 'QUEUED' | 'PROCESSING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -169,6 +174,10 @@ export class ImportJobService {
     });
 
     try {
+      // Verificar timeout de processamento
+      const startTime = Date.now();
+      const timeoutMs = IMPORT_CONFIG.TIMEOUT_ASYNC || 30 * 60 * 1000; // 30 minutos por padrão
+
       // Obter arquivo temporário
       const fileData = temporaryFileStorage.getFile(job.fileId);
       if (!fileData) {
@@ -189,15 +198,37 @@ export class ImportJobService {
       let rows: any[] = [];
       if (isCsv) {
         // Parsear CSV
-        const parseResult = await parseCSV(fileData.buffer);
+        const parseResult = await parseCSV(fileData.buffer, {}, job.tenantId, jobId);
         rows = parseResult.data;
       } else {
         // Parsear Excel
         const parseResult = await parseExcel(fileData.buffer, {
           sheetIndex: 0, // Usar primeira planilha por padrão
           header: true
-        });
+        }, job.tenantId, jobId);
         rows = parseResult.data;
+      }
+
+      // Verificar timeout após parsing
+      if (Date.now() - startTime > timeoutMs) {
+        throw new ProcessingTimeoutError(
+          `Tempo limite de processamento excedido para o job ${jobId}`,
+          { jobId, timeoutMs },
+          job.tenantId,
+          jobId
+        );
+      }
+
+      // Verificar uso de memória
+      const usedMemory = process.memoryUsage().heapUsed;
+      const maxMemory = IMPORT_CONFIG.MEMORY_LIMIT || 512 * 1024 * 1024; // 512MB por padrão
+      if (usedMemory > maxMemory) {
+        throw new InsufficientMemoryError(
+          `Memória insuficiente para processar o job ${jobId}. Memória usada: ${Math.round(usedMemory / 1024 / 1024)}MB`,
+          { jobId, usedMemory, maxMemory },
+          job.tenantId,
+          jobId
+        );
       }
 
       // Atualizar progresso inicial
@@ -218,6 +249,27 @@ export class ImportJobService {
 
       // Processar em batches
       for (let i = 0; i < rows.length; i += batchSize) {
+        // Verificar timeout durante o processamento
+        if (Date.now() - startTime > timeoutMs) {
+          throw new ProcessingTimeoutError(
+            `Tempo limite de processamento excedido para o job ${jobId}`,
+            { jobId, timeoutMs, processedRows: i },
+            job.tenantId,
+            jobId
+          );
+        }
+
+        // Verificar uso de memória durante o processamento
+        const currentMemory = process.memoryUsage().heapUsed;
+        if (currentMemory > maxMemory) {
+          throw new InsufficientMemoryError(
+            `Memória insuficiente durante o processamento do job ${jobId}. Memória usada: ${Math.round(currentMemory / 1024 / 1024)}MB`,
+            { jobId, usedMemory: currentMemory, maxMemory },
+            job.tenantId,
+            jobId
+          );
+        }
+
         const batch = rows.slice(i, i + batchSize);
 
         // Atualizar progresso
@@ -228,14 +280,28 @@ export class ImportJobService {
         });
 
         // Processar batch
-        const batchResult = await processImportBatch(
-          batch,
-          mappings,
-          job.entityType,
-          job.tenantId,
-          job.userId,
-          options
-        );
+        let batchResult;
+        try {
+          batchResult = await processImportBatch(
+            batch,
+            mappings,
+            job.entityType,
+            job.tenantId,
+            job.userId,
+            options
+          );
+        } catch (batchError) {
+          // Tratar erros de banco de dados
+          if (batchError instanceof Error && batchError.message.includes('database')) {
+            throw new DatabaseError(
+              `Erro de banco de dados ao processar batch para o job ${jobId}: ${batchError.message}`,
+              { jobId, batchStartIndex: i, originalError: batchError },
+              job.tenantId,
+              jobId
+            );
+          }
+          throw batchError;
+        }
 
         // Acumular resultados
         successCount += batchResult.successCount;
@@ -280,13 +346,26 @@ export class ImportJobService {
         completedAt: new Date(),
       });
     } catch (error) {
-      // Em caso de erro, atualizar status para FAILED
-      await this.updateJobStatus(jobId, 'FAILED', {
-        errorMessage: (error as Error).message,
-        completedAt: new Date(),
-        progress: 100, // Marcar como 100% para indicar que terminou (mesmo que com erro)
-      });
-      throw error; // Repassar o erro para ser tratado pelo caller
+      // Verificar se é um dos nossos erros personalizados de processamento
+      if (error instanceof ProcessingTimeoutError ||
+          error instanceof InsufficientMemoryError ||
+          error instanceof DatabaseError) {
+        // Atualizar status com informações específicas do erro
+        await this.updateJobStatus(jobId, 'FAILED', {
+          errorMessage: error.message,
+          completedAt: new Date(),
+          progress: 100,
+        });
+        throw error;
+      } else {
+        // Em caso de outro tipo de erro, atualizar status para FAILED
+        await this.updateJobStatus(jobId, 'FAILED', {
+          errorMessage: (error as Error).message,
+          completedAt: new Date(),
+          progress: 100, // Marcar como 100% para indicar que terminou (mesmo que com erro)
+        });
+        throw error; // Repassar o erro para ser tratado pelo caller
+      }
     }
   }
 

@@ -17,6 +17,7 @@ import { getExcelSheetsMetadata } from '../utils/excelParser';
 import { uploadImportFile, validateUploadedFile, checkImportPermission } from '../middleware/upload.middleware';
 import { temporaryFileStorage, validateFileContent, isPotentiallyMalicious } from '../services/uploadService';
 import { getImportReport, getImportTemplate } from '../controllers/importController';
+import { importExportErrorHandler } from '../middleware/importExportErrorHandler';
 
 // Configuração do multer para upload de arquivos
 const upload = multer({
@@ -125,12 +126,9 @@ router.post('/validate', upload.single('file'), async (req: Request, res: Respon
       });
     }
   } catch (error) {
-    console.error('Erro ao validar arquivo:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: 'Falha ao validar arquivo',
-      details: (error as Error).message
-    });
+    // Passar o erro para o middleware de tratamento de erros
+    importExportErrorHandler(error as Error, req, res, () => {});
+    return;
   }
   return; // Explicit return to satisfy TS7030
 });
@@ -419,12 +417,9 @@ router.post('/:fileId/map', async (req: Request, res: Response) => {
       timestamp: new Date()
     });
   } catch (error) {
-    console.error('Erro no mapeamento de campos:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: 'Falha ao processar o mapeamento de campos',
-      details: (error as Error).message
-    });
+    // Passar o erro para o middleware de tratamento de erros
+    importExportErrorHandler(error as Error, req, res, () => {});
+    return;
   }
   return; // Explicit return to satisfy TS7030
 });
@@ -518,12 +513,9 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
 
     res.status(200).json(importResult);
   } catch (error) {
-    console.error('Erro ao processar importação:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: 'Falha ao processar importação',
-      details: (error as Error).message
-    });
+    // Passar o erro para o middleware de tratamento de erros
+    importExportErrorHandler(error as Error, req, res, () => {});
+    return;
   }
   return; // Explicit return to satisfy TS7030
 });

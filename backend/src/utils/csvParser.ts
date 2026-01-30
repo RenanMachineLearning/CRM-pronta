@@ -11,6 +11,7 @@
 import { parse } from 'papaparse';
 import * as iconv from 'iconv-lite';
 import { sanitizeCsvData } from './csvSanitizer';
+import { CorruptedFileError, InvalidEncodingError } from '../errors/ImportExportError';
 
 export interface CsvParseOptions {
   delimiter?: string;
@@ -102,24 +103,45 @@ export function detectDelimiter(text: string): string {
  */
 export async function parseCSV(
   fileBuffer: Buffer,
-  options: CsvParseOptions = {}
+  options: CsvParseOptions = {},
+  tenantId?: string,
+  jobId?: string
 ): Promise<CsvParseResult> {
   return new Promise((resolve, reject) => {
     try {
+      // Validar integridade do arquivo
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new CorruptedFileError('Arquivo CSV vazio ou corrompido', undefined, tenantId, jobId);
+      }
+
       // Detectar encoding automaticamente se não for especificado
-      const encoding = options.encoding || detectEncoding(fileBuffer);
-      
+      let encoding = options.encoding || detectEncoding(fileBuffer);
+
       // Decodificar o buffer para string
       let textContent: string;
-      if (encoding === 'utf8') {
-        textContent = fileBuffer.toString('utf8');
-      } else {
-        textContent = iconv.decode(fileBuffer, encoding);
+      try {
+        if (encoding === 'utf8') {
+          textContent = fileBuffer.toString('utf8');
+        } else {
+          textContent = iconv.decode(fileBuffer, encoding);
+        }
+      } catch (decodeError) {
+        throw new InvalidEncodingError(
+          `Falha ao decodificar arquivo com encoding ${encoding}`,
+          { originalError: decodeError as Error, attemptedEncoding: encoding },
+          tenantId,
+          jobId
+        );
       }
-      
+
+      // Verificar se o conteúdo parece ser um CSV válido
+      if (!textContent.trim()) {
+        throw new CorruptedFileError('Arquivo CSV não contém conteúdo válido', undefined, tenantId, jobId);
+      }
+
       // Detectar delimitador automaticamente se não for especificado
       const delimiter = options.delimiter || detectDelimiter(textContent);
-      
+
       // Configurar opções para o PapaParse
       const parseOptions = {
         delimiter,
@@ -128,16 +150,45 @@ export async function parseCSV(
         transform: options.transform,
         // Detectar erros de parsing
         error: (error: any) => {
-          reject(error);
+          reject(new CorruptedFileError(
+            `Erro de parsing no arquivo CSV: ${error.message}`,
+            { papaparseError: error },
+            tenantId,
+            jobId
+          ));
         }
       };
-      
+
       // Parsear o CSV
-      const parsed = parse(textContent, parseOptions);
-      
+      let parsed;
+      try {
+        parsed = parse(textContent, parseOptions);
+      } catch (parseError) {
+        throw new CorruptedFileError(
+          `Falha ao parsear conteúdo CSV: ${(parseError as Error).message}`,
+          { originalError: parseError as Error },
+          tenantId,
+          jobId
+        );
+      }
+
+      // Verificar se houve erros de parsing
+      if (parsed.errors && parsed.errors.length > 0) {
+        // Converter erros do PapaParse para nosso formato
+        const hasCriticalErrors = parsed.errors.some((error: any) => error.type === 'Quotes' || error.type === 'Delimiter');
+        if (hasCriticalErrors) {
+          throw new CorruptedFileError(
+            `Erros críticos de parsing detectados no CSV: ${parsed.errors.map((e: any) => e.message).join(', ')}`,
+            { papaparseErrors: parsed.errors },
+            tenantId,
+            jobId
+          );
+        }
+      }
+
       // Sanitizar os dados
       const sanitizedData = parsed.data.map(row => sanitizeCsvData(row));
-      
+
       resolve({
         data: sanitizedData,
         meta: {
@@ -148,7 +199,18 @@ export async function parseCSV(
         errors: parsed.errors
       });
     } catch (error) {
-      reject(error);
+      // Se já for um dos nossos erros personalizados, apenas rejeitar
+      if (error instanceof CorruptedFileError || error instanceof InvalidEncodingError) {
+        reject(error);
+      } else {
+        // Converter outros erros para nosso formato
+        reject(new CorruptedFileError(
+          `Erro inesperado ao parsear arquivo CSV: ${(error as Error).message}`,
+          { originalError: error as Error },
+          tenantId,
+          jobId
+        ));
+      }
     }
   });
 }

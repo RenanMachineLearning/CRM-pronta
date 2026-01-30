@@ -8,8 +8,12 @@
  * - Detectar possíveis duplicatas
  */
 
-import { Contact } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import {
+  MissingRequiredFieldError,
+  InvalidTypeError,
+  DuplicateValueError
+} from '../errors/ImportExportError';
 
 export interface ValidationError {
   rowIndex: number;
@@ -107,7 +111,8 @@ async function validateField(
  */
 export async function validateCsvData(
   data: any[],
-  options: ValidationOptions
+  options: ValidationOptions,
+  jobId?: string
 ): Promise<{ valid: boolean; errors: ValidationError[] }> {
   const errors: ValidationError[] = [];
   let isValid = true;
@@ -118,11 +123,19 @@ export async function validateCsvData(
       const row = data[i];
       for (const requiredField of options.requiredFields) {
         if (!row.hasOwnProperty(requiredField) || row[requiredField] === null || row[requiredField] === undefined || row[requiredField] === '') {
+          const error = new MissingRequiredFieldError(
+            requiredField,
+            `Campo obrigatório "${requiredField}" está ausente ou vazio`,
+            { rowIndex: i, value: row[requiredField] },
+            options.tenantId,
+            jobId
+          );
+
           errors.push({
             rowIndex: i,
             field: requiredField,
             value: row[requiredField],
-            message: `Campo obrigatório ${requiredField} está ausente ou vazio`
+            message: error.message
           });
           isValid = false;
         }
@@ -139,6 +152,32 @@ export async function validateCsvData(
       const fieldValue = row[fieldName];
       const error = await validateField(fieldName, fieldValue, options.fieldValidators || {}, i);
       if (error) {
+        // Se for um erro de tipo inválido, criar erro específico
+        if (fieldValue !== undefined && fieldValue !== null) {
+          // Verificar se o tipo é compatível com o esperado
+          const expectedType = inferExpectedType(fieldName);
+          if (expectedType && typeof fieldValue !== expectedType && !isValidTypeMatch(fieldValue, expectedType)) {
+            const typeError = new InvalidTypeError(
+              fieldName,
+              expectedType,
+              fieldValue,
+              `Tipo inválido para o campo "${fieldName}". Esperado: ${expectedType}, Recebido: ${typeof fieldValue}`,
+              { rowIndex: i },
+              options.tenantId,
+              jobId
+            );
+
+            errors.push({
+              rowIndex: i,
+              field: fieldName,
+              value: fieldValue,
+              message: typeError.message
+            });
+            isValid = false;
+            continue; // Pular para o próximo campo
+          }
+        }
+
         errors.push(error);
         isValid = false;
       }
@@ -147,13 +186,13 @@ export async function validateCsvData(
 
   // Validar relacionamentos e duplicatas
   if (options.entityType === 'contact') {
-    const contactErrors = await validateContactRelations(data, options.tenantId);
+    const contactErrors = await validateContactRelations(data, options.tenantId, jobId);
     if (contactErrors.length > 0) {
       errors.push(...contactErrors);
       isValid = false;
     }
   } else if (options.entityType === 'company') {
-    const companyErrors = await validateCompanyRelations(data, options.tenantId);
+    const companyErrors = await validateCompanyRelations(data, options.tenantId, jobId);
     if (companyErrors.length > 0) {
       errors.push(...companyErrors);
       isValid = false;
@@ -164,9 +203,41 @@ export async function validateCsvData(
 }
 
 /**
+ * Inferir o tipo esperado com base no nome do campo
+ */
+function inferExpectedType(fieldName: string): string | null {
+  const lowerFieldName = fieldName.toLowerCase();
+
+  if (lowerFieldName.includes('email')) return 'string';
+  if (lowerFieldName.includes('phone') || lowerFieldName.includes('tel') || lowerFieldName.includes('cell')) return 'string';
+  if (lowerFieldName.includes('date') || lowerFieldName.includes('birth') || lowerFieldName.includes('created') || lowerFieldName.includes('updated')) return 'string';
+  if (lowerFieldName.includes('value') || lowerFieldName.includes('price') || lowerFieldName.includes('amount') || lowerFieldName.includes('salary')) return 'number';
+  if (lowerFieldName.includes('age') || lowerFieldName.includes('quantity') || lowerFieldName.includes('count')) return 'number';
+  if (lowerFieldName.includes('active') || lowerFieldName.includes('enabled') || lowerFieldName.includes('published')) return 'boolean';
+
+  return null;
+}
+
+/**
+ * Verificar se o tipo é compatível
+ */
+function isValidTypeMatch(value: any, expectedType: string): boolean {
+  switch (expectedType) {
+    case 'number':
+      return !isNaN(Number(value));
+    case 'boolean':
+      return ['true', 'false', '1', '0', true, false, 1, 0].includes(value);
+    case 'string':
+      return true; // Qualquer valor pode ser convertido para string
+    default:
+      return typeof value === expectedType;
+  }
+}
+
+/**
  * Valida relacionamentos para contatos
  */
-async function validateContactRelations(data: any[], tenantId: string): Promise<ValidationError[]> {
+async function validateContactRelations(data: any[], tenantId: string, jobId?: string): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
 
   for (let i = 0; i < data.length; i++) {
@@ -208,11 +279,20 @@ async function validateContactRelations(data: any[], tenantId: string): Promise<
       });
 
       if (existingContact) {
+        const duplicateError = new DuplicateValueError(
+          'email',
+          row.email,
+          `Contato com email ${row.email} já existe`,
+          { rowIndex: i, existingContactId: existingContact.id },
+          tenantId,
+          jobId
+        );
+
         errors.push({
           rowIndex: i,
           field: 'email',
           value: row.email,
-          message: `Contato com email ${row.email} já existe`
+          message: duplicateError.message
         });
       }
     }
@@ -224,7 +304,7 @@ async function validateContactRelations(data: any[], tenantId: string): Promise<
 /**
  * Valida relacionamentos para empresas
  */
-async function validateCompanyRelations(data: any[], tenantId: string): Promise<ValidationError[]> {
+async function validateCompanyRelations(data: any[], tenantId: string, jobId?: string): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
 
   for (let i = 0; i < data.length; i++) {
@@ -241,11 +321,20 @@ async function validateCompanyRelations(data: any[], tenantId: string): Promise<
       });
 
       if (existingCompany) {
+        const duplicateError = new DuplicateValueError(
+          'name',
+          row.name,
+          `Empresa com nome ${row.name} já existe`,
+          { rowIndex: i, existingCompanyId: existingCompany.id },
+          tenantId,
+          jobId
+        );
+
         errors.push({
           rowIndex: i,
           field: 'name',
           value: row.name,
-          message: `Empresa com nome ${row.name} já existe`
+          message: duplicateError.message
         });
       }
     }

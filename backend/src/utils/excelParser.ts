@@ -11,6 +11,7 @@
 
 import * as XLSX from 'xlsx';
 import { sanitizeCsvData } from './csvSanitizer';
+import { CorruptedFileError } from '../errors/ImportExportError';
 
 export interface ExcelParseOptions {
   sheetName?: string;        // Nome da planilha a ser processada
@@ -46,23 +47,40 @@ export interface ExcelSheetMetadata {
  */
 export async function parseExcel(
   fileBuffer: Buffer,
-  options: ExcelParseOptions = {}
+  options: ExcelParseOptions = {},
+  tenantId?: string,
+  jobId?: string
 ): Promise<ExcelParseResult> {
   return new Promise((resolve, reject) => {
     try {
+      // Validar integridade do arquivo
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new CorruptedFileError('Arquivo Excel vazio ou corrompido', undefined, tenantId, jobId);
+      }
+
       // Ler o workbook a partir do buffer
-      const workbook = XLSX.read(fileBuffer, {
-        type: 'buffer',
-        cellDates: true,      // Converter células de data automaticamente
-        cellNF: false,        // Não incluir formato de número das células
-        cellText: false,      // Não incluir representação de texto das células
-      });
+      let workbook;
+      try {
+        workbook = XLSX.read(fileBuffer, {
+          type: 'buffer',
+          cellDates: true,      // Converter células de data automaticamente
+          cellNF: false,        // Não incluir formato de número das células
+          cellText: false,      // Não incluir representação de texto das células
+        });
+      } catch (readError) {
+        throw new CorruptedFileError(
+          `Falha ao ler arquivo Excel: ${(readError as Error).message}`,
+          { originalError: readError as Error },
+          tenantId,
+          jobId
+        );
+      }
 
       // Obter nomes de todas as planilhas
       const sheetNames = workbook.SheetNames;
 
       if (sheetNames.length === 0) {
-        throw new Error('O arquivo Excel não contém nenhuma planilha');
+        throw new CorruptedFileError('O arquivo Excel não contém nenhuma planilha válida', undefined, tenantId, jobId);
       }
 
       // Determinar qual planilha será processada
@@ -80,29 +98,42 @@ export async function parseExcel(
       const worksheet = workbook.Sheets[activeSheetName];
 
       if (!worksheet) {
-        throw new Error(`Planilha "${activeSheetName}" não encontrada no arquivo`);
+        throw new CorruptedFileError(
+          `Planilha "${activeSheetName}" não encontrada ou não é uma planilha válida no arquivo`,
+          { requestedSheet: activeSheetName, availableSheets: sheetNames },
+          tenantId,
+          jobId
+        );
       }
 
       // Converter a worksheet para JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: options.header !== false ? 1 : 0,  // Por padrão, usa primeira linha como cabeçalho
-        defval: options.defval,
-        raw: options.raw === true,
-        range: options.range,
-      });
+      let jsonData;
+      try {
+        jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: options.header !== false ? 1 : 0,  // Por padrão, usa primeira linha como cabeçalho
+          defval: options.defval,
+          raw: options.raw === true,
+          range: options.range,
+        });
+      } catch (conversionError) {
+        throw new CorruptedFileError(
+          `Falha ao converter planilha "${activeSheetName}" para formato JSON: ${(conversionError as Error).message}`,
+          { originalError: conversionError as Error, sheetName: activeSheetName },
+          tenantId,
+          jobId
+        );
+      }
 
       // Sanitizar os dados
       const sanitizedData = jsonData.map(row => sanitizeCsvData(row));
 
       // Obter informações sobre o range processado
       const range = worksheet['!ref'] || 'A1';
-      
-      // Calcular número de linhas e colunas
-      let rowCount = 0;
+
+      // Calcular número de colunas
       let colCount = 0;
       if (range) {
         const decodedRange = XLSX.utils.decode_range(range);
-        rowCount = decodedRange.e.r - decodedRange.s.r + 1;
         colCount = decodedRange.e.c - decodedRange.s.c + 1;
       }
 
@@ -118,7 +149,18 @@ export async function parseExcel(
         errors: []  // Por enquanto, não capturamos erros específicos do parsing
       });
     } catch (error) {
-      reject(error);
+      // Se já for um dos nossos erros personalizados, apenas rejeitar
+      if (error instanceof CorruptedFileError) {
+        reject(error);
+      } else {
+        // Converter outros erros para nosso formato
+        reject(new CorruptedFileError(
+          `Erro inesperado ao parsear arquivo Excel: ${(error as Error).message}`,
+          { originalError: error as Error },
+          tenantId,
+          jobId
+        ));
+      }
     }
   });
 }
@@ -186,7 +228,7 @@ export function detectExcelFormat(buffer: Buffer): 'XLSX' | 'XLS' | 'UNKNOWN' {
   try {
     // A detecção de formato exato é complicada apenas com buffer
     // Mas podemos tentar ler o arquivo e verificar propriedades
-    const workbook = XLSX.read(buffer, {
+    XLSX.read(buffer, {
       type: 'buffer',
       cellDates: true
     });
