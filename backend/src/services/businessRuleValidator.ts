@@ -8,20 +8,24 @@
  * - Aplicar regras personalizadas por tenant
  */
 
-import { ValidationError, ValidationErrorCode, ErrorSeverity } from '../types/validation.types';
+import { ValidationError, ErrorSeverity } from '../types/validation.types';
 import { prisma } from '../utils/prisma';
 
 // Interface para regra de negócio
 export interface BusinessRule {
   id: string;
   tenantId: string;
+  name: string;
+  description?: string;
   entityType: string;
-  fieldName: string;
-  operator: string;
-  value: any;
-  errorMessage: string;
-  severity: ErrorSeverity;
+  condition: string;
+  action: string;
+  field?: string;
+  errorMessage?: string;
+  warningMessage?: string;
   active: boolean;
+  isDeleted: boolean;
+  severity: string; // Nível de severidade da regra ('info' | 'warning' | 'error' | 'critical')
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,9 +83,13 @@ async function validateContactBusinessRules(data: Record<string, any>, tenantId:
     const existingContact = await prisma.contact.findFirst({
       where: {
         tenantId,
-        email: data.email,
+        emails: {
+          some: {
+            email: data.email
+          }
+        },
         id: data.id ? { not: data.id } : undefined, // Ignora o próprio registro se estiver atualizando
-        isDeleted: false
+        deletedAt: null
       }
     });
 
@@ -163,9 +171,17 @@ async function validateCompanyBusinessRules(data: Record<string, any>, tenantId:
     const existingCompany = await prisma.company.findFirst({
       where: {
         tenantId,
-        email: data.email,
+        contacts: {
+          some: {
+            emails: {
+              some: {
+                email: data.email
+              }
+            }
+          }
+        },
         id: data.id ? { not: data.id } : undefined,
-        isDeleted: false
+        deletedAt: null
       }
     });
 
@@ -207,7 +223,7 @@ async function validateLeadBusinessRules(data: Record<string, any>, tenantId: st
         tenantId,
         email: data.email,
         id: data.id ? { not: data.id } : undefined,
-        isDeleted: false
+        deletedAt: null
       }
     });
 
@@ -311,8 +327,7 @@ async function validateOpportunityBusinessRules(data: Record<string, any>, tenan
     const stage = await prisma.pipelineStage.findFirst({
       where: {
         id: data.stageId,
-        tenantId,
-        isDeleted: false
+        tenantId
       }
     });
 
@@ -333,7 +348,7 @@ async function validateOpportunityBusinessRules(data: Record<string, any>, tenan
 /**
  * Valida regras de negócio para Tarefas
  */
-async function validateTaskBusinessRules(data: Record<string, any>, tenantId: string): Promise<ValidationError[]> {
+async function validateTaskBusinessRules(data: Record<string, any>, _tenantId: string): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
 
   // Validação: Título é obrigatório
@@ -397,7 +412,7 @@ async function validateTaskBusinessRules(data: Record<string, any>, tenantId: st
 /**
  * Valida regras de negócio para Notas
  */
-async function validateNoteBusinessRules(data: Record<string, any>, tenantId: string): Promise<ValidationError[]> {
+async function validateNoteBusinessRules(data: Record<string, any>, _tenantId: string): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
 
   // Validação: Conteúdo é obrigatório
@@ -475,7 +490,7 @@ async function validateCustomBusinessRules(
  */
 async function evaluateCustomRule(
   data: Record<string, any>,
-  rule: any // O tipo real dependeria da estrutura do modelo BusinessRule no Prisma
+  rule: BusinessRule
 ): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
 
@@ -490,8 +505,8 @@ async function evaluateCustomRule(
           field: rule.field || 'general',
           code: 'BUSINESS_RULE_VIOLATION',
           message: rule.errorMessage || `Regra de negócio violada: ${rule.name}`,
-          severity: 'error',
-          value: data[rule.field],
+          severity: isValidErrorSeverity(rule.severity) ? rule.severity : 'error',
+          value: rule.field ? data[rule.field] : undefined,
           details: {
             ruleName: rule.name,
             ruleDescription: rule.description
@@ -502,8 +517,8 @@ async function evaluateCustomRule(
           field: rule.field || 'general',
           code: 'BUSINESS_RULE_WARNING',
           message: rule.warningMessage || `Aviso de regra de negócio: ${rule.name}`,
-          severity: 'warning',
-          value: data[rule.field],
+          severity: isValidErrorSeverity(rule.severity) ? rule.severity : 'warning',
+          value: rule.field ? data[rule.field] : undefined,
           details: {
             ruleName: rule.name,
             ruleDescription: rule.description
@@ -711,4 +726,12 @@ function isValidTaskStatus(status: string): boolean {
 function isValidNoteType(type: string): boolean {
   const validTypes = ['COMMENT', 'CALL', 'MEETING', 'EMAIL', 'TASK'];
   return validTypes.includes(type.toUpperCase());
+}
+
+/**
+ * Verifica se o nível de severidade é válido
+ */
+function isValidErrorSeverity(severity: string): severity is ErrorSeverity {
+  const validSeverities: ErrorSeverity[] = ['info', 'warning', 'error', 'critical'];
+  return validSeverities.includes(severity as ErrorSeverity);
 }

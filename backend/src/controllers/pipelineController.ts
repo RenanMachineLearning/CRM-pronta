@@ -10,7 +10,7 @@
 
 import { Request, Response } from 'express';
 import { PipelineService } from '../services/pipelineService';
-import { validateHexColor, validateProbability } from '../utils/validators';
+import { validateHexColor } from '../utils/validators';
 
 /**
  * Lista todos os pipelines do tenant

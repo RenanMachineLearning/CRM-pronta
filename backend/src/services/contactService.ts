@@ -22,7 +22,7 @@ import { buildOrderBy } from '../utils/orderByHelpers';
 import { withQueryTimeout } from '../utils/queryTimeout';
 import { cacheManager } from '../cache/cacheManager';
 import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
-import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
+import { QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
 
 
 // Interface para filtros de listagem

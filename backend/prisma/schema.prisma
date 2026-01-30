@@ -190,6 +190,7 @@ model Tenant {
   pipelineStages      PipelineStage[] // Etapa 6 (Leads/Oportunidades)
   tasks               Task[] // Etapa 7 (Tarefas/Notas)
   notes               Note[] // Etapa 7 (Tarefas/Notas)
+  businessRules       BusinessRule[] // Etapa 8 (Regras de Negócio)
   importJobs          ImportJob[] // Etapa 9 (Importação/Exportação)
 
   @@map("tenants")
@@ -959,6 +960,41 @@ model Note {
   // Otimiza queries: SELECT * FROM notes WHERE tenantId = ? AND relatedEntityType = ? AND relatedEntityId = ?
   @@index([tenantId, relatedEntityType, relatedEntityId])
   @@map("notes")
+}
+
+// ============================================================================
+// ETAPA 8 - REGRAS DE NEGÓCIO
+// ============================================================================
+// Modelo para regras de negócio personalizadas por tenant
+// Implementado na Etapa 8 (Regras de Negócio)
+
+model BusinessRule {
+  id          String      @id @default(uuid())
+  tenantId    String      // Foreign key para Tenant (isolamento multi-tenant)
+  name        String      // Nome da regra
+  description String?     // Descrição opcional
+  entityType  String      // Tipo de entidade (ex: "Contact", "Company", "Lead")
+  condition   String      // Condição da regra (expressão)
+  action      String      // Ação a ser executada ("ERROR", "WARNING", etc.)
+  field       String?     // Campo específico (opcional)
+  errorMessage String?    // Mensagem de erro
+  warningMessage String?  // Mensagem de aviso
+  severity    String      @default("error") // Nível de severidade da regra ('info' | 'warning' | 'error' | 'critical')
+  active      Boolean     @default(true) // Se a regra está ativa
+  isDeleted   Boolean     @default(false) // Soft delete
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por tipo de entidade
+  @@index([tenantId, entityType])
+  // Índice para busca por status
+  @@index([tenantId, active])
+  @@map("business_rules")
 }
 
 // ============================================================================

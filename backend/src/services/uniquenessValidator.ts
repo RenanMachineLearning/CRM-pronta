@@ -9,7 +9,7 @@
  */
 
 import { prisma } from '../utils/prisma';
-import { UniquenessCheckResult, ValidationError } from '../types/validation.types';
+import { UniquenessCheckResult } from '../types/validation.types';
 import { cacheManager } from '../cache/cacheManager';
 import { generateCacheKey } from '../cache/cacheKeys';
 
@@ -104,7 +104,7 @@ async function performUniquenessCheck(
     if (existingRecords.length > 0) {
       return {
         isUnique: false,
-        conflictingIds: existingRecords.map(record => record.id)
+        conflictingIds: existingRecords.map((record: { id: string }) => record.id)
       };
     }
 
@@ -203,8 +203,8 @@ async function acquireLock(lockKey: string): Promise<boolean> {
   // Por enquanto, simulamos o comportamento
   try {
     // Tenta definir a chave com um TTL
-    const result = await cacheManager.setWithTtl(lockKey, 'locked', LOCK_TTL);
-    return result; // Retorna true se conseguiu definir o lock
+    await cacheManager.set(lockKey, 'locked', LOCK_TTL);
+    return true; // Retorna true se conseguiu definir o lock
   } catch {
     // Se der erro ao definir o lock, assume que já estava bloqueado
     return false;
@@ -309,7 +309,7 @@ async function performCompositeUniquenessCheck(
     if (existingRecords.length > 0) {
       return {
         isUnique: false,
-        conflictingIds: existingRecords.map(record => record.id)
+        conflictingIds: existingRecords.map((record: { id: string }) => record.id)
       };
     }
 

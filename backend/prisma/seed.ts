@@ -1,12 +1,14 @@
 /**
  * Script de seed para popular o banco de dados com dados iniciais
- * 
+ *
  * Cria um tenant de demonstração que será usado para testes e desenvolvimento.
  * Este script é idempotente - pode ser executado múltiplas vezes sem criar duplicados.
- * 
+ *
  * Etapa 3 (ACL): Cria roles padrão, permissões padrão e suas associações.
  * Etapa 4 (Modelo de Dados): Cria entidades core e campos padrão.
  */
+
+/// <reference types="node" />
 
 import { PrismaClient, Permission, Role } from '@prisma/client';
 
