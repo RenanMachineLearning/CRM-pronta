@@ -11,11 +11,16 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
+import ExportDialog from './ExportDialog/ExportDialog';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
 import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
+import { getAvailableFields, exportData } from '../services/exportService';
+import { downloadFile, generateExportFilename } from '../utils/downloadUtils';
+import { getAuthToken } from '../utils/api';
 import type { Lead, LeadFilters, LeadPaginationParams, LeadStatus } from '../types/lead';
 import type { Filter } from '../types/filter';
+import type { Field } from './ExportDialog/ExportDialog.types';
 
 export interface LeadListProps {
   leads?: Lead[]; // Opcional: se fornecido, usar em vez de buscar
@@ -28,10 +33,75 @@ export interface LeadListProps {
 export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLead, advancedFilters = [] }: LeadListProps) {
   // Estado para filtros
   const [filters, _setFilters] = useState<LeadFilters>({});
-  
+
+  // Estados para exportação
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [availableFields, setAvailableFields] = useState<Field[]>([]);
+  const [, setLoadingFields] = useState(false);
+  const token = getAuthToken();
+
   // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar leads da prop)
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
   const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
+
+  // Carregar campos disponíveis para exportação
+  useEffect(() => {
+    if (showExportDialog && token) {
+      const fetchFields = async () => {
+        setLoadingFields(true);
+        try {
+          const fields = await getAvailableFields('Lead', token);
+          // Mapear campos para o formato esperado pelo ExportDialog
+          const mappedFields: Field[] = fields.map((field: any) => ({
+            id: field.id,
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            order: field.order
+          }));
+          setAvailableFields(mappedFields);
+        } catch (error) {
+          console.error('Erro ao carregar campos para exportação:', error);
+        } finally {
+          setLoadingFields(false);
+        }
+      };
+
+      fetchFields();
+    }
+  }, [showExportDialog, token]);
+
+  // Handler para exportação
+  const handleExport = async (options: any) => {
+    if (!token) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    try {
+      // Chamar serviço de exportação
+      const blob = await exportData('leads', options, token);
+
+      // Gerar nome de arquivo
+      const filename = generateExportFilename('leads', options.format);
+
+      // Fazer download do arquivo
+      downloadFile(blob, filename);
+    } catch (error) {
+      console.error('Erro na exportação:', error);
+      throw error;
+    }
+  };
+
+  // Handler para abrir diálogo de exportação
+  const handleOpenExportDialog = () => {
+    setShowExportDialog(true);
+  };
+
+  // Handler para fechar diálogo de exportação
+  const handleCloseExportDialog = () => {
+    setShowExportDialog(false);
+  };
 
   // Sincronizar ordenação e paginação com URL (sempre chamar, mas callbacks só fazem algo se não usar leads da prop)
   useSortPaginationUrlSync(
@@ -218,7 +288,7 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
             onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
             className="w-48 mb-0"
           />
-          
+
           {/* Filtro de origem */}
           <Input
             placeholder="Origem..."
@@ -226,7 +296,7 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
             onChange={(e) => handleFilterChange('source', e.target.value || undefined)}
             className="w-48 mb-0"
           />
-          
+
           {/* Filtro de convertido */}
           <Select
             value={filters.converted !== undefined ? filters.converted.toString() : ''}
@@ -240,12 +310,28 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
           />
         </div>
 
-        {onNewLead && (
-          <Button onClick={onNewLead} variant="primary">
-            Novo Lead
+        <div className="flex flex-wrap gap-2">
+          {onNewLead && (
+            <Button onClick={onNewLead} variant="primary">
+              Novo Lead
+            </Button>
+          )}
+
+          <Button onClick={handleOpenExportDialog} variant="secondary">
+            Exportar
           </Button>
-        )}
+        </div>
       </div>
+
+      {/* Diálogo de exportação */}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={handleCloseExportDialog}
+        entityType="Lead"
+        currentFilters={advancedFilters.length > 0 ? advancedFilters : undefined}
+        availableFields={availableFields}
+        onExport={handleExport}
+      />
 
       {/* Tabela de leads */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
