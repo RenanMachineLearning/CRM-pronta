@@ -62,7 +62,13 @@ export interface FieldValidationRules {
 export interface BusinessRule {
   condition: string; // Condição que deve ser satisfeita
   errorMessage: string; // Mensagem de erro se condição não for satisfeita
+  description?: string | null; // Descrição opcional da regra
   dependsOn?: string[]; // Campos dos quais esta regra depende
+  action?: string; // Ação a ser executada ("ERROR", "WARNING", etc.)
+  field?: string | null; // Campo específico (opcional)
+  name?: string; // Nome da regra
+  severity?: string; // Nível de severidade da regra
+  warningMessage?: string | null; // Mensagem de aviso
 }
 
 // Interface para resultado de validação

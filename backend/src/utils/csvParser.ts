@@ -41,7 +41,7 @@ export function detectEncoding(buffer: Buffer): string {
   // Primeiro tenta detectar se é UTF-8 válido
   const utf8String = buffer.toString('utf8');
   const isValidUtf8 = Buffer.from(utf8String, 'utf8').equals(buffer);
-  
+
   if (isValidUtf8) {
     // Verifica se parece ser UTF-8 com caracteres especiais
     if (utf8String.match(/[\u0080-\u00FF]/)) {
@@ -60,7 +60,7 @@ export function detectEncoding(buffer: Buffer): string {
     }
     return 'utf8';
   }
-  
+
   // Se não for UTF-8 válido, tenta como ISO-8859-1
   try {
     const latin1String = iconv.decode(buffer, 'latin1');
@@ -70,7 +70,7 @@ export function detectEncoding(buffer: Buffer): string {
   } catch (e) {
     // Se der erro, assume UTF-8
   }
-  
+
   return 'utf8';
 }
 

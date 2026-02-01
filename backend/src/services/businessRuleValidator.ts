@@ -474,7 +474,17 @@ async function validateCustomBusinessRules(
 
     // Aplica cada regra personalizada
     for (const rule of customRules) {
-      const ruleErrors = await evaluateCustomRule(data, rule);
+      // Passa os campos necessários diretamente para a função de avaliação
+      const ruleErrors = await evaluateCustomRule(data, {
+        condition: rule.condition,
+        errorMessage: rule.errorMessage || '', // Garante que errorMessage não seja nulo
+        description: rule.description || undefined,
+        action: rule.action,
+        field: rule.field ?? undefined,
+        name: rule.name,
+        severity: rule.severity,
+        warningMessage: rule.warningMessage || undefined
+      } as BusinessRule);
       errors.push(...ruleErrors);
     }
   } catch (error) {

@@ -1,69 +1,184 @@
 /**
- * Testes unitários para exportHelpers (Etapa 9 - Parte 8).
- * Valida: generateCSV e generateExcel produzem buffers com headers e dados.
+ * Testes unitários para geração de CSV/Excel
+ * 
+ * Testa a funcionalidade de geração de arquivos para exportação
  */
 
 import { generateCSV, generateExcel } from '../../../src/utils/exportHelpers';
 
-describe('exportHelpers.generateCSV', () => {
-  it('retorna buffer CSV com headers e linhas', () => {
+describe('Geração de CSV - Testes Unitários', () => {
+  it('deve gerar CSV com cabeçalhos e dados corretos', () => {
     const data = [
-      { id: '1', name: 'A', value: 10 },
-      { id: '2', name: 'B', value: 20 },
+      { firstName: 'João', lastName: 'Silva', email: 'joao@email.com' },
+      { firstName: 'Maria', lastName: 'Souza', email: 'maria@email.com' }
     ];
-    const fields = ['id', 'name', 'value'];
-    const buf = generateCSV(data, fields);
-    expect(Buffer.isBuffer(buf)).toBe(true);
-    const str = buf.toString('utf8');
-    expect(str).toMatch(/id/);
-    expect(str).toMatch(/name/);
-    expect(str).toMatch(/value/);
-    expect(str).toMatch(/1/);
-    expect(str).toMatch(/A/);
-    expect(str).toMatch(/2/);
-    expect(str).toMatch(/B/);
+    
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    // Verificar se o CSV contém os cabeçalhos
+    expect(csvString).toContain('firstName,lastName,email');
+    // Verificar se contém os dados
+    expect(csvString).toContain('João,Silva,joao@email.com');
+    expect(csvString).toContain('Maria,Souza,maria@email.com');
   });
 
-  it('retorna CSV só com header quando data é vazio', () => {
-    const buf = generateCSV([], ['a', 'b']);
-    expect(Buffer.isBuffer(buf)).toBe(true);
-    const str = buf.toString('utf8');
-    expect(str).toContain('a');
-    expect(str).toContain('b');
-    const lines = str.split('\n').filter(Boolean);
-    expect(lines.length).toBeGreaterThanOrEqual(1);
+  it('deve gerar CSV com campos em ordem específica', () => {
+    const data = [
+      { firstName: 'João', lastName: 'Silva', email: 'joao@email.com' }
+    ];
+    
+    // Especificar campos em ordem diferente
+    const fields = ['email', 'firstName', 'lastName'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    // Verificar se os cabeçalhos estão na ordem correta
+    expect(csvString.startsWith('email,firstName,lastName')).toBe(true);
+    // Verificar se os dados seguem a mesma ordem
+    expect(csvString).toContain('joao@email.com,João,Silva');
   });
 
-  it('trata null/undefined como string vazia', () => {
-    const data = [{ x: null, y: undefined }];
-    const buf = generateCSV(data, ['x', 'y']);
-    const str = buf.toString('utf8');
-    expect(str).toMatch(/x/);
-    expect(str).toMatch(/y/);
+  it('deve lidar com campos ausentes', () => {
+    const data = [
+      { firstName: 'João', lastName: 'Silva' }, // Sem email
+      { firstName: 'Maria', email: 'maria@email.com' } // Sem lastName
+    ];
+    
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    // Verificar se o CSV contém os cabeçalhos
+    expect(csvString).toContain('firstName,lastName,email');
+    // Verificar se os dados ausentes são tratados como vazios
+    expect(csvString).toContain('João,Silva,');
+    expect(csvString).toContain('Maria,,maria@email.com');
+  });
+
+  it('deve escapar valores com vírgulas e aspas', () => {
+    const data = [
+      { firstName: 'João', description: 'Cliente, VIP, com desconto especial' },
+      { firstName: 'Maria', description: 'Cliente "premium"' }
+    ];
+    
+    const fields = ['firstName', 'description'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    // Verificar se valores com vírgulas são envoltos em aspas
+    expect(csvString).toContain('"Cliente, VIP, com desconto especial"');
+    // Verificar se aspas são escapadas
+    expect(csvString).toContain('"Cliente ""premium"""');
+  });
+
+  it('deve gerar CSV com dados vazios', () => {
+    const data: any[] = []; // Array vazio
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    // Deve conter apenas os cabeçalhos
+    expect(csvString).toBe('firstName,lastName,email\n');
+  });
+
+  it('deve gerar CSV com campos vazios', () => {
+    const data = [
+      { firstName: '', lastName: '', email: '' }
+    ];
+    
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const csvBuffer = generateCSV(data, fields);
+    const csvString = csvBuffer.toString('utf8');
+    
+    expect(csvString).toContain(',,\n');
   });
 });
 
-describe('exportHelpers.generateExcel', () => {
-  it('retorna buffer XLSX com headers e linhas', () => {
+describe('Geração de Excel - Testes Unitários', () => {
+  it('deve gerar arquivo Excel com dados corretos', () => {
     const data = [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
+      { firstName: 'João', lastName: 'Silva', email: 'joao@email.com' },
+      { firstName: 'Maria', lastName: 'Souza', email: 'maria@email.com' }
     ];
-    const fields = ['id', 'name'];
-    const buf = generateExcel(data, fields);
-    expect(Buffer.isBuffer(buf)).toBe(true);
-    expect(buf.length).toBeGreaterThan(0);
+    
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    // O teste verificará se a função não lança exceção e retorna um buffer
+    const excelBuffer = generateExcel(data, fields);
+    
+    // Verificar se o retorno é um Buffer
+    expect(Buffer.isBuffer(excelBuffer)).toBe(true);
+    // Verificar se o buffer tem algum conteúdo
+    expect(excelBuffer.length).toBeGreaterThan(0);
   });
 
-  it('retorna buffer para data vazio com fields', () => {
-    const buf = generateExcel([], ['a', 'b']);
-    expect(Buffer.isBuffer(buf)).toBe(true);
-    expect(buf.length).toBeGreaterThan(0);
+  it('deve gerar Excel com campos em ordem específica', () => {
+    const data = [
+      { firstName: 'João', lastName: 'Silva', email: 'joao@email.com' }
+    ];
+    
+    // Especificar campos em ordem diferente
+    const fields = ['email', 'firstName', 'lastName'];
+    
+    const excelBuffer = generateExcel(data, fields);
+    
+    // Verificar se o retorno é um Buffer
+    expect(Buffer.isBuffer(excelBuffer)).toBe(true);
+    expect(excelBuffer.length).toBeGreaterThan(0);
   });
 
-  it('converte Date para string', () => {
-    const data = [{ d: new Date('2024-01-15T12:00:00.000Z') }];
-    const buf = generateExcel(data, ['d']);
-    expect(Buffer.isBuffer(buf)).toBe(true);
+  it('deve lidar com dados vazios na geração de Excel', () => {
+    const data: any[] = []; // Array vazio
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const excelBuffer = generateExcel(data, fields);
+    
+    // Verificar se o retorno é um Buffer
+    expect(Buffer.isBuffer(excelBuffer)).toBe(true);
+    // Mesmo vazio, deve ter estrutura básica de um arquivo Excel
+    expect(excelBuffer.length).toBeGreaterThan(0);
+  });
+
+  it('deve lidar com campos ausentes na geração de Excel', () => {
+    const data = [
+      { firstName: 'João', lastName: 'Silva' }, // Sem email
+      { firstName: 'Maria', email: 'maria@email.com' } // Sem lastName
+    ];
+    
+    const fields = ['firstName', 'lastName', 'email'];
+    
+    const excelBuffer = generateExcel(data, fields);
+    
+    // Verificar se o retorno é um Buffer
+    expect(Buffer.isBuffer(excelBuffer)).toBe(true);
+    expect(excelBuffer.length).toBeGreaterThan(0);
+  });
+
+  it('deve gerar Excel com diferentes tipos de dados', () => {
+    const data = [
+      {
+        firstName: 'João',
+        age: 30,
+        isActive: true,
+        registrationDate: new Date('2023-01-01'),
+        balance: 1234.56
+      }
+    ];
+    
+    const fields = ['firstName', 'age', 'isActive', 'registrationDate', 'balance'];
+    
+    const excelBuffer = generateExcel(data, fields);
+    
+    // Verificar se o retorno é um Buffer
+    expect(Buffer.isBuffer(excelBuffer)).toBe(true);
+    expect(excelBuffer.length).toBeGreaterThan(0);
   });
 });
