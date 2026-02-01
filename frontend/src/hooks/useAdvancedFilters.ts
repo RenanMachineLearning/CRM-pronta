@@ -4,8 +4,8 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { Filter, FilterOperator, FieldMetadata } from '../types/filter';
-import { getEntityFilterConfig, getFieldMetadata, getAvailableOperators } from '../services/filterConfigService';
+import type { Filter, FilterOperator } from '../types/filter';
+import { getEntityFilterConfig, getFieldMetadata } from '../services/filterConfigService';
 import { validateFilter } from '../utils/filterValidation';
 import { OPERATOR_LABELS, FilterOperator as Op } from '../types/filter';
 

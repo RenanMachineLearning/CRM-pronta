@@ -3,7 +3,6 @@
  * Dropdown Contact, Company, Lead, Opportunity; link Baixar template.
  */
 
-import React from 'react';
 import { Select } from '../../Select';
 import { Button } from '../../Button';
 import { ENTITY_OPTIONS, type EntityType } from '../entityFields';

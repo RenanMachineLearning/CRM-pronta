@@ -3,14 +3,13 @@
  * Exibe tabela de tarefas com paginação, ordenação, filtros e ações
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTasks } from '../hooks/useTasks';
 import { updateTask } from '../services/taskService';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
-import { Input } from './Input';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
 import { Pagination } from './Pagination/Pagination';
 import { useSorting } from '../hooks/useSorting';
@@ -43,7 +42,6 @@ export function TaskList({
   initialPagination,
   showFilters = true,
   showPagination = true,
-  compact = false,
 }: TaskListProps) {
   // Estado para filtros
   const [filters, setFilters] = useState<TaskFilters>(initialFilters || {});
@@ -84,7 +82,6 @@ export function TaskList({
     error,
     pagination: paginationInfo,
     refetch,
-    setFilters: updateFilters,
     setPagination: updatePagination,
   } = useTasks(
     initialFilters || filters,

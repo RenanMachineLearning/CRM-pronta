@@ -6,7 +6,7 @@
  */
 
 import { Filter, FilterOperator, FilterError, ENTITY_FILTER_CONFIGS } from '../types/filter.types';
-import { convertFilterValue, parseRelationField } from './filterHelpers';
+import { convertFilterValue } from './filterHelpers';
 
 /**
  * Limite máximo de filtros por requisição

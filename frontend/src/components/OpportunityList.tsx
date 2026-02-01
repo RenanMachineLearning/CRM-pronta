@@ -3,7 +3,7 @@
  * Exibe tabela de oportunidades com paginação, ordenação e filtros
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useOpportunities } from '../hooks/useOpportunities';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
@@ -14,7 +14,7 @@ import { Pagination } from './Pagination/Pagination';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
 import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
-import type { Opportunity, OpportunityFilters, OpportunityStatus } from '../types/opportunity';
+import type { OpportunityFilters, OpportunityStatus, OpportunityPaginationParams } from '../types/opportunity';
 import type { Filter } from '../types/filter';
 
 export interface OpportunityListProps {
@@ -85,7 +85,7 @@ function getStatusColor(status: OpportunityStatus): string {
 
 export function OpportunityList({ onOpportunityClick, onNewOpportunity, advancedFilters = [] }: OpportunityListProps) {
   // Estado para filtros
-  const [filters, setFilters] = useState<OpportunityFilters>({});
+  const [filters] = useState<OpportunityFilters>({});
   
   // Hooks para ordenação e paginação
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
@@ -111,6 +111,34 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
   );
 
   // Hook para buscar oportunidades
+  const sortParams = toSortParams();
+  const paginationParams = toPaginationParams();
+
+  // Função para converter parâmetros com tipagem correta
+  const buildOpportunityParams = (): OpportunityPaginationParams => {
+    const baseParams = {
+      limit: paginationParams.limit,
+      offset: paginationParams.offset,
+    };
+
+    if (sortParams.orderBy) {
+      // Verificar se o campo de ordenação é um dos campos válidos para oportunidades
+      if (['value', 'closeDate', 'createdAt', 'name'].includes(sortParams.orderBy)) {
+        return {
+          ...baseParams,
+          orderBy: sortParams.orderBy as 'value' | 'closeDate' | 'createdAt' | 'name',
+          order: sortParams.order,
+        };
+      }
+    }
+
+    return {
+      ...baseParams,
+      orderBy: undefined,
+      order: sortParams.order,
+    };
+  };
+
   const {
     opportunities,
     loading,
@@ -122,10 +150,7 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
     setAdvancedFilters: updateAdvancedFilters,
   } = useOpportunities(
     filters,
-    {
-      ...toPaginationParams(),
-      ...toSortParams(),
-    },
+    buildOpportunityParams(),
     advancedFilters
   );
 
@@ -142,9 +167,11 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
 
   // Atualizar paginação e ordenação na API quando mudarem
   useEffect(() => {
+    const sortParams = toSortParams();
     updatePagination({
       ...toPaginationParams(),
-      ...toSortParams(),
+      orderBy: sortParams.orderBy as 'name' | 'value' | 'createdAt' | 'closeDate' | undefined,
+      order: sortParams.order,
     });
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams]);
 
@@ -163,97 +190,6 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
     }
     updateFilters(newFilters);
     updatePage(1); // Resetar para primeira página
-  };
-
-  // Calcular número de páginas
-  const totalPages = Math.ceil(pagination.total / limit);
-
-  // Função para renderizar indicador de ordenação
-  const renderSortIndicator = (column: 'value' | 'closeDate' | 'createdAt' | 'name') => {
-    if (orderBy !== column) return null;
-    return order === 'asc' ? ' ↑' : ' ↓';
-  };
-
-  // Função para renderizar paginação
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-
-    const pages: (number | string)[] = [];
-    const maxVisible = 7;
-
-    if (totalPages <= maxVisible) {
-      // Mostrar todas as páginas
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Lógica de ellipsis
-      if (page <= 3) {
-        // Início
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      } else if (page >= totalPages - 2) {
-        // Fim
-        pages.push(1);
-        pages.push('ellipsis');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        // Meio
-        pages.push(1);
-        pages.push('ellipsis');
-        for (let i = page - 1; i <= page + 1; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      }
-    }
-
-    return (
-      <div className="flex items-center justify-center gap-2 mt-4">
-        <button
-          onClick={() => handlePageChange(page - 1)}
-          disabled={page === 1}
-          className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-        >
-          Anterior
-        </button>
-        {pages.map((p, index) => {
-          if (p === 'ellipsis') {
-            return (
-              <span key={`ellipsis-${index}`} className="px-2">
-                ...
-              </span>
-            );
-          }
-          return (
-            <button
-              key={p}
-              onClick={() => handlePageChange(p as number)}
-              className={`px-3 py-1 rounded border ${
-                page === p
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {p}
-            </button>
-          );
-        })}
-        <button
-          onClick={() => handlePageChange(page + 1)}
-          disabled={page === totalPages}
-          className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-        >
-          Próxima
-        </button>
-      </div>
-    );
   };
 
   if (loading) {

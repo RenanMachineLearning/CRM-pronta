@@ -8,10 +8,8 @@
  * - Tratar erros de mapeamento granularmente
  */
 
-import { FieldMapping, MappedRow, MappingPreview, MappingStats, MappingError, ErrorSeverity, MappingErrorType } from '../types/mapping.types';
+import { FieldMapping, MappedRow, MappingPreview, MappingStats, MappingError } from '../types/mapping.types';
 import { FieldMetadataService } from '../services/fieldMetadataService';
-import { parse, ParseResult } from 'papaparse';
-import * as XLSX from 'xlsx';
 
 /**
  * Função principal para mapear campos de linhas para entidade
@@ -20,8 +18,7 @@ export async function mapFieldsToEntity(
   rows: any[][],
   mappings: FieldMapping[],
   entityType: string,
-  tenantId: string,
-  userId?: string
+  tenantId: string
 ): Promise<MappedRow[]> {
   const mappedRows: MappedRow[] = [];
 
@@ -422,7 +419,6 @@ export async function generateMappingPreview(
   mappings: FieldMapping[],
   entityType: string,
   tenantId: string,
-  userId?: string,
   maxPreviewRows: number = 5
 ): Promise<MappingPreview> {
   const startTime = Date.now();
@@ -431,7 +427,7 @@ export async function generateMappingPreview(
   const previewRows = rows.slice(0, maxPreviewRows);
 
   // Mapeia as linhas
-  const mappedRows = await mapFieldsToEntity(previewRows, mappings, entityType, tenantId, userId);
+  const mappedRows = await mapFieldsToEntity(previewRows, mappings, entityType, tenantId);
 
   // Calcula estatísticas
   const stats: MappingStats = {
@@ -469,7 +465,6 @@ export async function generateDetailedMappingPreview(
   mappings: FieldMapping[],
   entityType: string,
   tenantId: string,
-  userId?: string,
   maxPreviewRows: number = 5
 ): Promise<MappingPreview> {
   const startTime = Date.now();
@@ -478,7 +473,7 @@ export async function generateDetailedMappingPreview(
   const previewRows = rows.slice(0, maxPreviewRows);
 
   // Mapeia as linhas
-  const mappedRows = await mapFieldsToEntity(previewRows, mappings, entityType, tenantId, userId);
+  const mappedRows = await mapFieldsToEntity(previewRows, mappings, entityType, tenantId);
 
   // Calcula estatísticas detalhadas
   const stats: MappingStats = {
@@ -501,7 +496,7 @@ export async function generateDetailedMappingPreview(
   }
 
   // Adiciona informações sobre campos mapeados e não mapeados
-  const availableFields = await FieldMetadataService.getEntityFields(entityType, tenantId, userId);
+  const availableFields = await FieldMetadataService.getEntityFields(entityType, tenantId);
   const mappedFieldNames = new Set(mappings.map(m => m.fieldName));
   const unmappedFields = availableFields.filter(f => !mappedFieldNames.has(f.name));
 
@@ -530,8 +525,7 @@ export async function generateDetailedMappingPreview(
 export async function validateMapping(
   mappings: FieldMapping[],
   entityType: string,
-  tenantId: string,
-  userId?: string
+  tenantId: string
 ): Promise<{ isValid: boolean; errors: MappingError[]; warnings: MappingError[] }> {
   const errors: MappingError[] = [];
   const warnings: MappingError[] = [];
@@ -547,7 +541,7 @@ export async function validateMapping(
   }
 
   // Recupera os campos disponíveis para a entidade
-  const availableFields = await FieldMetadataService.getEntityFields(entityType, tenantId, userId);
+  const availableFields = await FieldMetadataService.getEntityFields(entityType, tenantId);
 
   // Verifica cada mapeamento
   const usedColumns = new Set<number>();
@@ -633,10 +627,9 @@ export async function validateMappingWithData(
   mappings: FieldMapping[],
   rows: any[][],
   entityType: string,
-  tenantId: string,
-  userId?: string
+  tenantId: string
 ): Promise<{ isValid: boolean; errors: MappingError[]; warnings: MappingError[]; sampleErrors?: any[] }> {
-  const { isValid, errors, warnings } = await validateMapping(mappings, entityType, tenantId, userId);
+  const { isValid, errors, warnings } = await validateMapping(mappings, entityType, tenantId);
 
   if (!isValid) {
     return { isValid, errors, warnings };

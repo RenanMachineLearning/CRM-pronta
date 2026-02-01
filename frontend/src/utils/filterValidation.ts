@@ -3,7 +3,7 @@
  * Baseada nas regras do backend
  */
 
-import type { Filter, FieldMetadata } from '../types/filter';
+import type { Filter } from '../types/filter';
 import { FilterOperator } from '../types/filter';
 import { getFieldMetadata, getAvailableOperators } from '../services/filterConfigService';
 

@@ -2,7 +2,7 @@
  * Página de listagem de leads
  */
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeadList } from '../components/LeadList';
 import { ConvertLeadModal } from '../components/ConvertLeadModal';
@@ -11,7 +11,6 @@ import { useLeads } from '../hooks/useLeads';
 import { getLeadById } from '../services/leadService';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
 import type { Lead, ConvertLeadResponse } from '../types/lead';
-import type { Filter } from '../types/filter';
 
 export function LeadsPage() {
   const navigate = useNavigate();
@@ -20,11 +19,7 @@ export function LeadsPage() {
   // Usar hook useLeads diretamente
   const {
     leads,
-    loading,
-    error,
     refetch,
-    setFilters: updateFilters,
-    setPagination: updatePagination,
     setAdvancedFilters: updateAdvancedFilters,
   } = useLeads(undefined, {
     limit: 20,
@@ -34,7 +29,7 @@ export function LeadsPage() {
   }, advancedFilters);
 
   // Atualizar filtros avançados quando mudarem
-  React.useEffect(() => {
+  useEffect(() => {
     updateAdvancedFilters(advancedFilters);
   }, [advancedFilters, updateAdvancedFilters]);
 

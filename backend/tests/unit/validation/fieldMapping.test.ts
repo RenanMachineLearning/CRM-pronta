@@ -2,11 +2,11 @@
  * Testes unitários para o sistema de mapeamento de campos
  */
 
-import { validateImportRow } from '../../src/utils/importValidator';
-import { normalizeValue } from '../../src/utils/valueNormalizer';
-import { validateUniqueness } from '../../src/services/uniquenessValidator';
-import { validateBusinessRules } from '../../src/services/businessRuleValidator';
-import { FieldValidationRules } from '../../src/types/validation.types';
+import { validateImportRow } from '../../../src/utils/importValidator';
+import { normalizeValue } from '../../../src/utils/valueNormalizer';
+import { validateUniqueness } from '../../../src/services/uniquenessValidator';
+import { validateBusinessRules } from '../../../src/services/businessRuleValidator';
+import { FieldValidationRules } from '../../../src/types/validation.types';
 
 describe('Sistema de Mapeamento de Campos - Testes Unitários', () => {
   const mockTenantId = 'test-tenant-id-mapping';

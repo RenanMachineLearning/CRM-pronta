@@ -272,7 +272,6 @@ describe('Entity Specific Filters - E2E Tests', () => {
   describe('Company - hasContacts filter', () => {
     let companyWithContacts: { id: string };
     let companyWithoutContacts: { id: string };
-    let contact1: { id: string };
 
     beforeAll(async () => {
       // Criar empresa com contatos
@@ -284,7 +283,7 @@ describe('Entity Specific Filters - E2E Tests', () => {
         },
       });
 
-      contact1 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant1.id,
           firstName: 'Contato',

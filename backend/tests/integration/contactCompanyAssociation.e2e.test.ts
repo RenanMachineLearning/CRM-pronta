@@ -685,7 +685,6 @@ describe('Contact-Company Association - E2E Tests', () => {
 
   describe('Validação de permissões', () => {
     let company: { id: string };
-    let contact: { id: string };
     let viewerUser: { id: string; email: string; password: string };
     let viewerToken: string;
     let viewerRole: { id: string };
@@ -700,14 +699,6 @@ describe('Contact-Company Association - E2E Tests', () => {
         },
       });
 
-      contact = await prisma.contact.create({
-        data: {
-          tenantId: tenant1.id,
-          firstName: 'Contato Teste',
-          status: 'ACTIVE',
-          companyId: company.id,
-        },
-      });
 
       // Criar role Visualizador (sem permissão Contact.update)
       viewerRole = await prisma.role.create({

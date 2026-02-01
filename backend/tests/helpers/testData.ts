@@ -30,7 +30,7 @@ export async function createSearchTestData(tenantId: string, count: number = 10)
       status: 'ACTIVE' as const,
     });
   }
-  const createdContacts = await prisma.contact.createMany({ data: contacts });
+  await prisma.contact.createMany({ data: contacts });
   const contactsData = await prisma.contact.findMany({
     where: { tenantId, firstName: { startsWith: 'Search' } },
     select: { id: true },
@@ -147,7 +147,7 @@ export async function createVolumeTestData(
         tenantId,
         firstName: `Volume${index}`,
         lastName: `Test${index}`,
-        status: index % 2 === 0 ? 'ACTIVE' : 'INACTIVE' as const,
+        status: index % 2 === 0 ? 'ACTIVE' as const : 'INACTIVE' as const,
       });
     }
     await prisma.contact.createMany({ data: contacts });

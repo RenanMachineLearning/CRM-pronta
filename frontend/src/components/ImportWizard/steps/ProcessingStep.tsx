@@ -3,7 +3,6 @@
  * Barra de progresso e estatísticas em tempo real (backend síncrono: indicador indeterminado).
  */
 
-import React from 'react';
 
 export interface ProcessingStepProps {
   message: string;

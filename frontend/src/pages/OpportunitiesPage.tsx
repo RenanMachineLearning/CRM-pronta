@@ -3,14 +3,13 @@
  * Exibe visualização Kanban ou Lista de oportunidades
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PipelineView } from '../components/PipelineView';
 import { OpportunityList } from '../components/OpportunityList';
 import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { Button } from '../components/Button';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
-import type { Filter } from '../types/filter';
 
 type ViewMode = 'kanban' | 'list';
 

@@ -3,7 +3,6 @@
  * Suporta modo criação e edição
  */
 
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OpportunityForm } from '../components/OpportunityForm';
 import { createOpportunity, updateOpportunity } from '../services/opportunityService';

@@ -3,7 +3,7 @@
  * Permite criar ou editar uma nota
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { NoteForm } from '../components/NoteForm';
 import { createNote, updateNote, getNoteById } from '../services/noteService';

@@ -18,7 +18,6 @@ import {
   createTestRole,
   closeDatabase,
   waitForAuditLog,
-  getAuditLogs,
   prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';
@@ -31,13 +30,11 @@ describe('Task CRUD - E2E Tests', () => {
   let adminUser2: { id: string; email: string; password: string };
   let regularUser1: { id: string; email: string; password: string };
   let adminToken1: string;
-  let adminToken2: string;
   let regularToken1: string;
   let adminRole1: { id: string };
   let adminRole2: { id: string };
   let regularRole1: { id: string };
   let contact1: { id: string };
-  let contact2: { id: string };
   let company1: { id: string };
   let lead1: { id: string };
   let opportunity1: { id: string };
@@ -133,7 +130,6 @@ describe('Task CRUD - E2E Tests', () => {
 
     // Gerar tokens JWT
     adminToken1 = generateToken(adminUser1.id, tenant1.id);
-    adminToken2 = generateToken(adminUser2.id, tenant2.id);
     regularToken1 = generateToken(regularUser1.id, tenant1.id);
 
     // Criar entidades relacionadas para testar relacionamentos polimórficos
@@ -142,15 +138,6 @@ describe('Task CRUD - E2E Tests', () => {
         tenantId: tenant1.id,
         firstName: 'João',
         lastName: 'Silva',
-        status: 'ACTIVE',
-      },
-    });
-
-    contact2 = await prisma.contact.create({
-      data: {
-        tenantId: tenant1.id,
-        firstName: 'Maria',
-        lastName: 'Santos',
         status: 'ACTIVE',
       },
     });

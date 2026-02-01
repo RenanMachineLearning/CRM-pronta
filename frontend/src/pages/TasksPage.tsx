@@ -3,7 +3,7 @@
  * Exibe listagem de tarefas com filtros por status
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskList } from '../components/TaskList';
 import { Button } from '../components/Button';

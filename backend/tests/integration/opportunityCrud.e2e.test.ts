@@ -521,7 +521,7 @@ describe('Opportunity CRUD - E2E Tests', () => {
     });
 
     it('deve filtrar oportunidades por contactId', async () => {
-      const opp = await prisma.opportunity.create({
+      await prisma.opportunity.create({
         data: {
           tenantId: tenant1.id,
           name: 'Oportunidade com Contact',
@@ -546,7 +546,7 @@ describe('Opportunity CRUD - E2E Tests', () => {
     });
 
     it('deve filtrar oportunidades por companyId', async () => {
-      const opp = await prisma.opportunity.create({
+      await prisma.opportunity.create({
         data: {
           tenantId: tenant1.id,
           name: 'Oportunidade com Company',

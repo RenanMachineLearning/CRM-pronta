@@ -3,7 +3,7 @@
  * Permite buscar usuários por nome ou email e selecionar um
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import { listUsersForLookup, type UserLookup } from '../services/userService';
 

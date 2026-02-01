@@ -13,7 +13,6 @@ import { FieldMapping } from '../../../src/types/mapping.types';
 
 describe('Import Mapping Full Integration Tests', () => {
   const mockTenantId = 'test-tenant-id-integration';
-  const mockUserId = 'test-user-id-integration';
   let authToken: string;
 
   beforeAll(async () => {
@@ -290,7 +289,7 @@ describe('Import Mapping Full Integration Tests', () => {
           unique: false,
           entity: {
             connectOrCreate: {
-              where: { name_tenantId: { name: 'Contact', tenantId: mockTenantId } },
+              where: { Entity_tenantId_name_unique: { name: 'Contact', tenantId: mockTenantId } },
               create: {
                 name: 'Contact',
                 label: 'Contato',

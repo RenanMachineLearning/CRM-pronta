@@ -5,12 +5,10 @@
 import request from 'supertest';
 import { app } from '../../../src/index';
 import { prisma } from '../../../src/utils/prisma';
-import { Contact } from '@prisma/client';
 
 describe('CSV Import API Integration Tests', () => {
   // Mock tenant and user for testing
   const mockTenantId = 'test-tenant-id';
-  const mockUserId = 'test-user-id';
   
   // Sample CSV content for testing
   const sampleCsvContent = 'firstName,lastName,email,phone\nJohn,Doe,john.doe@example.com,+1234567890\nJane,Smith,jane.smith@example.com,+0987654321';
@@ -167,12 +165,6 @@ describe('CSV Import API Integration Tests', () => {
 
       // Step 2: Map fields (would normally happen in UI)
       // For this test, we'll use the default mapping from the validate endpoint
-      const fieldMapping = {
-        'firstName': 'firstName',
-        'lastName': 'lastName',
-        'email': 'email',
-        'phone': 'phone'
-      };
 
       // Step 3: Process import (skipping due to auth requirements)
       // This would require a valid JWT token in the Authorization header

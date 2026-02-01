@@ -3,7 +3,6 @@
  * Tabela coluna → campo, dropdown campo, checkbox Obrigatório, preview mapeado.
  */
 
-import React from 'react';
 import type { FieldMappingRow } from '../types';
 import type { EntityType } from '../entityFields';
 import { ENTITY_FIELDS } from '../entityFields';

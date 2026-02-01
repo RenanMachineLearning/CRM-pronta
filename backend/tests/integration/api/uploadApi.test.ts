@@ -142,7 +142,7 @@ describe('Upload API Integration Tests', () => {
 
       // Para testar completamente, precisaríamos mockar os middlewares de autenticação
       // ou configurar um token JWT válido para testes
-      const response = await request(app)
+      await request(app)
         .post('/api/import/upload')
         .set('X-Tenant-Id', mockTenantId)
         .attach('file', csvBuffer, { filename: 'test.csv' });

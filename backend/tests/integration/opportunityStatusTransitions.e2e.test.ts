@@ -582,7 +582,7 @@ describe('Opportunity Status Transitions - E2E Tests', () => {
           status: 'ARCHIVED',
         });
 
-      const updateResponse = await request(app)
+      await request(app)
         .put(`/api/opportunities/${oppId}`)
         .set('X-Tenant-Id', tenant1.id)
         .set('Authorization', `Bearer ${adminToken1}`)
@@ -594,7 +594,7 @@ describe('Opportunity Status Transitions - E2E Tests', () => {
       // Mas como mudamos para ARCHIVED e voltamos, o status WON não pode ser reaberto
       // Na verdade, WON → ARCHIVED é permitido, mas ARCHIVED → WON não é permitido
       // Vamos testar que actualCloseDate é mantida quando já existe
-      const getResponse = await request(app)
+      await request(app)
         .get(`/api/opportunities/${oppId}`)
         .set('X-Tenant-Id', tenant1.id)
         .set('Authorization', `Bearer ${adminToken1}`);
@@ -660,7 +660,7 @@ describe('Opportunity Status Transitions - E2E Tests', () => {
         },
       });
 
-      const stage2 = await prisma.pipelineStage.create({
+      await prisma.pipelineStage.create({
         data: {
           pipelineId: pipeline2.id,
           tenantId: tenant2.id,

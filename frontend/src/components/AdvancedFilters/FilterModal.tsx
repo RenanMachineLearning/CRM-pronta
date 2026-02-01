@@ -3,7 +3,6 @@
  * Envolve o FilterForm
  */
 
-import React from 'react';
 import { Modal } from '../Modal';
 import { FilterForm } from './FilterForm';
 import type { FilterModalProps } from './types';

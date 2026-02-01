@@ -2,8 +2,8 @@
  * Testes unitários para utilitários de parsing de Excel
  */
 
-import { parseExcel, getExcelSheetsMetadata, isValidExcelBuffer, detectExcelFormat } from '../../src/utils/excelParser';
-import { validateExcelFile, validateExcelData, validateExcelStructure } from '../../src/utils/excelValidator';
+import { parseExcel, getExcelSheetsMetadata, isValidExcelBuffer, detectExcelFormat } from '../../../src/utils/excelParser';
+import { validateExcelFile, validateExcelData, validateExcelStructure } from '../../../src/utils/excelValidator';
 
 // Mock de um buffer Excel simples para testes
 // Em um ambiente real, usaríamos arquivos fixture reais
@@ -14,20 +14,6 @@ describe('Excel Parser Utilities', () => {
     it('should parse a valid Excel file correctly', async () => {
       // Este teste requer um arquivo Excel real para funcionar corretamente
       // Para fins de demonstração, vamos simular o comportamento
-      const mockWorkbook = {
-        SheetNames: ['Sheet1'],
-        Sheets: {
-          'Sheet1': {
-            '!ref': 'A1:C2',
-            A1: { v: 'Name', t: 's' },
-            B1: { v: 'Email', t: 's' },
-            C1: { v: 'Age', t: 's' },
-            A2: { v: 'John Doe', t: 's' },
-            B2: { v: 'john@example.com', t: 's' },
-            C2: { v: 30, t: 'n' }
-          }
-        }
-      };
 
       // Como não podemos realmente testar o xlsx sem um arquivo real,
       // vamos apenas verificar se a função existe e pode ser chamada

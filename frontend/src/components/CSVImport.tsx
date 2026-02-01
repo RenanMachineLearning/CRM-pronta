@@ -4,9 +4,8 @@
  * Interface para upload e importação de arquivos (CSV e Excel)
  */
 
-import React, { useState, useRef, ChangeEvent } from 'react';
+import { useState, useRef, ChangeEvent } from 'react';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
 
 interface FileImportProps {
   entityType: 'contact' | 'company' | 'lead' | 'opportunity';

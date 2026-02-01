@@ -11,7 +11,7 @@
  * - Implementar cache de validações para melhorar performance em grandes volumes
  */
 
-import { ValidationResult, ValidationError, FieldValidationRules, ValidationStats, ErrorSeverity } from '../types/validation.types';
+import { ValidationResult, ValidationError, FieldValidationRules, ValidationStats } from '../types/validation.types';
 import { ValidationRulesService } from '../services/validationRulesService';
 import { normalizeValue, NormalizationOptions } from './valueNormalizer';
 import { validateUniqueness } from '../services/uniquenessValidator';

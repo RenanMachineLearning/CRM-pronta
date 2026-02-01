@@ -466,7 +466,7 @@ export function TaskForm({ taskId, relatedEntityType, relatedEntityId, onSubmit,
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <ErrorMessage message={error} role="alert" />}
+      {error && <ErrorMessage message={error} />}
 
       <Input
         label="Título da Tarefa *"

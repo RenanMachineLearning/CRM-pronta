@@ -3,7 +3,6 @@
  * Checkbox Atualizar registros existentes; Ignorar erros e continuar.
  */
 
-import React from 'react';
 import type { ImportOptionsState } from '../types';
 
 export interface ImportOptionsStepProps {

@@ -8,7 +8,7 @@
  * - Suporte a ordenação simples e múltipla
  */
 
-import { ENTITY_ORDER_CONFIGS, EntityOrderConfig } from '../types/orderBy.types';
+import { ENTITY_ORDER_CONFIGS } from '../types/orderBy.types';
 
 /**
  * Erro customizado para validação de ordenação

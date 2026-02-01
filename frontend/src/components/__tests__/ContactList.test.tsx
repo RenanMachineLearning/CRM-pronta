@@ -24,10 +24,10 @@ describe('ContactList', () => {
         tenantId: 'tenant-1',
         firstName: 'João',
         lastName: 'Silva',
-        emails: [{ id: '1', email: 'joao@example.com', isPrimary: true, type: 'WORK', createdAt: '2024-01-01', updatedAt: '2024-01-01' }],
+        emails: [{ id: '1', email: 'joao@example.com', isPrimary: true, type: 'WORK' as any, createdAt: '2024-01-01', updatedAt: '2024-01-01' }],
         phones: [],
         tags: [],
-        status: 'ACTIVE',
+        status: 'ACTIVE' as any,
         createdAt: '2024-01-01',
         updatedAt: '2024-01-01',
       },
@@ -42,6 +42,7 @@ describe('ContactList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -67,6 +68,7 @@ describe('ContactList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -82,6 +84,7 @@ describe('ContactList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -97,6 +100,7 @@ describe('ContactList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);

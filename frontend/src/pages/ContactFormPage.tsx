@@ -3,7 +3,6 @@
  * Suporta modo criação e edição
  */
 
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ContactForm } from '../components/ContactForm';
 import { createContact, updateContact } from '../services/contactService';

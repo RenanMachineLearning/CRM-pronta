@@ -16,7 +16,6 @@ import { ValidationError, ValidationErrorCode, ErrorSeverity } from '../types/va
 export function getErrorMessage(
   errorCode: ValidationErrorCode,
   fieldName?: string,
-  value?: any,
   details?: Record<string, any>
 ): string {
   switch (errorCode) {
@@ -165,7 +164,7 @@ export function createValidationError(
   return {
     field,
     code,
-    message: message || getErrorMessage(code, field, value, details),
+    message: message || getErrorMessage(code, field, details),
     severity,
     value,
     details

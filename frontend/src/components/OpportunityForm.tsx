@@ -15,7 +15,7 @@ import { ErrorMessage } from './ErrorMessage';
 import { getOpportunityById } from '../services/opportunityService';
 import { getDefaultPipeline } from '../services/pipelineService';
 import { listTags } from '../services/tagService';
-import type {
+import {
   Opportunity,
   OpportunityFormData,
   OpportunityFormErrors,
@@ -54,7 +54,7 @@ export function OpportunityForm({ opportunityId, onSubmit, onCancel }: Opportuni
     value: '', // String vazia inicialmente (será convertido para number na validação)
     currency: 'BRL',
     stageId: '',
-    status: 'OPEN',
+    status: OpportunityStatus.OPEN,
     closeDate: '',
     probability: undefined,
     contactId: undefined,
@@ -187,7 +187,7 @@ export function OpportunityForm({ opportunityId, onSubmit, onCancel }: Opportuni
     }
 
     // Validar status (valores permitidos)
-    const validStatuses = ['OPEN', 'WON', 'LOST', 'ARCHIVED'];
+    const validStatuses = [OpportunityStatus.OPEN, OpportunityStatus.WON, OpportunityStatus.LOST, OpportunityStatus.ARCHIVED];
     if (formData.status && !validStatuses.includes(formData.status)) {
       newErrors.status = 'Status inválido';
       isValid = false;
@@ -219,10 +219,10 @@ export function OpportunityForm({ opportunityId, onSubmit, onCancel }: Opportuni
       // Limpar e formatar dados antes de enviar
       const dataToSubmit: OpportunityFormData = {
         name: formData.name.trim(),
-        value: formData.value ? Number(formData.value) : undefined,
+        value: formData.value ? Number(formData.value) : 0,
         currency: formData.currency || 'BRL',
         stageId: formData.stageId.trim(),
-        status: formData.status || 'OPEN',
+        status: formData.status || OpportunityStatus.OPEN,
         closeDate: formData.closeDate && formData.closeDate.trim() !== ''
           ? new Date(formData.closeDate).toISOString()
           : undefined,
@@ -306,13 +306,13 @@ export function OpportunityForm({ opportunityId, onSubmit, onCancel }: Opportuni
         />
         <Select
           label="Status"
-          value={formData.status || 'OPEN'}
+          value={formData.status || OpportunityStatus.OPEN}
           onChange={(e) => setFormData({ ...formData, status: e.target.value as OpportunityStatus })}
           options={[
-            { value: 'OPEN', label: 'Aberto' },
-            { value: 'WON', label: 'Ganho' },
-            { value: 'LOST', label: 'Perdido' },
-            { value: 'ARCHIVED', label: 'Arquivado' },
+            { value: OpportunityStatus.OPEN, label: 'Aberto' },
+            { value: OpportunityStatus.WON, label: 'Ganho' },
+            { value: OpportunityStatus.LOST, label: 'Perdido' },
+            { value: OpportunityStatus.ARCHIVED, label: 'Arquivado' },
           ]}
           error={errors.status}
         />

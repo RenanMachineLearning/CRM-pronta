@@ -4,7 +4,6 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import type { PaginationState, PaginationParams, ItemsPerPageOption } from '../types/pagination.types';
-import { ITEMS_PER_PAGE_OPTIONS } from '../types/pagination.types';
 
 export function usePagination(
   initialPage: number = 1,

@@ -366,7 +366,8 @@ describe('Note Validations - E2E Tests', () => {
         tenant1.id,
         adminUser1.id
       );
-      expect(note.content.length).toBe(10000);
+      expect(note.content).toBeDefined();
+      expect(note.content!.length).toBe(10000);
       // Limpar após teste
       await NoteService.deleteNote(note.id, tenant1.id, adminUser1.id);
     });
@@ -383,7 +384,8 @@ describe('Note Validations - E2E Tests', () => {
         tenant1.id,
         adminUser1.id
       );
-      expect(note.content.length).toBeLessThan(10000);
+      expect(note.content).toBeDefined();
+      expect(note.content!.length).toBeLessThan(10000);
       // Limpar após teste
       await NoteService.deleteNote(note.id, tenant1.id, adminUser1.id);
     });

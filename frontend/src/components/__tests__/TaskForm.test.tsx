@@ -7,17 +7,9 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskForm } from '../TaskForm';
 import { getTaskById } from '../../services/taskService';
-import { getContactById } from '../../services/contactService';
-import { getCompanyById } from '../../services/companyService';
-import { getLeadById } from '../../services/leadService';
-import { getOpportunityById } from '../../services/opportunityService';
 
 // Mock dos serviços
 vi.mock('../../services/taskService');
-vi.mock('../../services/contactService');
-vi.mock('../../services/companyService');
-vi.mock('../../services/leadService');
-vi.mock('../../services/opportunityService');
 
 describe('TaskForm', () => {
   const mockOnSubmit = vi.fn();

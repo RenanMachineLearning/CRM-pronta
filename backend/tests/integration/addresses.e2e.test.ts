@@ -639,7 +639,6 @@ describe('Addresses - E2E Tests', () => {
 
   describe('Isolamento multi-tenant', () => {
     let contact1: { id: string };
-    let contact2: { id: string };
     let address1: { id: string };
 
     beforeEach(async () => {
@@ -652,15 +651,6 @@ describe('Addresses - E2E Tests', () => {
         },
       });
       contact1 = { id: contact1Obj.id };
-
-      const contact2Obj = await prisma.contact.create({
-        data: {
-          tenantId: tenant2.id,
-          firstName: 'João Tenant2',
-          status: 'ACTIVE',
-        },
-      });
-      contact2 = { id: contact2Obj.id };
 
       // Criar endereço no tenant1
       const address1Obj = await prisma.address.create({

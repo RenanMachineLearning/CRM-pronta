@@ -3,7 +3,6 @@
  * Exibe tags como chips selecionáveis
  */
 
-import React from 'react';
 import type { Tag } from '../types/tag';
 
 export interface TagSelectorProps {

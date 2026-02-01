@@ -3,15 +3,13 @@
  * Permite remoção do filtro
  */
 
-import React from 'react';
 import type { FilterChipProps } from './types';
 
-export function FilterChip({ 
-  filter, 
-  fieldLabel, 
-  operatorLabel, 
-  valueLabel, 
-  onRemove 
+export function FilterChip({
+  fieldLabel,
+  operatorLabel,
+  valueLabel,
+  onRemove
 }: FilterChipProps) {
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm">

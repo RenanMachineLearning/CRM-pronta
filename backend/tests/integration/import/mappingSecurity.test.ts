@@ -314,7 +314,7 @@ describe('Import Mapping Security Tests', () => {
 
       // All requests should be processed appropriately
       responses.forEach(response => {
-        expect(response.status).toBeOneOf([200, 429]); // Either success or rate limited
+        expect([200, 429]).toContain(response.status); // Either success or rate limited
       });
 
       // Clean up

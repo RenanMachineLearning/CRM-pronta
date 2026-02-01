@@ -154,10 +154,9 @@ export class FieldMetadataService {
    */
   static async getEntityFields(
     entityType: string,
-    tenantId: string,
-    userId?: string
+    tenantId: string
   ): Promise<FieldDefinition[]> {
-    const cacheKey = generateCacheKey(`${this.CACHE_PREFIX}:${entityType}`, { tenantId, userId }, tenantId);
+    const cacheKey = generateCacheKey(`${this.CACHE_PREFIX}:${entityType}`, { tenantId }, tenantId);
 
     // Tenta obter do cache primeiro
     const cached = await cacheManager.get<FieldDefinition[]>(cacheKey);

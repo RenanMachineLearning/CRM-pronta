@@ -3,7 +3,7 @@
  * Exibe tabela de notas com paginação, ordenação, filtros e ações
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
 import { deleteNote } from '../services/noteService';
 import { Loading } from './Loading';
@@ -23,7 +23,7 @@ import type {
   Note,
   NoteFilters,
   NoteType,
-  RelatedEntityType,
+  NotePaginationParams,
 } from '../types/note';
 
 export interface NoteListProps {
@@ -42,13 +42,11 @@ export function NoteList({
   onNewNote,
   notes: notesProp,
   initialFilters,
-  initialPagination,
   showFilters = true,
   showPagination = true,
-  compact = false,
 }: NoteListProps) {
   // Estado para filtros
-  const [filters, setFilters] = useState<NoteFilters>(initialFilters || {});
+  const [filters] = useState<NoteFilters>(initialFilters || {});
   
   // Hooks para ordenação e paginação (sempre inicializar, mas só usar se não usar notes da prop)
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
@@ -90,10 +88,15 @@ export function NoteList({
     setPagination: updatePagination,
   } = useNotes(
     initialFilters || filters,
-    initialPagination || {
-      ...toPaginationParams(),
-      ...toSortParams(),
-    }
+    (() => {
+      const paginationParams = toPaginationParams();
+      const sortParams = toSortParams();
+      return {
+        ...paginationParams,
+        orderBy: sortParams.orderBy === 'createdAt' ? 'createdAt' : undefined,
+        order: sortParams.order,
+      } as NotePaginationParams;
+    })()
   );
   
   // Usar notes da prop se fornecido, senão usar do hook
@@ -113,10 +116,12 @@ export function NoteList({
   // Atualizar paginação e ordenação na API quando mudarem (apenas se não usar notes da prop)
   useEffect(() => {
     if (!notesProp) {
+      const sortParams = toSortParams();
       updatePagination({
         ...toPaginationParams(),
-        ...toSortParams(),
-      });
+        orderBy: (sortParams.orderBy === 'createdAt' ? 'createdAt' : undefined) as 'createdAt' | undefined,
+        order: sortParams.order,
+      } as NotePaginationParams);
     }
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, notesProp]);
 

@@ -100,12 +100,6 @@ describe('Indexes Performance Tests', () => {
       
       // Verificar que algum tipo de scan de índice está sendo usado
       const nodeType = plan['Node Type'];
-      const hasIndexUsage = 
-        nodeType === 'Index Scan' || 
-        nodeType === 'Bitmap Index Scan' ||
-        (plan['Plans'] && plan['Plans'].some((p: any) => 
-          p['Node Type'] === 'Index Scan' || p['Node Type'] === 'Bitmap Index Scan'
-        ));
 
       // Em queries com ILIKE, pode usar Index Scan no tenantId e depois filtrar
       // O importante é que não seja Seq Scan completo

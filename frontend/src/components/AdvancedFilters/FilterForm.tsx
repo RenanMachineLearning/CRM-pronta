@@ -3,9 +3,8 @@
  * Permite selecionar campo, operador e valor
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Select } from '../Select';
-import { Input } from '../Input';
 import { Button } from '../Button';
 import { ErrorMessage } from '../ErrorMessage';
 import { FilterValueInput } from './FilterValueInput';

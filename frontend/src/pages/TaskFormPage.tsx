@@ -3,7 +3,6 @@
  * Suporta modo criação e edição
  */
 
-import React from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { TaskForm } from '../components/TaskForm';
 import { createTask, updateTask } from '../services/taskService';

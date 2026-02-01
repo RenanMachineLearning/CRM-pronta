@@ -3,7 +3,6 @@
  * Exibe listagem de notas com filtros
  */
 
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NoteList } from '../components/NoteList';
 import type { RelatedEntityType } from '../types/note';

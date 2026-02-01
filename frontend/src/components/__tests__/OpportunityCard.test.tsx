@@ -15,7 +15,7 @@ describe('OpportunityCard', () => {
     value: 50000,
     currency: 'BRL',
     stageId: 'stage-1',
-    status: 'OPEN',
+    status: 'OPEN' as any,
     closeDate: '2024-12-31T00:00:00.000Z',
     probability: 75,
     contact: {

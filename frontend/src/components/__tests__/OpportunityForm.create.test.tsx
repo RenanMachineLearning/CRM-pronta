@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpportunityForm } from '../OpportunityForm';
 import { createOpportunity } from '../../services/opportunityService';
 import { getDefaultPipeline } from '../../services/pipelineService';
-import { listTags } from '../../services/tagService';
 
 vi.mock('../../services/opportunityService', () => ({
   getOpportunityById: vi.fn(),

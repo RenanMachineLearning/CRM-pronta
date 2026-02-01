@@ -3,8 +3,6 @@
  */
 
 import { temporaryFileStorage, validateFileContent, isPotentiallyMalicious, sanitizeFileName } from '../../../src/services/uploadService';
-import { isValidExcelBuffer } from '../../../src/utils/excelParser';
-import { validateCsvFormat } from '../../../src/utils/csvValidator';
 
 describe('Upload Service - TemporaryFileStorage', () => {
   beforeEach(() => {

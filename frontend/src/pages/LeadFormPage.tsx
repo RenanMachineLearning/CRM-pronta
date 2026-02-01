@@ -3,7 +3,6 @@
  * Suporta modo criação e edição
  */
 
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LeadForm } from '../components/LeadForm';
 import { createLead, updateLead } from '../services/leadService';

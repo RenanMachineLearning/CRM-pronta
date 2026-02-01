@@ -5,7 +5,7 @@
  * para mostrar o histórico de atividades.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getOpportunityById } from '../services/opportunityService';
 import { Timeline } from '../components/Timeline';
@@ -20,6 +20,7 @@ function translateStatus(status: OpportunityStatus): string {
     OPEN: 'Aberta',
     WON: 'Ganha',
     LOST: 'Perdida',
+    ARCHIVED: 'Arquivada',
   };
   return translations[status] || status;
 }
@@ -30,6 +31,7 @@ function getStatusColor(status: OpportunityStatus): string {
     OPEN: 'bg-blue-100 text-blue-800',
     WON: 'bg-green-100 text-green-800',
     LOST: 'bg-red-100 text-red-800',
+    ARCHIVED: 'bg-gray-100 text-gray-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 }

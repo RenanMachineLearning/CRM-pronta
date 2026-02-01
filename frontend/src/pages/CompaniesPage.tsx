@@ -2,12 +2,10 @@
  * Página de listagem de empresas
  */
 
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CompanyList } from '../components/CompanyList';
 import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
-import type { Filter } from '../types/filter';
 
 export function CompaniesPage() {
   const navigate = useNavigate();

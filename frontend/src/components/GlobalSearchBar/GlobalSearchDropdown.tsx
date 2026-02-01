@@ -3,7 +3,6 @@
  * Gerencia estados de loading, error e empty, e exibe grupos de resultados
  */
 
-import React from 'react';
 import { SearchResultGroup } from './SearchResultGroup';
 import { Loading } from '../Loading';
 import { ErrorMessage } from '../ErrorMessage';
@@ -17,7 +16,6 @@ export function GlobalSearchDropdown({
   query,
   onSelectResult,
   onViewAll,
-  onClose,
 }: GlobalSearchDropdownProps) {
   // Verificar se há resultados
   const hasResults = results && (

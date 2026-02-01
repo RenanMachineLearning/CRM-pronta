@@ -3,7 +3,6 @@
  * Estatísticas finais, lista de erros, botão Baixar relatório e Nova importação.
  */
 
-import React from 'react';
 import { Button } from '../../Button';
 import type { ProcessImportResult } from '../../../services/importService';
 

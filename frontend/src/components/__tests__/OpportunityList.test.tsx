@@ -72,6 +72,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -99,6 +100,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -125,6 +127,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -141,6 +144,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -157,6 +161,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -178,6 +183,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -204,6 +210,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -231,6 +238,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -256,6 +264,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -281,6 +290,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -306,6 +316,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -333,6 +344,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -352,6 +364,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -371,6 +384,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -397,6 +411,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList onOpportunityClick={mockOnOpportunityClick} />);
@@ -421,6 +436,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList onNewOpportunity={mockOnNewOpportunity} />);
@@ -444,6 +460,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -472,6 +489,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -491,6 +509,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -515,6 +534,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -540,6 +560,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -562,6 +583,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);
@@ -578,6 +600,7 @@ describe('OpportunityList', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(<OpportunityList />);

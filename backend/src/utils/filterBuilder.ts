@@ -5,7 +5,6 @@
  * Suporta todos os operadores, campos em relacionamentos e tipos especiais (Decimal, Date).
  */
 
-import { Prisma } from '@prisma/client';
 import { Filter, FilterOperator, ENTITY_FILTER_CONFIGS } from '../types/filter.types';
 import { convertFilterValue, parseRelationField } from './filterHelpers';
 
@@ -55,7 +54,7 @@ export function buildFilterQuery(filters: Filter[], entityType: string): any {
     }
 
     // Construir condição Prisma
-    const condition = buildCondition(filter.operator, convertedValue, fieldMetadata.type);
+    const condition = buildCondition(filter.operator, convertedValue);
 
     // Verificar se campo está em relacionamento
     const relationInfo = parseRelationField(filter.field);
@@ -86,8 +85,7 @@ export function buildFilterQuery(filters: Filter[], entityType: string): any {
  */
 function buildCondition(
   operator: FilterOperator,
-  value: any,
-  fieldType: string
+  value: any
 ): any {
   switch (operator) {
     case FilterOperator.EQUALS:

@@ -9,7 +9,6 @@ import { prisma } from '../../../src/utils/prisma';
 describe('Excel Import API Integration Tests', () => {
   // Mock tenant and user for testing
   const mockTenantId = 'test-tenant-id-excel';
-  const mockUserId = 'test-user-id-excel';
   
   // Since we can't easily create real Excel files in tests, we'll test the endpoints
   // and their responses to various inputs

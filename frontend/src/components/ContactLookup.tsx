@@ -3,7 +3,7 @@
  * Permite buscar contatos por nome e selecionar um
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import { listContactsForLookup } from '../services/contactService';
 import type { ContactLookup } from '../types/contact';
@@ -18,7 +18,6 @@ export interface ContactLookupProps {
 export function ContactLookup({ value, contactName, onChange, error }: ContactLookupProps) {
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<ContactLookup[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactLookup | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -62,7 +61,6 @@ export function ContactLookup({ value, contactName, onChange, error }: ContactLo
         return;
       }
 
-      setLoading(true);
       try {
         const contacts = await listContactsForLookup(query);
         setOptions(contacts);
@@ -70,8 +68,6 @@ export function ContactLookup({ value, contactName, onChange, error }: ContactLo
       } catch (err) {
         console.error('Erro ao buscar contatos:', err);
         setOptions([]);
-      } finally {
-        setLoading(false);
       }
     };
 

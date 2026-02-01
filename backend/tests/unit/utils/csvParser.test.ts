@@ -2,9 +2,9 @@
  * Testes unitários para utilitários de parsing de CSV
  */
 
-import { parseCSV, detectEncoding, detectDelimiter, isValidCsvBuffer } from '../../src/utils/csvParser';
-import { sanitizeCsvData, sanitizeCsvValue, escapeCsvValue } from '../../src/utils/csvSanitizer';
-import { validateCsvData, validateCsvFormat } from '../../src/utils/csvValidator';
+import { parseCSV, detectEncoding, detectDelimiter, isValidCsvBuffer } from '../../../src/utils/csvParser';
+import { sanitizeCsvData, sanitizeCsvValue, escapeCsvValue } from '../../../src/utils/csvSanitizer';
+import { validateCsvData, validateCsvFormat } from '../../../src/utils/csvValidator';
 
 describe('CSV Parser Utilities', () => {
   describe('parseCSV', () => {

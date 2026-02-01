@@ -16,7 +16,7 @@ import {
   findOverdueTasks,
   processOverdueTasks,
 } from '../../src/services/taskNotificationService';
-import { TaskStatus, TaskPriority, TaskType, UserStatus } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskType } from '@prisma/client';
 import { EmailService } from '../../src/services/emailService';
 
 // Mock do EmailService para capturar chamadas
@@ -374,7 +374,7 @@ describe('Task Notification Service - Integration Tests', () => {
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setUTCHours(0, 0, 0, 0);
 
-      const task = await prisma.task.create({
+      await prisma.task.create({
         data: {
           tenantId: tenant1.id,
           title: 'Tarefa para Teste de Duplicata',
@@ -391,7 +391,6 @@ describe('Task Notification Service - Integration Tests', () => {
 
       // Primeira execução
       await processOverdueTasks(tenant1.id);
-      const firstCallCount = emailServiceSpy.mock.calls.length;
 
       // Segunda execução (mesmo dia)
       emailServiceSpy.mockClear();
