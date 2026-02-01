@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { mergeConfig } from 'vite';
+import { defineConfig as defineVitestConfig } from 'vitest/config';
 
-// https://vitejs.dev/config/
-export default defineConfig({
+const viteConfig = defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
@@ -15,6 +16,10 @@ export default defineConfig({
       },
     },
   },
+});
+
+// Configuração específica para testes
+const testConfig = defineVitestConfig({
   test: {
     globals: true,
     environment: 'jsdom',
@@ -25,4 +30,7 @@ export default defineConfig({
     },
   },
 });
+
+// Mesclar as configurações
+export default mergeConfig(viteConfig, testConfig);
 
