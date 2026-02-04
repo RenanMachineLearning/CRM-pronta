@@ -35,7 +35,7 @@ export const Card: React.FC<CardProps> = ({
 
   const borderClass = border ? 'border border-gray-200' : '';
 
-  const classes = `bg-white rounded-lg ${paddingClasses[padding]} ${shadowClasses[shadow]} ${borderClass} ${className}`;
+  const classes = `bg-white rounded-lg ${paddingClasses[padding]} ${shadowClasses[shadow]} ${borderClass} ${className} transition-all duration-200`;
 
   return (
     <div className={classes}>

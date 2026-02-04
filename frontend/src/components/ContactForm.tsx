@@ -184,19 +184,21 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <ErrorMessage message={error} />}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="Nome *"
           value={formData.firstName}
           onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
           error={errors.firstName}
           required
+          fullWidth
         />
         <Input
           label="Sobrenome"
           value={formData.lastName}
           onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
           error={errors.lastName}
+          fullWidth
         />
       </div>
 

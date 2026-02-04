@@ -37,7 +37,7 @@ export const Table = <T extends Record<string, any>>({
   `;
 
   const responsiveWrapper = responsive ? (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
       <InnerTable />
     </div>
   ) : (
