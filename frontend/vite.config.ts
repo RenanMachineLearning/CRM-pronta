@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { mergeConfig } from 'vite';
 import { defineConfig as defineVitestConfig } from 'vitest/config';
 
 const viteConfig = defineConfig({
@@ -31,6 +30,7 @@ const testConfig = defineVitestConfig({
   },
 });
 
-// Mesclar as configurações
-export default mergeConfig(viteConfig, testConfig);
-
+// Mesclar as configurações apenas quando estiver executando testes
+export default process.env.NODE_ENV === 'test' || process.argv.includes('--test')
+  ? testConfig
+  : viteConfig;

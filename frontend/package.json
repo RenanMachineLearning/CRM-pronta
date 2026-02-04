@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && tailwindcss -i ./src/index.css -o ./dist/output.css && vite build",
+    "build:css": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
@@ -24,6 +25,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@heroicons/react": "^2.2.0",
     "@testing-library/jest-dom": "^6.1.0",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.5.0",
@@ -34,11 +37,17 @@
     "@typescript-eslint/parser": "^8.18.2",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^1.0.0",
+    "autoprefixer": "^10.4.24",
     "eslint": "^9.18.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "jsdom": "^23.0.0",
+    "postcss": "^8.5.6",
     "prettier": "^3.4.2",
+    "stylelint": "^17.1.1",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-scss": "^7.0.0",
+    "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^6.0.5",
     "vitest": "^1.0.0"
