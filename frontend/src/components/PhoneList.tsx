@@ -3,7 +3,7 @@
  * Permite adicionar, remover e marcar telefone como principal
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';

@@ -3,18 +3,23 @@
  * Exibe tabela de contatos com paginação, ordenação e filtros
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useContacts } from '../hooks/useContacts';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
 import { Pagination } from './Pagination/Pagination';
+import ExportDialog from './ExportDialog/ExportDialog';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
 import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
-import type { Contact, ContactFilters, ContactStatus } from '../types/contact';
+import { getAvailableFields, exportData } from '../services/exportService';
+import { downloadFile, generateExportFilename } from '../utils/downloadUtils';
+import { getAuthToken } from '../utils/api';
+import type { Contact, ContactFilters } from '../types/contact';
 import type { Filter } from '../types/filter';
+import type { Field } from './ExportDialog/ExportDialog.types';
 
 export interface ContactListProps {
   onContactClick?: (contactId: string) => void;
@@ -24,8 +29,14 @@ export interface ContactListProps {
 
 export function ContactList({ onContactClick, onNewContact, advancedFilters = [] }: ContactListProps) {
   // Estado para filtros
-  const [filters, setFilters] = useState<ContactFilters>({});
-  
+  const [filters] = useState<ContactFilters>({});
+
+  // Estados para exportação
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [availableFields, setAvailableFields] = useState<Field[]>([]);
+  const [, setLoadingFields] = useState(false);
+  const token = getAuthToken();
+
   // Hooks para ordenação e paginação
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('createdAt', 'desc');
   const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
@@ -66,7 +77,7 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     {
       ...toPaginationParams(),
       ...toSortParams(),
-    },
+    } as any, // Temporary fix until we align the types properly
     advancedFilters
   );
 
@@ -86,13 +97,72 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     updatePagination({
       ...toPaginationParams(),
       ...toSortParams(),
-    });
+    } as any); // Temporary fix until we align the types properly
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams]);
+
+  // Carregar campos disponíveis para exportação
+  useEffect(() => {
+    if (showExportDialog && token) {
+      const fetchFields = async () => {
+        setLoadingFields(true);
+        try {
+          const fields = await getAvailableFields('Contact', token);
+          // Mapear campos para o formato esperado pelo ExportDialog
+          const mappedFields: Field[] = fields.map((field: any) => ({
+            id: field.id,
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            order: field.order
+          }));
+          setAvailableFields(mappedFields);
+        } catch (error) {
+          console.error('Erro ao carregar campos para exportação:', error);
+        } finally {
+          setLoadingFields(false);
+        }
+      };
+
+      fetchFields();
+    }
+  }, [showExportDialog, token]);
 
   // Handler para ordenação
   const handleSort = (field: string) => {
     updateSorting(field);
     updatePage(1); // Resetar para primeira página
+  };
+
+  // Handler para exportação
+  const handleExport = async (options: any) => {
+    if (!token) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    try {
+      // Chamar serviço de exportação
+      const blob = await exportData('contacts', options, token);
+
+      // Gerar nome de arquivo
+      const filename = generateExportFilename('contacts', options.format);
+
+      // Fazer download do arquivo
+      downloadFile(blob, filename);
+    } catch (error) {
+      console.error('Erro na exportação:', error);
+      throw error;
+    }
+  };
+
+  // Handler para abrir diálogo de exportação
+  const handleOpenExportDialog = () => {
+    setShowExportDialog(true);
+  };
+
+  // Handler para fechar diálogo de exportação
+  const handleCloseExportDialog = () => {
+    setShowExportDialog(false);
   };
 
   const handleFilterChange = (key: keyof ContactFilters, value: string | undefined) => {
@@ -155,12 +225,28 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
           </select>
         </div>
 
-        {onNewContact && (
-          <Button onClick={onNewContact} variant="primary">
-            Novo Contato
+        <div className="flex flex-wrap gap-2">
+          {onNewContact && (
+            <Button onClick={onNewContact} variant="primary">
+              Novo Contato
+            </Button>
+          )}
+
+          <Button onClick={handleOpenExportDialog} variant="secondary">
+            Exportar
           </Button>
-        )}
+        </div>
       </div>
+
+      {/* Diálogo de exportação */}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={handleCloseExportDialog}
+        entityType="Contact"
+        currentFilters={advancedFilters.length > 0 ? advancedFilters : undefined}
+        availableFields={availableFields}
+        onExport={handleExport}
+      />
 
       {/* Tabela de contatos */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">

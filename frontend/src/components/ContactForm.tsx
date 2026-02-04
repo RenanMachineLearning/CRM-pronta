@@ -19,8 +19,8 @@ import type {
   Contact,
   ContactFormData,
   ContactFormErrors,
-  ContactStatus,
 } from '../types/contact';
+import { ContactStatus } from '../types/contact';
 import type { Tag } from '../types/tag';
 
 export interface ContactFormProps {
@@ -39,7 +39,7 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
     firstName: '',
     lastName: '',
     title: '',
-    status: 'ACTIVE',
+    status: ContactStatus.ACTIVE,
     companyId: null,
     emails: [],
     phones: [],

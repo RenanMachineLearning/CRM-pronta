@@ -26,6 +26,8 @@ import taskRoutes from './routes/taskRoutes';
 import noteRoutes from './routes/noteRoutes';
 import timelineRoutes from './routes/timelineRoutes';
 import searchRoutes from './routes/searchRoutes';
+import csvImportRoutes from './routes/csvImportRoutes';
+import exportRoutes from './routes/exportRoutes';
 import { startTaskNotificationJob } from './jobs/taskNotificationJob';
 
 // Carregar variáveis de ambiente
@@ -111,6 +113,12 @@ app.use('/api/timeline', timelineRoutes);
 
 // Rotas de busca (protegidas - requerem tenant context + autenticação)
 app.use('/api/search', searchRoutes);
+
+// Rotas de importação CSV (protegidas - requerem tenant context + autenticação)
+app.use('/api/import', csvImportRoutes);
+
+// Rotas de exportação (protegidas - requerem tenant context + autenticação)
+app.use('/api/export', exportRoutes);
 
 // Exemplo de rota protegida (requer tenant context + autenticação)
 app.get('/api/test', (req, res) => {

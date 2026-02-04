@@ -15,7 +15,6 @@ import {
   createStandardRoles,
   createTestPermission,
   closeDatabase,
-  waitForAuditLog,
   prisma,
 } from '../helpers/db';
 import { generateToken } from '../../src/utils/jwt';

@@ -79,14 +79,17 @@ export function GlobalSearchBar({
     clearResults();
     
     // Navegar para página de detalhes
-    const routes = {
+    const routes: Record<string, string> = {
       contact: `/contacts/${result.id}`,
       company: `/companies/${result.id}`,
       lead: `/leads/${result.id}`,
       opportunity: `/opportunities/${result.id}`,
     };
-    
-    navigate(routes[result.type]);
+
+    const route = routes[result.type as keyof typeof routes];
+    if (route) {
+      navigate(route);
+    }
     
     if (onSelectResult) {
       onSelectResult(result);

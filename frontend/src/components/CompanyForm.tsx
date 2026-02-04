@@ -56,7 +56,7 @@ export function CompanyForm({ companyId, onSubmit, onCancel }: CompanyFormProps)
   const loadCompany = async () => {
     try {
       setLoading(true);
-      const company = await getCompanyById(companyId!);
+      const company: Company = await getCompanyById(companyId!);
       setFormData({
         name: company.name,
         website: company.website || null,

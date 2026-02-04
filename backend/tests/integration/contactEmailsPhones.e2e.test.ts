@@ -596,7 +596,7 @@ describe('Contact Emails and Phones - E2E Tests', () => {
 
     it('deve adicionar múltiplos telefones', async () => {
       // Adicionar primeiro telefone
-      const phone1Response = await request(app)
+      await request(app)
         .post(`/api/contacts/${contact.id}/phones`)
         .set('X-Tenant-Slug', tenant1.slug)
         .set('Authorization', `Bearer ${adminToken1}`)
@@ -607,7 +607,7 @@ describe('Contact Emails and Phones - E2E Tests', () => {
         .expect(201);
 
       // Adicionar segundo telefone
-      const phone2Response = await request(app)
+      await request(app)
         .post(`/api/contacts/${contact.id}/phones`)
         .set('X-Tenant-Slug', tenant1.slug)
         .set('Authorization', `Bearer ${adminToken1}`)
@@ -618,7 +618,7 @@ describe('Contact Emails and Phones - E2E Tests', () => {
         .expect(201);
 
       // Adicionar terceiro telefone
-      const phone3Response = await request(app)
+      await request(app)
         .post(`/api/contacts/${contact.id}/phones`)
         .set('X-Tenant-Slug', tenant1.slug)
         .set('Authorization', `Bearer ${adminToken1}`)
@@ -712,8 +712,6 @@ describe('Contact Emails and Phones - E2E Tests', () => {
 
   describe('Isolamento multi-tenant', () => {
     let contact1: { id: string };
-    let contact2: { id: string };
-    let email1: { id: string };
 
     beforeEach(async () => {
       // Criar contatos em tenants diferentes
@@ -725,7 +723,7 @@ describe('Contact Emails and Phones - E2E Tests', () => {
         },
       });
 
-      contact2 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant2.id,
           firstName: 'Tenant2',
@@ -733,7 +731,7 @@ describe('Contact Emails and Phones - E2E Tests', () => {
         },
       });
 
-      email1 = await prisma.contactEmail.create({
+      await prisma.contactEmail.create({
         data: {
           tenantId: tenant1.id,
           contactId: contact1.id,

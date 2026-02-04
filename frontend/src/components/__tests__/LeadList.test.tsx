@@ -67,6 +67,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -104,6 +105,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -119,6 +121,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -134,6 +137,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -149,6 +153,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     const handleConvert = vi.fn();
@@ -174,6 +179,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -203,6 +209,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -232,6 +239,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList />);
@@ -262,6 +270,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList onConvertLead={handleConvert} />);
@@ -284,6 +293,7 @@ describe('LeadList', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<LeadList onNewLead={handleNewLead} />);

@@ -108,7 +108,7 @@ describe('Volume Performance Tests', () => {
           tenantId: tenant.id,
           firstName: `Contact${index}`,
           lastName: `Test${index}`,
-          status: index % 2 === 0 ? 'ACTIVE' : 'INACTIVE',
+          status: index % 2 === 0 ? 'ACTIVE' as const : 'INACTIVE' as const,
         });
       }
       await prisma.contact.createMany({ data: contacts });
@@ -124,7 +124,7 @@ describe('Volume Performance Tests', () => {
           tenantId: tenant.id,
           name: `Company ${index}`,
           industry: index % 3 === 0 ? 'Technology' : index % 3 === 1 ? 'Finance' : 'Retail',
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.company.createMany({ data: companies });
@@ -141,7 +141,7 @@ describe('Volume Performance Tests', () => {
           firstName: `Lead${index}`,
           lastName: `Test${index}`,
           email: `lead${index}@test.com`,
-          status: index % 4 === 0 ? 'NEW' : index % 4 === 1 ? 'QUALIFIED' : 'CONVERTED',
+          status: index % 4 === 0 ? 'NEW' as const : index % 4 === 1 ? 'QUALIFIED' as const : 'CONVERTED' as const,
         });
       }
       await prisma.lead.createMany({ data: leads });
@@ -158,7 +158,7 @@ describe('Volume Performance Tests', () => {
           name: `Opportunity ${index}`,
           value: 1000 * index,
           stageId: stage.id,
-          status: 'OPEN',
+          status: 'OPEN' as const,
         });
       }
       await prisma.opportunity.createMany({ data: opportunities });

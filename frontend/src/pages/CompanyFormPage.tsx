@@ -3,7 +3,6 @@
  * Suporta modo criação e edição
  */
 
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CompanyForm } from '../components/CompanyForm';
 import { createCompany, updateCompany } from '../services/companyService';

@@ -5,7 +5,7 @@
  * Teste obrigatório 2: Preview de Markdown funciona
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { NoteEditor } from '../NoteEditor';
@@ -160,11 +160,10 @@ describe('NoteEditor', () => {
 
   describe('Contador de caracteres funciona', () => {
     it('atualiza conforme digitação', async () => {
-      const user = userEvent.setup();
       const { rerender } = render(<NoteEditor value="" onChange={mockOnChange} />);
-      
+
       expect(screen.getByText(/0 \/ 10000/)).toBeInTheDocument();
-      
+
       rerender(<NoteEditor value="abc" onChange={mockOnChange} />);
       expect(screen.getByText(/3 \/ 10000/)).toBeInTheDocument();
     });
@@ -283,10 +282,10 @@ describe('NoteEditor', () => {
     it('navegação por teclado funciona', async () => {
       const user = userEvent.setup();
       render(<NoteEditor value="" onChange={mockOnChange} />);
-      
-      const textarea = screen.getByRole('textbox');
+
+      screen.getByRole('textbox');
       await user.tab();
-      
+
       // Deve focar no textarea ou primeiro botão
       expect(document.activeElement).toBeInTheDocument();
     });

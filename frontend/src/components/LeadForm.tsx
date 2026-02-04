@@ -16,8 +16,8 @@ import type {
   Lead,
   LeadFormData,
   LeadFormErrors,
-  LeadStatus,
 } from '../types/lead';
+import { LeadStatus } from '../types/lead';
 import type { Tag } from '../types/tag';
 
 export interface LeadFormProps {
@@ -39,7 +39,7 @@ export function LeadForm({ leadId, onSubmit, onCancel }: LeadFormProps) {
     phone: '',
     company: '',
     source: '',
-    status: 'NEW',
+    status: LeadStatus.NEW,
     tagIds: [],
   });
 

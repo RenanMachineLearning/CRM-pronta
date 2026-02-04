@@ -2,12 +2,10 @@
  * Página de listagem de contatos
  */
 
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContactList } from '../components/ContactList';
 import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
-import type { Filter } from '../types/filter';
 
 export function ContactsPage() {
   const navigate = useNavigate();

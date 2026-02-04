@@ -3,7 +3,7 @@
  * Permite buscar oportunidades por nome e selecionar uma
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import { listOpportunitiesForLookup, type OpportunityLookup } from '../services/opportunityService';
 

@@ -77,7 +77,7 @@ describe('Pagination Integration Tests', () => {
           tenantId: tenant.id,
           firstName: `Contact${i}`,
           lastName: `Test${i}`,
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.contact.createMany({ data: contacts });
@@ -256,7 +256,7 @@ describe('Pagination Integration Tests', () => {
         companies.push({
           tenantId: tenant.id,
           name: `Company ${i}`,
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.company.createMany({ data: companies });
@@ -283,7 +283,7 @@ describe('Pagination Integration Tests', () => {
           tenantId: tenant.id,
           firstName: `Lead${i}`,
           lastName: `Test${i}`,
-          status: 'NEW',
+          status: 'NEW' as const,
         });
       }
       await prisma.lead.createMany({ data: leads });
@@ -332,7 +332,7 @@ describe('Pagination Integration Tests', () => {
           name: `Opportunity ${i}`,
           value: 1000 * i,
           stageId: stage.id,
-          status: 'OPEN',
+          status: 'OPEN' as const,
         });
       }
       await prisma.opportunity.createMany({ data: opportunities });
@@ -351,16 +351,32 @@ describe('Pagination Integration Tests', () => {
   });
 
   describe('Task - Paginação', () => {
+    let contact1: { id: string };
+
     beforeAll(async () => {
+      // Criar contato para relacionamento
+      const contactObj = await prisma.contact.create({
+        data: {
+          tenantId: tenant.id,
+          firstName: 'Task Related',
+          lastName: 'Contact',
+          status: 'ACTIVE',
+        },
+      });
+      contact1 = { id: contactObj.id };
+
       // Criar 18 tarefas de teste
       const tasks = [];
       for (let i = 1; i <= 18; i++) {
         tasks.push({
           tenantId: tenant.id,
           title: `Task ${i}`,
-          status: 'PENDING',
-          priority: 'MEDIUM',
+          status: 'PENDING' as const,
+          priority: 'MEDIUM' as const,
           createdById: adminUser.id,
+          type: 'OTHER' as const,
+          relatedEntityType: 'Contact',
+          relatedEntityId: contact1.id,
         });
       }
       await prisma.task.createMany({ data: tasks });
@@ -386,7 +402,7 @@ describe('Pagination Integration Tests', () => {
         notes.push({
           tenantId: tenant.id,
           content: `Note ${i}`,
-          type: 'NOTE',
+          type: 'NOTE' as const,
           relatedEntityType: 'Contact',
           relatedEntityId: '00000000-0000-0000-0000-000000000001',
           createdById: adminUser.id,
@@ -462,7 +478,6 @@ describe('Pagination Integration Tests', () => {
   describe('Paginação com grandes volumes', () => {
     beforeAll(async () => {
       // Criar 500 contatos para testar paginação com volume
-      const contacts = [];
       const batchSize = 100;
       for (let batch = 0; batch < 5; batch++) {
         const batchContacts = [];
@@ -472,7 +487,7 @@ describe('Pagination Integration Tests', () => {
             tenantId: tenant.id,
             firstName: `Volume${index}`,
             lastName: `Test${index}`,
-            status: index % 2 === 0 ? 'ACTIVE' : 'INACTIVE',
+            status: index % 2 === 0 ? 'ACTIVE' as const : 'INACTIVE' as const,
           });
         }
         await prisma.contact.createMany({ data: batchContacts });
@@ -527,7 +542,7 @@ describe('Pagination Integration Tests', () => {
           tenantId: tenant.id,
           firstName: `Filter${i}`,
           lastName: i % 2 === 0 ? 'Active' : 'Inactive',
-          status: i % 2 === 0 ? 'ACTIVE' : 'INACTIVE',
+          status: i % 2 === 0 ? 'ACTIVE' as const : 'INACTIVE' as const,
         });
       }
       await prisma.contact.createMany({ data: contacts });
@@ -587,7 +602,7 @@ describe('Pagination Integration Tests', () => {
           tenantId: tenant.id,
           firstName: `Sort${i % 3}`,
           lastName: `Test${i}`,
-          status: 'ACTIVE',
+          status: 'ACTIVE' as const,
         });
       }
       await prisma.contact.createMany({ data: contacts });

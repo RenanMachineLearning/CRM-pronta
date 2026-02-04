@@ -3,7 +3,7 @@
  * Inclui botões de navegação, números de página, input para ir para página e seletor de itens por página
  */
 
-import React, { useState, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { Button } from '../Button';
 import type { PaginationProps } from './types';
 import type { ItemsPerPageOption } from '../../types/pagination.types';

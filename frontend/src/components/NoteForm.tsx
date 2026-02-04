@@ -10,9 +10,8 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
-import { getNoteById, createNote, updateNote } from '../services/noteService';
+import { getNoteById } from '../services/noteService';
 import type {
-  Note,
   NoteFormData,
   NoteFormErrors,
   NoteType,
@@ -30,7 +29,6 @@ export interface NoteFormProps {
 export function NoteForm({ noteId, relatedEntityType, relatedEntityId, onSubmit, onCancel }: NoteFormProps) {
   const [loading, setLoading] = useState(!!noteId);
   const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<Note | null>(null);
 
   const [formData, setFormData] = useState<NoteFormData>({
     content: '',
@@ -62,7 +60,6 @@ export function NoteForm({ noteId, relatedEntityType, relatedEntityId, onSubmit,
     try {
       setLoading(true);
       const loadedNote = await getNoteById(noteId!);
-      setNote(loadedNote);
       setFormData({
         content: loadedNote.content,
         type: loadedNote.type,

@@ -3,7 +3,7 @@
  * Permite buscar empresas por nome e selecionar uma
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import { listCompaniesForLookup } from '../services/companyService';
 import type { CompanyLookup } from '../types/company';
@@ -18,7 +18,6 @@ export interface CompanyLookupProps {
 export function CompanyLookup({ value, companyName, onChange, error }: CompanyLookupProps) {
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<CompanyLookup[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyLookup | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -42,7 +41,6 @@ export function CompanyLookup({ value, companyName, onChange, error }: CompanyLo
         return;
       }
 
-      setLoading(true);
       try {
         const companies = await listCompaniesForLookup(query);
         setOptions(companies);
@@ -50,8 +48,6 @@ export function CompanyLookup({ value, companyName, onChange, error }: CompanyLo
       } catch (err) {
         console.error('Erro ao buscar empresas:', err);
         setOptions([]);
-      } finally {
-        setLoading(false);
       }
     };
 

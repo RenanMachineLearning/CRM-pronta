@@ -5,7 +5,7 @@
  * para mostrar o histórico de atividades.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCompanyById } from '../services/companyService';
 import { Timeline } from '../components/Timeline';

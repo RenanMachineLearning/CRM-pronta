@@ -69,13 +69,11 @@ describe('OrderBy Integration Tests', () => {
   });
 
   describe('Contact - Ordenação', () => {
-    let contact1: any;
-    let contact2: any;
     let contact3: any;
 
     beforeAll(async () => {
       // Criar contatos de teste
-      contact1 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant.id,
           firstName: 'Alice',
@@ -84,7 +82,7 @@ describe('OrderBy Integration Tests', () => {
         },
       });
 
-      contact2 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant.id,
           firstName: 'Bob',

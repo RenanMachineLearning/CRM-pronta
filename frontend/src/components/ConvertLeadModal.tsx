@@ -199,7 +199,7 @@ export function ConvertLeadModal({
         createOpportunity: formData.createOpportunity,
         opportunityData: formData.createOpportunity
           ? {
-              name: formData.opportunityData.name.trim() || undefined,
+              name: formData.opportunityData.name.trim() || generateOpportunityName(leadName),
               value: Number(formData.opportunityData.value),
               currency: formData.opportunityData.currency || 'BRL',
               stageId:

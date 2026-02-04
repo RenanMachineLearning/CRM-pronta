@@ -5,7 +5,7 @@
  * para mostrar o histórico de atividades.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getLeadById } from '../services/leadService';
 import { Timeline } from '../components/Timeline';
@@ -18,9 +18,8 @@ import type { Lead, LeadStatus } from '../types/lead';
 function translateStatus(status: LeadStatus): string {
   const translations: Record<LeadStatus, string> = {
     NEW: 'Novo',
-    CONTACTED: 'Contatado',
     QUALIFIED: 'Qualificado',
-    UNQUALIFIED: 'Não Qualificado',
+    LOST: 'Perdido',
     CONVERTED: 'Convertido',
   };
   return translations[status] || status;
@@ -30,9 +29,8 @@ function translateStatus(status: LeadStatus): string {
 function getStatusColor(status: LeadStatus): string {
   const colors: Record<LeadStatus, string> = {
     NEW: 'bg-blue-100 text-blue-800',
-    CONTACTED: 'bg-yellow-100 text-yellow-800',
     QUALIFIED: 'bg-green-100 text-green-800',
-    UNQUALIFIED: 'bg-gray-100 text-gray-800',
+    LOST: 'bg-red-100 text-red-800',
     CONVERTED: 'bg-purple-100 text-purple-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
@@ -232,14 +230,14 @@ export function LeadDetailPage() {
                 <div className="text-sm text-purple-600 font-medium mb-2">
                   Lead Convertido
                 </div>
-                {lead.convertedContactId && (
+                {lead.convertedToContactId && (
                   <div className="text-xs text-gray-500">
-                    Contato: <Link to={`/contacts/${lead.convertedContactId}`} className="text-blue-600 hover:underline">Ver contato</Link>
+                    Contato: <Link to={`/contacts/${lead.convertedToContactId}`} className="text-blue-600 hover:underline">Ver contato</Link>
                   </div>
                 )}
-                {lead.convertedOpportunityId && (
+                {lead.convertedToOpportunityId && (
                   <div className="text-xs text-gray-500">
-                    Oportunidade: <Link to={`/opportunities/${lead.convertedOpportunityId}`} className="text-blue-600 hover:underline">Ver oportunidade</Link>
+                    Oportunidade: <Link to={`/opportunities/${lead.convertedToOpportunityId}`} className="text-blue-600 hover:underline">Ver oportunidade</Link>
                   </div>
                 )}
                 <div className="text-xs text-gray-500 mt-1">

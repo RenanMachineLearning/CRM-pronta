@@ -3,12 +3,11 @@
  * Exibe resultados agrupados por entidade com filtros e paginação
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGlobalSearch } from '../hooks/useGlobalSearch';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { Button } from '../components/Button';
 import type { SearchableEntity, SearchResult } from '../types/search';
 import type { ContactSearchData, CompanySearchData, LeadSearchData, OpportunitySearchData } from '../types/search';
 
@@ -136,7 +135,7 @@ function ResultsSection({
 }
 
 export function SearchResultsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get('q') || '';
   const [selectedEntities, setSelectedEntities] = useState<SearchableEntity[]>(['contact', 'company', 'lead', 'opportunity']);

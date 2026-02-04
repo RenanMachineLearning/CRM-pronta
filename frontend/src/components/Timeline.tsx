@@ -5,7 +5,6 @@
  * relacionadas a uma entidade específica, agrupadas por data.
  */
 
-import React from 'react';
 import { useTimeline } from '../hooks/useTimeline';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';

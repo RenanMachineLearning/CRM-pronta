@@ -24,8 +24,8 @@ describe('CompanyList', () => {
         name: 'Empresa XYZ',
         website: 'https://example.com',
         industry: 'Tecnologia',
-        size: 'MEDIUM',
-        status: 'ACTIVE',
+        size: 'MEDIUM' as const,
+        status: 'ACTIVE' as const,
         contactsCount: 5,
         tags: [{ id: 'tag-1', name: 'Cliente', color: '#3B82F6' }],
         createdAt: '2024-01-01',
@@ -42,6 +42,7 @@ describe('CompanyList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<CompanyList />);
@@ -69,6 +70,7 @@ describe('CompanyList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<CompanyList />);
@@ -84,6 +86,7 @@ describe('CompanyList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<CompanyList />);
@@ -99,6 +102,7 @@ describe('CompanyList', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<CompanyList />);

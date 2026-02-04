@@ -11,6 +11,7 @@ import { PipelineView } from '../PipelineView';
 import { getDefaultPipeline, getPipelineById } from '../../services/pipelineService';
 import { listOpportunities } from '../../services/opportunityService';
 import type { Pipeline, Opportunity } from '../../types/opportunity';
+import { OpportunityStatus } from '../../types/opportunity';
 
 // Mock dos serviços
 vi.mock('../../services/pipelineService', () => ({
@@ -75,7 +76,7 @@ describe('PipelineView', () => {
       value: 10000,
       currency: 'BRL',
       stageId: 'stage-1',
-      status: 'OPEN',
+      status: OpportunityStatus.OPEN,
       closeDate: '2024-12-31T00:00:00.000Z',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -87,7 +88,7 @@ describe('PipelineView', () => {
       value: 20000,
       currency: 'BRL',
       stageId: 'stage-2',
-      status: 'OPEN',
+      status: OpportunityStatus.OPEN,
       closeDate: '2024-12-31T00:00:00.000Z',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -99,7 +100,7 @@ describe('PipelineView', () => {
       value: 30000,
       currency: 'BRL',
       stageId: 'stage-1',
-      status: 'OPEN',
+      status: OpportunityStatus.OPEN,
       closeDate: '2024-12-31T00:00:00.000Z',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',

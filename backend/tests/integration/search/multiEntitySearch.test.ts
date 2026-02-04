@@ -343,7 +343,7 @@ describe('Multi-Entity Search Integration', () => {
         },
       });
 
-      const stage2 = await prisma.pipelineStage.create({
+      await prisma.pipelineStage.create({
         data: {
           tenantId: tenant2.id,
           pipelineId: pipeline2.id,

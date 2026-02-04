@@ -11,7 +11,7 @@ const TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG || 'demo';
 /**
  * Obtém token de autenticação do localStorage
  */
-function getAuthToken(): string | null {
+export function getAuthToken(): string | null {
   return localStorage.getItem('authToken');
 }
 

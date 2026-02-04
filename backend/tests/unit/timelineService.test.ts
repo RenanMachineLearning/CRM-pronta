@@ -23,7 +23,6 @@ describe('TimelineService', () => {
   let tenant1: { id: string };
   let tenant2: { id: string };
   let adminUser1: { id: string };
-  let regularUser1: { id: string };
   let adminRole1: { id: string };
   let contact1: { id: string };
   let company1: { id: string };
@@ -59,12 +58,6 @@ describe('TimelineService', () => {
     });
     await assignRoleToUser(adminUser1.id, adminRole1.id);
 
-    regularUser1 = await createTestUser({
-      email: 'regular1@timelineservice.test',
-      password: 'RegularPass123',
-      name: 'Regular User 1',
-      tenantId: tenant1.id,
-    });
 
     // Criar entidades relacionadas
     contact1 = await prisma.contact.create({
@@ -239,7 +232,7 @@ describe('TimelineService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const note1 = await NoteService.createNote(
+      await NoteService.createNote(
         {
           content: 'Nota 1',
           relatedEntityType: 'Contact',

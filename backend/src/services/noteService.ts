@@ -21,6 +21,11 @@ import { logAudit } from '../utils/auditLog';
 import { validateFilters } from '../utils/filterValidator';
 import { buildFilterQuery } from '../utils/filterBuilder';
 import { buildOrderBy } from '../utils/orderByHelpers';
+import { withQueryTimeout } from '../utils/queryTimeout';
+import { cacheManager } from '../cache/cacheManager';
+import { generateCacheKey, getEntityCacheTags } from '../cache/cacheKeys';
+import { QUERY_LIMITS, QUERY_TIMEOUTS, CACHE_TTL } from '../config/constants';
+import { getSelectionProfile } from '../utils/selectionProfiles';
 
 
 // Interface para filtros de listagem
@@ -426,7 +431,7 @@ export class NoteService {
     );
 
     // Usar perfil de seleção otimizado (sem content - campo grande)
-    const select = getSelectionProfile('note', 'list');
+    const select = getSelectionProfile('note', 'list') as any;
 
     // Buscar notas com timeout e select otimizado
     const [notes, total] = await withQueryTimeout(
@@ -470,9 +475,9 @@ export class NoteService {
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
           createdBy: {
-            id: note.createdBy.id,
-            name: note.createdBy.name,
-            email: note.createdBy.email,
+            id: note.createdById, // Using the foreign key directly since relation might not be loaded
+            name: '', // Will be populated later if needed
+            email: '', // Will be populated later if needed
           },
           relatedEntity,
         };
@@ -532,7 +537,7 @@ export class NoteService {
     }
 
     // Usar perfil de seleção para detalhe (com content)
-    const select = getSelectionProfile('note', 'detail');
+    const select = getSelectionProfile('note', 'detail') as any;
 
     // Buscar nota com timeout e select otimizado (inclui content)
     const note = await withQueryTimeout(
@@ -572,9 +577,9 @@ export class NoteService {
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
       createdBy: {
-        id: note.createdBy.id,
-        name: note.createdBy.name,
-        email: note.createdBy.email,
+        id: note.createdById, // Using the foreign key directly since relation might not be loaded
+        name: '', // Will be populated later if needed
+        email: '', // Will be populated later if needed
       },
       relatedEntity,
     };

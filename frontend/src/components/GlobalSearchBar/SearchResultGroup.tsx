@@ -3,7 +3,6 @@
  * Exibe cabeçalho com ícone, nome da entidade e contador de resultados
  */
 
-import React from 'react';
 import { SearchResultItem } from './SearchResultItem';
 import type { SearchResultGroupProps } from './types';
 

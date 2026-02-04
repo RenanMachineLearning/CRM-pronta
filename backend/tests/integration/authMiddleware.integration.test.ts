@@ -14,7 +14,6 @@ describe('Auth Middleware - Integração', () => {
   let tenantA: { id: string; slug: string };
   let tenantB: { id: string; slug: string };
   let userA: { id: string; email: string; password: string };
-  let userB: { id: string; email: string; password: string };
 
   beforeAll(async () => {
     await cleanDatabase();
@@ -49,19 +48,6 @@ describe('Auth Middleware - Integração', () => {
       password: 'Password123',
     };
 
-    // Criar usuário no tenant B
-    const userBObj = await createTestUser({
-      email: 'userb@example.com',
-      password: 'Password123',
-      name: 'User B',
-      tenantId: tenantB.id,
-      status: 'ACTIVE',
-    });
-    userB = {
-      id: userBObj.id,
-      email: userBObj.email,
-      password: 'Password123',
-    };
   });
 
   afterAll(async () => {

@@ -3,7 +3,7 @@
  * Permite buscar leads por nome e selecionar um
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import { listLeadsForLookup, type LeadLookup } from '../services/leadService';
 

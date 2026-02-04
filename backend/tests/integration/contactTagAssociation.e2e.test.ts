@@ -516,7 +516,7 @@ describe('Contact Tag Association - E2E Tests', () => {
 
       const contactId = contactResponse.body.id;
 
-      const tagResponse = await request(app)
+      await request(app)
         .post('/api/tags')
         .set('X-Tenant-Slug', tenant1.slug)
         .set('Authorization', `Bearer ${adminToken1}`)
@@ -524,8 +524,6 @@ describe('Contact Tag Association - E2E Tests', () => {
           name: 'Tag Tenant 1',
         })
         .expect(201);
-
-      const tagId = tagResponse.body.id;
 
       // Tentar associar tag do tenant2 ao contato do tenant1 (deve falhar)
       const response = await request(app)

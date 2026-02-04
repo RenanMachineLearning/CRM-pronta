@@ -156,7 +156,7 @@ describe('Performance Tests', () => {
         content: `Nota ${i} - Conteúdo grande que não deve ser buscado em listagens`.repeat(50), // Campo grande
         type: 'NOTE' as const,
         relatedEntityType: 'Contact',
-        relatedEntityId: contacts[0]?.id || '00000000-0000-0000-0000-000000000001',
+        relatedEntityId: '00000000-0000-0000-0000-000000000001',
         createdById: adminUser.id,
       });
     }
@@ -294,7 +294,7 @@ describe('Performance Tests', () => {
       );
 
       // Cache deve ter sido invalidado
-      const invalidatedCache = await cacheManager.get(
+      await cacheManager.get(
         require('../../src/cache/cacheKeys').generateCacheKey(
           'listContacts',
           { tenantId: tenant.id, filters: {}, pagination: { limit: 20, page: 1 }, userId: adminUser.id },

@@ -2,7 +2,6 @@
  * Componente de loading/spinner
  */
 
-import React from 'react';
 
 export interface LoadingProps {
   message?: string;

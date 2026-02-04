@@ -46,7 +46,7 @@ import type { GlobalSearchParams, SearchableEntity } from '../types/search.types
  * Response 401: Não autenticado
  * Response 500: Erro interno
  */
-export async function searchGlobal(req: Request, res: Response, next: any): Promise<void> {
+export async function searchGlobal(req: Request, res: Response, _next: any): Promise<void> {
   try {
     // Validar tenantId e userId (inseridos pelos middlewares)
     const tenantId = req.tenantId;

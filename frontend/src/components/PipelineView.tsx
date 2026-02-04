@@ -4,13 +4,13 @@
  * Exibe oportunidades organizadas por estágios do pipeline
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getDefaultPipeline, getPipelineById } from '../services/pipelineService';
 import { listOpportunities } from '../services/opportunityService';
 import { OpportunityCard } from './OpportunityCard';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
-import type { Pipeline, Opportunity, PipelineStage } from '../types/opportunity';
+import type { Pipeline, Opportunity } from '../types/opportunity';
 
 export interface PipelineViewProps {
   pipelineId?: string; // Se fornecido, usa pipeline específico; senão, usa padrão

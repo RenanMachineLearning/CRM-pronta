@@ -3,7 +3,7 @@
  * Gerencia lista de filtros aplicados e modal para adicionar novos
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdvancedFilters } from '../../hooks/useAdvancedFilters';
 import { FilterChip } from './FilterChip';
 import { FilterModal } from './FilterModal';
@@ -25,7 +25,6 @@ export function AdvancedFilters({
     addFilter,
     removeFilter,
     clearFilters,
-    availableFields,
     formatFilterValue,
     getOperatorLabel,
   } = useAdvancedFilters(entity, externalFilters);

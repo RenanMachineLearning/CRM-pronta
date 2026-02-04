@@ -190,6 +190,8 @@ model Tenant {
   pipelineStages      PipelineStage[] // Etapa 6 (Leads/Oportunidades)
   tasks               Task[] // Etapa 7 (Tarefas/Notas)
   notes               Note[] // Etapa 7 (Tarefas/Notas)
+  businessRules       BusinessRule[] // Etapa 8 (Regras de Negócio)
+  importJobs          ImportJob[] // Etapa 9 (Importação/Exportação)
 
   @@map("tenants")
 }
@@ -214,6 +216,7 @@ model User {
   tasksCreated        Task[] @relation("TaskCreatedBy") // Etapa 7 (Tarefas criadas pelo usuário)
   tasksAssigned       Task[] @relation("TaskAssignedTo") // Etapa 7 (Tarefas atribuídas ao usuário)
   notesCreated        Note[] // Etapa 7 (Notas criadas pelo usuário)
+  importJobs          ImportJob[] // Etapa 9 (Importação/Exportação)
 
   // Índice único composto: email único por tenant
   @@unique([tenantId, email])
@@ -957,6 +960,102 @@ model Note {
   // Otimiza queries: SELECT * FROM notes WHERE tenantId = ? AND relatedEntityType = ? AND relatedEntityId = ?
   @@index([tenantId, relatedEntityType, relatedEntityId])
   @@map("notes")
+}
+
+// ============================================================================
+// ETAPA 8 - REGRAS DE NEGÓCIO
+// ============================================================================
+// Modelo para regras de negócio personalizadas por tenant
+// Implementado na Etapa 8 (Regras de Negócio)
+
+model BusinessRule {
+  id          String      @id @default(uuid())
+  tenantId    String      // Foreign key para Tenant (isolamento multi-tenant)
+  name        String      // Nome da regra
+  description String?     // Descrição opcional
+  entityType  String      // Tipo de entidade (ex: "Contact", "Company", "Lead")
+  condition   String      // Condição da regra (expressão)
+  action      String      // Ação a ser executada ("ERROR", "WARNING", etc.)
+  field       String?     // Campo específico (opcional)
+  errorMessage String?    // Mensagem de erro
+  warningMessage String?  // Mensagem de aviso
+  severity    String      @default("error") // Nível de severidade da regra ('info' | 'warning' | 'error' | 'critical')
+  active      Boolean     @default(true) // Se a regra está ativa
+  isDeleted   Boolean     @default(false) // Soft delete
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índice para busca por tipo de entidade
+  @@index([tenantId, entityType])
+  // Índice para busca por status
+  @@index([tenantId, active])
+  @@map("business_rules")
+}
+
+// ============================================================================
+// ETAPA 9 - IMPORTAÇÃO/EXPORTAÇÃO - Modelo de Job de Importação
+// ============================================================================
+// Modelo para rastrear jobs de importação assíncronos
+// Implementado na Etapa 9 (Import/Export)
+
+enum ImportJobStatus {
+  PENDING
+  QUEUED
+  PROCESSING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model ImportJob {
+  id                  String           @id @default(uuid())
+  tenantId            String // Foreign key para Tenant (isolamento multi-tenant)
+  userId              String // Foreign key para User (usuário que iniciou a importação)
+  fileId              String // ID do arquivo temporário
+  entityType          String // Tipo de entidade sendo importada (Contact, Company, etc.)
+  status              ImportJobStatus  @default(PENDING)
+  progress            Int              @default(0) // Percentual de progresso (0-100)
+  totalRows           Int              @default(0) // Total de linhas a processar
+  processedRows       Int              @default(0) // Linhas já processadas
+  successCount        Int              @default(0) // Registros criados com sucesso
+  errorCount          Int              @default(0) // Erros encontrados
+  duplicateCount      Int              @default(0) // Registros duplicados
+  result              Json?            // Resultado completo da importação (JSON)
+  errorMessage        String?          // Mensagem de erro em caso de falha
+  startedAt           DateTime?        // Timestamp de início do processamento
+  completedAt         DateTime?        // Timestamp de conclusão
+  estimatedCompletion DateTime?        // Tempo estimado de conclusão
+  retries             Int              @default(0) // Número de tentativas
+  priority            JobPriority      @default(NORMAL) // Prioridade do job
+  options             Json?            // Opções de importação (JSON)
+  mappings            Json?            // Mapeamento de campos (JSON)
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índice composto obrigatório para performance (convenção multi-tenant)
+  @@index([tenantId, id])
+  // Índices para otimização de consultas
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("import_jobs")
 }
 
 // ============================================================================

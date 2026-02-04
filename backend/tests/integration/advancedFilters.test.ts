@@ -95,7 +95,6 @@ describe('Advanced Filters - E2E Tests', () => {
 
   describe('Contact - Advanced Filters', () => {
     let contact1: { id: string };
-    let contact2: { id: string };
     let company1: { id: string };
 
     beforeAll(async () => {
@@ -119,7 +118,7 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      contact2 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant1.id,
           firstName: 'Maria',
@@ -221,7 +220,6 @@ describe('Advanced Filters - E2E Tests', () => {
 
   describe('Company - Advanced Filters', () => {
     let company1: { id: string };
-    let company2: { id: string };
 
     beforeAll(async () => {
       company1 = await prisma.company.create({
@@ -234,15 +232,6 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      company2 = await prisma.company.create({
-        data: {
-          tenantId: tenant1.id,
-          name: 'Small Business',
-          industry: 'Retail',
-          size: 'SMALL',
-          status: 'INACTIVE',
-        },
-      });
     });
 
     it('deve filtrar empresas por size usando equals', async () => {
@@ -279,7 +268,6 @@ describe('Advanced Filters - E2E Tests', () => {
 
   describe('Lead - Advanced Filters', () => {
     let lead1: { id: string };
-    let lead2: { id: string };
 
     beforeAll(async () => {
       lead1 = await prisma.lead.create({
@@ -293,16 +281,6 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      lead2 = await prisma.lead.create({
-        data: {
-          tenantId: tenant1.id,
-          firstName: 'Lead',
-          lastName: 'Two',
-          email: 'lead2@test.com',
-          status: 'QUALIFIED',
-          source: 'Referral',
-        },
-      });
     });
 
     it('deve filtrar leads por status', async () => {
@@ -339,7 +317,6 @@ describe('Advanced Filters - E2E Tests', () => {
   describe('Opportunity - Advanced Filters', () => {
     let stage1: { id: string };
     let opportunity1: { id: string };
-    let opportunity2: { id: string };
 
     beforeAll(async () => {
       // Criar pipeline e stage
@@ -370,15 +347,6 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      opportunity2 = await prisma.opportunity.create({
-        data: {
-          tenantId: tenant1.id,
-          name: 'Small Deal',
-          value: new Prisma.Decimal('5000'),
-          stageId: stage1.id,
-          status: 'OPEN',
-        },
-      });
     });
 
     it('deve filtrar oportunidades por value usando greaterThan', async () => {
@@ -415,7 +383,6 @@ describe('Advanced Filters - E2E Tests', () => {
   describe('Task - Advanced Filters', () => {
     let contact1: { id: string };
     let task1: { id: string };
-    let task2: { id: string };
 
     beforeAll(async () => {
       // Criar contato
@@ -451,17 +418,6 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      task2 = await prisma.task.create({
-        data: {
-          tenantId: tenant1.id,
-          title: 'Task 2',
-          status: 'COMPLETED',
-          type: 'EMAIL',
-          createdById: adminUser1.id,
-          relatedEntityType: 'Contact',
-          relatedEntityId: contact1.id,
-        },
-      });
     });
 
     it('deve filtrar tarefas por status', async () => {
@@ -498,7 +454,6 @@ describe('Advanced Filters - E2E Tests', () => {
   describe('Note - Advanced Filters', () => {
     let contact1: { id: string };
     let note1: { id: string };
-    let note2: { id: string };
 
     beforeAll(async () => {
       // Criar contato
@@ -521,16 +476,6 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      note2 = await prisma.note.create({
-        data: {
-          tenantId: tenant1.id,
-          content: 'Note 2 content',
-          type: 'COMMENT',
-          createdById: adminUser1.id,
-          relatedEntityType: 'Contact',
-          relatedEntityId: contact1.id,
-        },
-      });
     });
 
     it('deve filtrar notas por type', async () => {
@@ -672,9 +617,6 @@ describe('Advanced Filters - E2E Tests', () => {
   });
 
   describe('Todos os 13 Operadores de Filtro', () => {
-    let contact1: { id: string };
-    let contact2: { id: string };
-    let contact3: { id: string };
     let company1: { id: string };
 
     beforeAll(async () => {
@@ -692,7 +634,7 @@ describe('Advanced Filters - E2E Tests', () => {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + 10);
 
-      contact1 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant1.id,
           firstName: 'Operator',
@@ -703,7 +645,7 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      contact2 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant1.id,
           firstName: 'Operator',
@@ -713,7 +655,7 @@ describe('Advanced Filters - E2E Tests', () => {
         },
       });
 
-      contact3 = await prisma.contact.create({
+      await prisma.contact.create({
         data: {
           tenantId: tenant1.id,
           firstName: 'Different',

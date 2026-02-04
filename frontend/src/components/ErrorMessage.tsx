@@ -2,7 +2,6 @@
  * Componente para exibir mensagens de erro
  */
 
-import React from 'react';
 
 export interface ErrorMessageProps {
   message: string;

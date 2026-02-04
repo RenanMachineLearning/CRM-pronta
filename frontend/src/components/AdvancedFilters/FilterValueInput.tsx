@@ -3,7 +3,6 @@
  * Renderiza input apropriado baseado no tipo de campo e operador
  */
 
-import React from 'react';
 import { Input } from '../Input';
 import { Select } from '../Select';
 import type { FilterValueInputProps } from './types';

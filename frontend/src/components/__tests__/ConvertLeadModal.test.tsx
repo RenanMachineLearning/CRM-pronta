@@ -5,7 +5,6 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import { ConvertLeadModal } from '../ConvertLeadModal';
 import { convertLead } from '../../services/leadService';
 import { getDefaultPipeline } from '../../services/pipelineService';

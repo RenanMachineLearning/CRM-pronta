@@ -29,13 +29,11 @@ describe('Opportunity Validations - E2E Tests', () => {
   let adminUser1: { id: string; email: string; password: string };
   let adminUser2: { id: string; email: string; password: string };
   let adminToken1: string;
-  let adminToken2: string;
   let adminRole1: { id: string };
   let adminRole2: { id: string };
   let pipeline1: { id: string };
   let pipeline2: { id: string };
   let stage1: { id: string }; // Primeiro estágio do pipeline1
-  let stage2: { id: string }; // Segundo estágio do pipeline1
   let stageTenant2: { id: string }; // Estágio do pipeline2 (outro tenant)
 
   beforeAll(async () => {
@@ -116,7 +114,7 @@ describe('Opportunity Validations - E2E Tests', () => {
 
     // Gerar tokens JWT
     adminToken1 = generateToken(adminUser1.id, tenant1.id);
-    adminToken2 = generateToken(adminUser2.id, tenant2.id);
+    generateToken(adminUser2.id, tenant2.id);
 
     // Criar pipelines e estágios para tenant1
     pipeline1 = await prisma.pipeline.create({
@@ -138,7 +136,7 @@ describe('Opportunity Validations - E2E Tests', () => {
       },
     });
 
-    stage2 = await prisma.pipelineStage.create({
+    await prisma.pipelineStage.create({
       data: {
         pipelineId: pipeline1.id,
         tenantId: tenant1.id,

@@ -3,7 +3,7 @@
  * Exibe tabela de empresas com paginação, ordenação e filtros
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useCompanies } from '../hooks/useCompanies';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
@@ -12,11 +12,16 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
 import { Pagination } from './Pagination/Pagination';
+import ExportDialog from './ExportDialog/ExportDialog';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
 import { useSortPaginationUrlSync } from '../hooks/useSortPaginationUrlSync';
-import type { Company, CompanyFilters, CompanySize } from '../types/company';
+import { getAvailableFields, exportData } from '../services/exportService';
+import { downloadFile, generateExportFilename } from '../utils/downloadUtils';
+import { getAuthToken } from '../utils/api';
+import type { CompanyFilters, CompanySize } from '../types/company';
 import type { Filter } from '../types/filter';
+import type { Field } from './ExportDialog/ExportDialog.types';
 
 export interface CompanyListProps {
   onCompanyClick?: (companyId: string) => void;
@@ -26,8 +31,14 @@ export interface CompanyListProps {
 
 export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = [] }: CompanyListProps) {
   // Estado para filtros
-  const [filters, setFilters] = useState<CompanyFilters>({});
-  
+  const [filters] = useState<CompanyFilters>({});
+
+  // Estados para exportação
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [availableFields, setAvailableFields] = useState<Field[]>([]);
+  const [, setLoadingFields] = useState(false);
+  const token = getAuthToken();
+
   // Hooks para ordenação e paginação
   const { sorting, updateSorting, setSortingState, toBackendParams: toSortParams } = useSorting('name', 'asc');
   const { pagination: paginationState, updatePage, updateLimit, updateTotal, toBackendParams: toPaginationParams } = usePagination(1, 20, 0);
@@ -51,6 +62,65 @@ export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = []
     }
   );
 
+  // Carregar campos disponíveis para exportação
+  useEffect(() => {
+    if (showExportDialog && token) {
+      const fetchFields = async () => {
+        setLoadingFields(true);
+        try {
+          const fields = await getAvailableFields('Company', token);
+          // Mapear campos para o formato esperado pelo ExportDialog
+          const mappedFields: Field[] = fields.map((field: any) => ({
+            id: field.id,
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            order: field.order
+          }));
+          setAvailableFields(mappedFields);
+        } catch (error) {
+          console.error('Erro ao carregar campos para exportação:', error);
+        } finally {
+          setLoadingFields(false);
+        }
+      };
+
+      fetchFields();
+    }
+  }, [showExportDialog, token]);
+
+  // Handler para exportação
+  const handleExport = async (options: any) => {
+    if (!token) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    try {
+      // Chamar serviço de exportação
+      const blob = await exportData('companies', options, token);
+
+      // Gerar nome de arquivo
+      const filename = generateExportFilename('companies', options.format);
+
+      // Fazer download do arquivo
+      downloadFile(blob, filename);
+    } catch (error) {
+      console.error('Erro na exportação:', error);
+      throw error;
+    }
+  };
+
+  // Handler para abrir diálogo de exportação
+  const handleOpenExportDialog = () => {
+    setShowExportDialog(true);
+  };
+
+  // Handler para fechar diálogo de exportação
+  const handleCloseExportDialog = () => {
+    setShowExportDialog(false);
+  };
+
   // Hook para buscar empresas
   const {
     companies,
@@ -66,7 +136,7 @@ export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = []
     {
       ...toPaginationParams(),
       ...toSortParams(),
-    },
+    } as any, // Temporary fix until we align the types properly
     advancedFilters
   );
 
@@ -86,7 +156,7 @@ export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = []
     updatePagination({
       ...toPaginationParams(),
       ...toSortParams(),
-    });
+    } as any); // Temporary fix until we align the types properly
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams]);
 
   // Handler para ordenação
@@ -176,12 +246,28 @@ export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = []
           />
         </div>
 
-        {onNewCompany && (
-          <Button onClick={onNewCompany} variant="primary">
-            Nova Empresa
+        <div className="flex flex-wrap gap-2">
+          {onNewCompany && (
+            <Button onClick={onNewCompany} variant="primary">
+              Nova Empresa
+            </Button>
+          )}
+
+          <Button onClick={handleOpenExportDialog} variant="secondary">
+            Exportar
           </Button>
-        )}
+        </div>
       </div>
+
+      {/* Diálogo de exportação */}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={handleCloseExportDialog}
+        entityType="Company"
+        currentFilters={advancedFilters.length > 0 ? advancedFilters : undefined}
+        availableFields={availableFields}
+        onExport={handleExport}
+      />
 
       {/* Tabela de empresas */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">

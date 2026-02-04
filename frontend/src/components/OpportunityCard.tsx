@@ -4,7 +4,6 @@
  * Exibe nome, valor, data de fechamento, probabilidade, status, contato/empresa e tags
  */
 
-import React from 'react';
 import type { Opportunity, OpportunityStatus } from '../types/opportunity';
 
 export interface OpportunityCardProps {

@@ -26,6 +26,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -43,6 +44,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -62,6 +64,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -80,6 +83,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -96,6 +100,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
@@ -112,6 +117,7 @@ describe('ContactList - Paginação', () => {
       refetch: vi.fn(),
       setFilters: vi.fn(),
       setPagination: vi.fn(),
+      setAdvancedFilters: vi.fn(),
     });
 
     render(<ContactList />);
