@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Layout } from './components/Layout';
+import Layout from './components/Layout';
 import { ContactsPage } from './pages/ContactsPage';
 import { ContactFormPage } from './pages/ContactFormPage';
 import { ContactDetailPage } from './pages/ContactDetailPage';
