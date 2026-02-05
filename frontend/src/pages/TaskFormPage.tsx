@@ -5,12 +5,14 @@
 
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { TaskForm } from '../components/TaskForm';
+import { useToast } from '../components/Toast';
 import { createTask, updateTask } from '../services/taskService';
 import type { TaskFormData, RelatedEntityType } from '../types/task';
 
 export function TaskFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { success } = useToast();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const relatedEntityType = searchParams.get('relatedEntityType') as RelatedEntityType | null;
@@ -21,9 +23,11 @@ export function TaskFormPage() {
       if (id) {
         // Modo edição
         await updateTask(id, data);
+        success('Tarefa atualizada com sucesso!');
       } else {
         // Modo criação
         await createTask(data);
+        success('Tarefa criada com sucesso!');
       }
       // Redirecionar apenas após sucesso
       navigate('/tasks');

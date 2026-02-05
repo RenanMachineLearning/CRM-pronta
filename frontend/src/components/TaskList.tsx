@@ -9,6 +9,7 @@ import { updateTask } from '../services/taskService';
 import { SkeletonTable } from './Skeleton';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { Select } from './Select';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
@@ -430,8 +431,18 @@ export function TaskList({
           <tbody className="bg-white divide-y divide-gray-200">
             {tasks.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  {hasFilters ? 'Nenhuma tarefa encontrada com os filtros aplicados' : 'Nenhuma tarefa encontrada'}
+                <td colSpan={7} className="px-4 py-8">
+                  <EmptyState
+                    title="Nenhuma tarefa encontrada"
+                    description={hasFilters 
+                      ? 'Tente ajustar os filtros aplicados para ver mais resultados.' 
+                      : 'Comece criando uma nova tarefa para organizar suas atividades.'}
+                    icon="task"
+                    actionLabel={hasFilters ? undefined : "Nova Tarefa"}
+                    onAction={hasFilters ? undefined : onNewTask}
+                    variant="table"
+                    filtersApplied={hasFilters}
+                  />
                 </td>
               </tr>
             ) : (

@@ -8,6 +8,7 @@ import { useLeads } from '../hooks/useLeads';
 import { SkeletonTable } from './Skeleton';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
@@ -380,8 +381,16 @@ export function LeadList({ leads: leadsProp, onLeadClick, onNewLead, onConvertLe
           <tbody className="bg-white divide-y divide-gray-200">
             {leads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Nenhum lead encontrado
+                <td colSpan={6} className="px-4 py-8">
+                  <EmptyState
+                    title="Nenhum lead encontrado"
+                    description="Comece criando um novo lead para gerenciar seus potenciais clientes."
+                    icon="users"
+                    actionLabel="Novo Lead"
+                    onAction={onNewLead}
+                    variant="table"
+                    filtersApplied={Object.keys(filters).length > 0 || advancedFilters.length > 0}
+                  />
                 </td>
               </tr>
             ) : (

@@ -8,6 +8,7 @@ import { useNotes } from '../hooks/useNotes';
 import { deleteNote } from '../services/noteService';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { Select } from './Select';
 import { ContactLookup } from './ContactLookup';
@@ -473,8 +474,18 @@ export function NoteList({
           <tbody className="bg-white divide-y divide-gray-200">
             {notes.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  {hasFilters() ? 'Nenhuma nota encontrada com os filtros aplicados' : 'Nenhuma nota encontrada'}
+                <td colSpan={6} className="px-4 py-8">
+                  <EmptyState
+                    title="Nenhuma nota encontrada"
+                    description={hasFilters()
+                      ? 'Tente ajustar os filtros aplicados para ver mais resultados.'
+                      : 'Comece criando uma nova nota para registrar informações importantes.'}
+                    icon="note"
+                    actionLabel={hasFilters() ? undefined : "Nova Nota"}
+                    onAction={hasFilters() ? undefined : onNewNote}
+                    variant="table"
+                    filtersApplied={hasFilters()}
+                  />
                 </td>
               </tr>
             ) : (

@@ -5,21 +5,25 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { CompanyForm } from '../components/CompanyForm';
+import { useToast } from '../components/Toast';
 import { createCompany, updateCompany } from '../services/companyService';
 import type { CompanyFormData } from '../types/company';
 
 export function CompanyFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { success } = useToast();
 
   const handleSubmit = async (data: CompanyFormData) => {
     try {
       if (id) {
         // Modo edição
         await updateCompany(id, data);
+        success('Empresa atualizada com sucesso!');
       } else {
         // Modo criação
         await createCompany(data);
+        success('Empresa criada com sucesso!');
       }
       // Redirecionar apenas após sucesso
       navigate('/companies');

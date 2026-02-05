@@ -8,6 +8,7 @@ import { useOpportunities } from '../hooks/useOpportunities';
 import { SkeletonTable } from './Skeleton';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { Select } from './Select';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
@@ -292,8 +293,16 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
             <tbody className="bg-white divide-y divide-gray-200">
               {opportunities.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    Nenhuma oportunidade encontrada
+                  <td colSpan={7} className="px-6 py-8">
+                    <EmptyState
+                      title="Nenhuma oportunidade encontrada"
+                      description="Comece criando uma nova oportunidade para gerenciar seus negócios."
+                      icon="opportunity"
+                      actionLabel="Nova Oportunidade"
+                      onAction={onNewOpportunity}
+                      variant="table"
+                      filtersApplied={Object.keys(filters).length > 0 || advancedFilters.length > 0}
+                    />
                   </td>
                 </tr>
               ) : (

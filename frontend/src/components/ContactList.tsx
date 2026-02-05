@@ -8,6 +8,7 @@ import { useContacts } from '../hooks/useContacts';
 import { ErrorMessage } from './ErrorMessage';
 import { SkeletonTable } from './Skeleton';
 import { LoadingSpinner } from './LoadingSpinner';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
 import { Pagination } from './Pagination/Pagination';
@@ -297,8 +298,16 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
           <tbody className="bg-white divide-y divide-gray-200">
             {contacts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                  Nenhum contato encontrado
+                <td colSpan={5} className="px-4 py-8">
+                  <EmptyState
+                    title="Nenhum contato encontrado"
+                    description="Comece criando um novo contato para gerenciar seus relacionamentos."
+                    icon="users"
+                    actionLabel="Novo Contato"
+                    onAction={onNewContact}
+                    variant="table"
+                    filtersApplied={Object.keys(filters).length > 0 || advancedFilters.length > 0}
+                  />
                 </td>
               </tr>
             ) : (

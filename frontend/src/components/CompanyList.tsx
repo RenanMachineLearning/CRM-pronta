@@ -8,6 +8,7 @@ import { useCompanies } from '../hooks/useCompanies';
 import { ErrorMessage } from './ErrorMessage';
 import { SkeletonTable } from './Skeleton';
 import { LoadingSpinner } from './LoadingSpinner';
+import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
@@ -325,8 +326,16 @@ export function CompanyList({ onCompanyClick, onNewCompany, advancedFilters = []
           <tbody className="bg-white divide-y divide-gray-200">
             {companies.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  Nenhuma empresa encontrada
+                <td colSpan={7} className="px-4 py-8">
+                  <EmptyState
+                    title="Nenhuma empresa encontrada"
+                    description="Comece criando uma nova empresa para gerenciar suas organizações."
+                    icon="building"
+                    actionLabel="Nova Empresa"
+                    onAction={onNewCompany}
+                    variant="table"
+                    filtersApplied={Object.keys(filters).length > 0 || advancedFilters.length > 0}
+                  />
                 </td>
               </tr>
             ) : (

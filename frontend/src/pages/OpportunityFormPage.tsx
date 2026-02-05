@@ -5,19 +5,23 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { OpportunityForm } from '../components/OpportunityForm';
+import { useToast } from '../components/Toast';
 import { createOpportunity, updateOpportunity } from '../services/opportunityService';
 import type { OpportunityFormData } from '../types/opportunity';
 
 export function OpportunityFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { success } = useToast();
 
   const handleSubmit = async (data: OpportunityFormData) => {
     try {
       if (id) {
         await updateOpportunity(id, data);
+        success('Oportunidade atualizada com sucesso!');
       } else {
         await createOpportunity(data);
+        success('Oportunidade criada com sucesso!');
       }
       navigate('/opportunities');
     } catch (error) {

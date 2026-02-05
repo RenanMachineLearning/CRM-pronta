@@ -5,21 +5,25 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { LeadForm } from '../components/LeadForm';
+import { useToast } from '../components/Toast';
 import { createLead, updateLead } from '../services/leadService';
 import type { LeadFormData } from '../types/lead';
 
 export function LeadFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { success } = useToast();
 
   const handleSubmit = async (data: LeadFormData) => {
     try {
       if (id) {
         // Modo edição
         await updateLead(id, data);
+        success('Lead atualizado com sucesso!');
       } else {
         // Modo criação
         await createLead(data);
+        success('Lead criado com sucesso!');
       }
       // Redirecionar apenas após sucesso
       navigate('/leads');

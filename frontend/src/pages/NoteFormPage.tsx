@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { NoteForm } from '../components/NoteForm';
+import { useToast } from '../components/Toast';
 import { createNote, updateNote, getNoteById } from '../services/noteService';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -14,6 +15,7 @@ import type { NoteFormData, RelatedEntityType } from '../types/note';
 export function NoteFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { success } = useToast();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   
@@ -56,8 +58,10 @@ export function NoteFormPage() {
 
       if (isEditMode && id) {
         await updateNote(id, data);
+        success('Nota atualizada com sucesso!');
       } else {
         await createNote(data);
+        success('Nota criada com sucesso!');
       }
 
       // Redirecionar para lista de notas
