@@ -1,17 +1,18 @@
 /**
  * Componente ContactList
  * Exibe tabela de contatos com paginação, ordenação e filtros
+ * Versão com DataTable responsivo
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useContacts } from '../hooks/useContacts';
+
+import { DataTable, DataTableColumn } from './DataTable';
+import { MobileFilterDrawer } from './MobileFilterDrawer';
 import { ErrorMessage } from './ErrorMessage';
 import { SkeletonTable } from './Skeleton';
-import { LoadingSpinner } from './LoadingSpinner';
 import { EmptyState } from './EmptyState';
 import { Button } from './Button';
-import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
-import { Pagination } from './Pagination/Pagination';
 import ExportDialog from './ExportDialog/ExportDialog';
 import { useSorting } from '../hooks/useSorting';
 import { usePagination } from '../hooks/usePagination';
@@ -22,16 +23,25 @@ import { getAuthToken } from '../utils/api';
 import type { Contact, ContactFilters } from '../types/contact';
 import type { Filter } from '../types/filter';
 import type { Field } from './ExportDialog/ExportDialog.types';
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export interface ContactListProps {
   onContactClick?: (contactId: string) => void;
   onNewContact?: () => void;
+  onEditContact?: (contactId: string) => void;
+  onDeleteContact?: (contactId: string) => void;
   advancedFilters?: Filter[];
 }
 
-export function ContactList({ onContactClick, onNewContact, advancedFilters = [] }: ContactListProps) {
+export function ContactList({ 
+  onContactClick, 
+  onNewContact,
+  onEditContact,
+  onDeleteContact,
+  advancedFilters = [] 
+}: ContactListProps) {
   // Estado para filtros
-  const [filters] = useState<ContactFilters>({});
+  const [filters, setFilters] = useState<ContactFilters>({});
 
   // Estados para exportação
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -48,13 +58,11 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     sorting,
     paginationState,
     (newSort) => {
-      // Atualizar ordenação quando vier da URL (apenas se diferente)
       if (newSort.sortBy !== sorting.sortBy || newSort.sortOrder !== sorting.sortOrder) {
         setSortingState(newSort);
       }
     },
     (newPagination) => {
-      // Atualizar paginação quando vier da URL
       if (newPagination.page !== undefined && newPagination.page !== paginationState.page) {
         updatePage(newPagination.page);
       }
@@ -79,7 +87,7 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     {
       ...toPaginationParams(),
       ...toSortParams(),
-    } as any, // Temporary fix until we align the types properly
+    } as any,
     advancedFilters
   );
 
@@ -91,7 +99,7 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
   // Atualizar filtros avançados quando mudarem externamente
   useEffect(() => {
     updateAdvancedFilters(advancedFilters);
-    updatePage(1); // Resetar para primeira página
+    updatePage(1);
   }, [advancedFilters, updateAdvancedFilters, updatePage]);
 
   // Atualizar paginação e ordenação na API quando mudarem
@@ -99,8 +107,29 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     updatePagination({
       ...toPaginationParams(),
       ...toSortParams(),
-    } as any); // Temporary fix until we align the types properly
+    } as any);
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams]);
+
+  // Handler para ordenação
+  const handleSort = useCallback((field: string) => {
+    updateSorting(field);
+    updatePage(1);
+  }, [updateSorting, updatePage]);
+
+  // Handler para exportação
+  const handleExport = async (options: any) => {
+    if (!token) {
+      throw new Error('Usuário não autenticado');
+    }
+    try {
+      const blob = await exportData('contacts', options, token);
+      const filename = generateExportFilename('contacts', options.format);
+      downloadFile(blob, filename);
+    } catch (error) {
+      console.error('Erro na exportação:', error);
+      throw error;
+    }
+  };
 
   // Carregar campos disponíveis para exportação
   useEffect(() => {
@@ -109,7 +138,6 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
         setLoadingFields(true);
         try {
           const fields = await getAvailableFields('Contact', token);
-          // Mapear campos para o formato esperado pelo ExportDialog
           const mappedFields: Field[] = fields.map((field: any) => ({
             id: field.id,
             name: field.name,
@@ -125,47 +153,9 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
           setLoadingFields(false);
         }
       };
-
       fetchFields();
     }
   }, [showExportDialog, token]);
-
-  // Handler para ordenação
-  const handleSort = (field: string) => {
-    updateSorting(field);
-    updatePage(1); // Resetar para primeira página
-  };
-
-  // Handler para exportação
-  const handleExport = async (options: any) => {
-    if (!token) {
-      throw new Error('Usuário não autenticado');
-    }
-
-    try {
-      // Chamar serviço de exportação
-      const blob = await exportData('contacts', options, token);
-
-      // Gerar nome de arquivo
-      const filename = generateExportFilename('contacts', options.format);
-
-      // Fazer download do arquivo
-      downloadFile(blob, filename);
-    } catch (error) {
-      console.error('Erro na exportação:', error);
-      throw error;
-    }
-  };
-
-  // Handler para abrir diálogo de exportação
-  const handleOpenExportDialog = () => {
-    setShowExportDialog(true);
-  };
-
-  // Handler para fechar diálogo de exportação
-  const handleCloseExportDialog = () => {
-    setShowExportDialog(false);
-  };
 
   const handleFilterChange = (key: keyof ContactFilters, value: string | undefined) => {
     const newFilters = { ...filters };
@@ -174,8 +164,15 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     } else {
       delete newFilters[key];
     }
+    setFilters(newFilters);
     updateFilters(newFilters);
-    updatePage(1); // Resetar para primeira página
+    updatePage(1);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    updateFilters({});
+    updatePage(1);
   };
 
   // Formatar nome completo
@@ -198,6 +195,83 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
     return primaryPhone?.phone || contact.phones[0]?.phone || '-';
   };
 
+  // Definição das colunas
+  const columns: DataTableColumn<Contact>[] = useMemo(() => [
+    {
+      key: 'name',
+      title: 'Nome',
+      priority: 'high',
+      sortable: true,
+      render: (contact) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">
+            {formatName(contact)}
+          </div>
+          {contact.title && (
+            <div className="text-sm text-gray-500">{contact.title}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'email',
+      title: 'Email',
+      priority: 'high',
+      hiddenOn: ['mobile'],
+      render: (contact) => (
+        <span className="text-sm text-gray-500">
+          {getPrimaryEmail(contact)}
+        </span>
+      ),
+    },
+    {
+      key: 'phone',
+      title: 'Telefone',
+      priority: 'medium',
+      hiddenOn: ['mobile', 'tablet'],
+      render: (contact) => (
+        <span className="text-sm text-gray-500">
+          {getPrimaryPhone(contact)}
+        </span>
+      ),
+    },
+    {
+      key: 'company',
+      title: 'Empresa',
+      priority: 'medium',
+      hiddenOn: ['mobile'],
+      render: (contact) => (
+        <span className="text-sm text-gray-500">
+          {contact.company?.name || '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'tags',
+      title: 'Tags',
+      priority: 'low',
+      hiddenOn: ['mobile', 'tablet'],
+      render: (contact) => (
+        <div className="flex flex-wrap gap-1">
+          {contact.tags.slice(0, 2).map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+              style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+            >
+              {tag.name}
+            </span>
+          ))}
+          {contact.tags.length > 2 && (
+            <span className="text-xs text-gray-400">+{contact.tags.length - 2}</span>
+          )}
+        </div>
+      ),
+    },
+  ], []);
+
+  // Contar filtros ativos
+  const activeFiltersCount = Object.keys(filters).length + advancedFilters.length;
 
   // Renderizar loading
   if (loading && contacts.length === 0) {
@@ -212,9 +286,7 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
             <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
           </div>
         </div>
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <SkeletonTable rows={5} columns={5} />
-        </div>
+        <SkeletonTable rows={5} columns={5} />
       </div>
     );
   }
@@ -226,10 +298,9 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
 
   return (
     <div className="space-y-4">
-      {/* Barra de ações e filtros */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Barra de ações e filtros - Desktop */}
+      <div className="hidden sm:flex flex-row justify-between items-center gap-4">
         <div className="flex flex-wrap gap-2">
-          {/* Filtro de status */}
           <select
             value={filters.status || ''}
             onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
@@ -248,123 +319,114 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
               Novo Contato
             </Button>
           )}
-
-          <Button onClick={handleOpenExportDialog} variant="secondary">
+          <Button onClick={() => setShowExportDialog(true)} variant="secondary">
             Exportar
           </Button>
         </div>
       </div>
 
+      {/* Barra de ações - Mobile */}
+      <div className="flex sm:hidden justify-between items-center gap-2">
+        {onNewContact && (
+          <Button onClick={onNewContact} variant="primary" size="sm">
+            Novo
+          </Button>
+        )}
+        <Button onClick={() => setShowExportDialog(true)} variant="secondary" size="sm">
+          Exportar
+        </Button>
+      </div>
+
       {/* Diálogo de exportação */}
       <ExportDialog
         isOpen={showExportDialog}
-        onClose={handleCloseExportDialog}
+        onClose={() => setShowExportDialog(false)}
         entityType="Contact"
         currentFilters={advancedFilters.length > 0 ? advancedFilters : undefined}
         availableFields={availableFields}
         onExport={handleExport}
       />
 
-      {/* Tabela de contatos */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md relative">
-        {loading && contacts.length > 0 && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-            <LoadingSpinner size="lg" />
+      {/* Drawer de filtros - Mobile */}
+      <MobileFilterDrawer
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            value: filters.status || '',
+            onChange: (value) => handleFilterChange('status', value as string),
+            type: 'select',
+            options: [
+              { value: 'ACTIVE', label: 'Ativo' },
+              { value: 'INACTIVE', label: 'Inativo' },
+              { value: 'ARCHIVED', label: 'Arquivado' },
+            ],
+          },
+        ]}
+        onClear={handleClearFilters}
+        activeFiltersCount={activeFiltersCount}
+      />
+
+      {/* DataTable responsivo */}
+      <DataTable
+        data={contacts}
+        columns={columns}
+        keyExtractor={(contact) => contact.id}
+        loading={loading && contacts.length > 0}
+        pagination={{
+          page: paginationState.page,
+          limit: paginationState.limit,
+          total: paginationInfo.total,
+          onPageChange: updatePage,
+          onLimitChange: (limit) => updateLimit(limit as any),
+        }}
+        sorting={{
+          sortBy: sorting.sortBy,
+          sortOrder: sorting.sortOrder === 'default' ? null : sorting.sortOrder as 'asc' | 'desc',
+          onSort: handleSort,
+        }}
+        onRowClick={(contact) => onContactClick?.(contact.id)}
+        actions={(contact) => (
+          <div className="flex items-center gap-2">
+            {onEditContact && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditContact(contact.id);
+                }}
+                className="p-1 text-blue-600 hover:text-blue-800"
+              >
+                <PencilIcon className="w-4 h-4" />
+              </button>
+            )}
+            {onDeleteContact && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteContact(contact.id);
+                }}
+                className="p-1 text-red-600 hover:text-red-800"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <SortableTableHeader
-                fieldName="firstName"
-                displayName="Nome"
-                currentSort={sorting}
-                onSort={handleSort}
-              />
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Telefone
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Empresa
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tags
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {contacts.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8">
-                  <EmptyState
-                    title="Nenhum contato encontrado"
-                    description="Comece criando um novo contato para gerenciar seus relacionamentos."
-                    icon="users"
-                    actionLabel="Novo Contato"
-                    onAction={onNewContact}
-                    variant="table"
-                    filtersApplied={Object.keys(filters).length > 0 || advancedFilters.length > 0}
-                  />
-                </td>
-              </tr>
-            ) : (
-              contacts.map((contact) => (
-                <tr
-                  key={contact.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onContactClick?.(contact.id)}
-                >
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {formatName(contact)}
-                    </div>
-                    {contact.title && (
-                      <div className="text-sm text-gray-500">{contact.title}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getPrimaryEmail(contact)}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getPrimaryPhone(contact)}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.company?.name || '-'}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap gap-1">
-                      {contact.tags.length > 0 ? (
-                        contact.tags.map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                            style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Paginação */}
-      <Pagination
-        pagination={paginationState}
-        onPageChange={updatePage}
-        onLimitChange={updateLimit}
+        emptyState={
+          <EmptyState
+            title="Nenhum contato encontrado"
+            description="Comece criando um novo contato para gerenciar seus relacionamentos."
+            icon="users"
+            actionLabel="Novo Contato"
+            onAction={onNewContact}
+            variant="card"
+            filtersApplied={activeFiltersCount > 0}
+          />
+        }
+        columnStorageKey="contact-list-columns"
       />
     </div>
   );
 }
 
+export default ContactList;
