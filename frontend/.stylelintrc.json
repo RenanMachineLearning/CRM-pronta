@@ -10,11 +10,13 @@
       true,
       {
         "ignoreAtRules": [
+          "import",
           "tailwind",
           "apply",
           "layer",
           "responsive",
           "screen",
+          "theme",
           "function",
           "if",
           "each",
@@ -27,11 +29,13 @@
       true,
       {
         "ignoreAtRules": [
+          "import",
           "tailwind",
           "apply",
           "layer",
           "responsive",
           "screen",
+          "theme",
           "function",
           "if",
           "each",
