@@ -14,5 +14,6 @@ export interface ApiRequestConfig {
   headers?: Record<string, string>;
   body?: any;
   signal?: AbortSignal; // Suporte para cancelamento de requisições
+  timeout?: number; // Timeout em milissegundos
 }
 
