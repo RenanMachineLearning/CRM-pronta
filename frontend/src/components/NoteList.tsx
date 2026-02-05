@@ -9,7 +9,9 @@ import { deleteNote } from '../services/noteService';
 import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
 import { EmptyState } from './EmptyState';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Button } from './Button';
+import { useToast } from './Toast';
 import { Select } from './Select';
 import { ContactLookup } from './ContactLookup';
 import { CompanyLookup } from './CompanyLookup';
@@ -56,6 +58,19 @@ export function NoteList({
   // Estado para deletar nota
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Estado para modal de confirmação
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    noteId: string | null;
+    noteContent: string;
+  }>({
+    isOpen: false,
+    noteId: null,
+    noteContent: '',
+  });
+  
+  const toast = useToast();
 
   // Sincronizar ordenação e paginação com URL (sempre chamar, mas callbacks só fazem algo se não usar notes da prop)
   useSortPaginationUrlSync(
@@ -154,25 +169,36 @@ export function NoteList({
     }
   };
 
-  const handleDelete = async (noteId: string, noteContent?: string) => {
-    // Mensagem de confirmação mais descritiva
+  const handleDeleteClick = (noteId: string, noteContent?: string) => {
     const contentPreview = noteContent 
       ? truncateContent(noteContent, 50) 
       : 'esta nota';
-    const confirmMessage = `Tem certeza que deseja deletar "${contentPreview}"?\n\nEsta ação não pode ser desfeita.`;
     
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    setDeleteModal({
+      isOpen: true,
+      noteId,
+      noteContent: contentPreview,
+    });
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.noteId) return;
     
     try {
-      setDeletingNoteId(noteId);
+      setDeletingNoteId(deleteModal.noteId);
       setErrorMessage(null);
-      await deleteNote(noteId);
+      await deleteNote(deleteModal.noteId);
+      
+      // Feedback de sucesso
+      toast.success('Nota deletada com sucesso!');
+      
       // Refetch lista
       if (!notesProp) {
         await refetch();
       }
+      
+      // Fecha o modal
+      setDeleteModal({ isOpen: false, noteId: null, noteContent: '' });
     } catch (err) {
       let errorMessage = 'Erro ao deletar nota';
       
@@ -190,6 +216,7 @@ export function NoteList({
       }
       
       setErrorMessage(errorMessage);
+      setDeleteModal({ isOpen: false, noteId: null, noteContent: '' });
       
       // Scroll para mensagem de erro
       setTimeout(() => {
@@ -199,6 +226,10 @@ export function NoteList({
     } finally {
       setDeletingNoteId(null);
     }
+  };
+  
+  const handleCancelDelete = () => {
+    setDeleteModal({ isOpen: false, noteId: null, noteContent: '' });
   };
 
 
@@ -530,7 +561,7 @@ export function NoteList({
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => handleDelete(note.id, note.content)}
+                        onClick={() => handleDeleteClick(note.id, note.content)}
                         disabled={deletingNoteId === note.id}
                         aria-label={`Deletar nota ${note.id}`}
                         aria-busy={deletingNoteId === note.id}
@@ -554,6 +585,19 @@ export function NoteList({
           onLimitChange={updateLimit}
         />
       )}
+      
+      {/* Modal de confirmação de deleção */}
+      <ConfirmDialog
+        isOpen={deleteModal.isOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Deletar Nota"
+        message={`Tem certeza que deseja deletar "${deleteModal.noteContent}"?\n\nEsta ação não pode ser desfeita.`}
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={!!deletingNoteId}
+      />
     </div>
   );
 }
