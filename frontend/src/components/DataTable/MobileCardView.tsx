@@ -35,19 +35,26 @@ export function MobileCardView<T>({
   const detailColumns = mobileColumns.slice(1);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" role="list" aria-label="Lista de itens">
       {data.map((item, index) => (
         <div
           key={keyExtractor(item)}
           className={`
             bg-white rounded-lg shadow-sm border border-gray-200 p-4
             transition-all duration-200
-            ${onRowClick ? 'cursor-pointer active:scale-[0.98]' : ''}
+            ${onRowClick ? 'cursor-pointer active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500' : ''}
             ${index % 2 === 1 ? 'bg-gray-50/50' : ''}
           `}
           onClick={() => onRowClick?.(item)}
-          role={onRowClick ? 'button' : undefined}
+          onKeyDown={(e) => {
+            if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onRowClick(item);
+            }
+          }}
+          role={onRowClick ? 'button' : 'listitem'}
           tabIndex={onRowClick ? 0 : undefined}
+          aria-label={`Item ${index + 1} de ${data.length}`}
         >
           {/* Cabeçalho do card - Título principal */}
           <div className="flex items-start justify-between mb-3">

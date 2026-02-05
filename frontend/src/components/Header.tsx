@@ -9,6 +9,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { Tooltip } from './Tooltip';
+import { LazyImage } from './LazyImage';
 import GlobalSearchBar from './GlobalSearchBar/GlobalSearchBar';
 
 interface HeaderProps {
@@ -73,18 +75,27 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
         <div className="flex items-center gap-4">
           {/* Notificações */}
           <div className="relative">
-            <button
-              type="button"
-              className="p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-            >
-              <span className="sr-only">Ver notificações</span>
-              <BellAlertIcon className="h-6 w-6" aria-hidden="true" />
-            </button>
+            <Tooltip content="Notificações">
+              <button
+                type="button"
+                className="p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                aria-label="Ver notificações"
+                aria-expanded={notificationsOpen}
+                aria-haspopup="true"
+              >
+                <span className="sr-only">Ver notificações</span>
+                <BellAlertIcon className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </Tooltip>
 
             {/* Dropdown de notificações */}
             {notificationsOpen && (
-              <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+              <div 
+                className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                role="menu"
+                aria-label="Notificações"
+              >
                 <div className="py-1">
                   <p className="px-4 py-2 text-sm text-gray-700">Você não tem notificações novas</p>
                 </div>
@@ -98,6 +109,9 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
               type="button"
               className="flex items-center gap-3 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
+              aria-label="Abrir menu do usuário"
+              aria-expanded={userMenuOpen}
+              aria-haspopup="true"
             >
               <span className="hidden md:block text-right">
                 <span className="block text-sm font-medium text-gray-900">{user?.name}</span>
@@ -107,10 +121,12 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
               {/* Avatar */}
               <div className="relative">
                 {user?.avatar ? (
-                  <img
+                  <LazyImage
                     src={user.avatar}
                     alt={user.name}
                     className="h-9 w-9 rounded-full object-cover border-2 border-gray-200"
+                    width={36}
+                    height={36}
                   />
                 ) : (
                   <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-sm font-medium border-2 border-gray-200">
@@ -125,6 +141,8 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
               <div 
                 className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50 py-1"
                 onMouseLeave={() => setUserMenuOpen(false)}
+                role="menu"
+                aria-label="Menu do usuário"
               >
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm text-gray-900 font-medium">{user?.name}</p>
@@ -134,19 +152,21 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
                 <div className="py-1">
                   <Link
                     to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
                     onClick={() => setUserMenuOpen(false)}
+                    role="menuitem"
                   >
-                    <UserIcon className="mr-3 h-4 w-4 text-gray-400" />
+                    <UserIcon className="mr-3 h-4 w-4 text-gray-400" aria-hidden="true" />
                     Meu Perfil
                   </Link>
                   
                   <Link
                     to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
                     onClick={() => setUserMenuOpen(false)}
+                    role="menuitem"
                   >
-                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400" />
+                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400" aria-hidden="true" />
                     Configurações
                   </Link>
                 </div>
@@ -154,9 +174,10 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
                 <div className="border-t border-gray-100 py-1">
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                    className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 focus:outline-none focus:bg-red-50"
+                    role="menuitem"
                   >
-                    <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4 text-red-500" />
+                    <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4 text-red-500" aria-hidden="true" />
                     Sair
                   </button>
                 </div>

@@ -48,3 +48,87 @@ body {
 .animate-slide-out-right {
   animation: slide-out-right 0.3s ease-in forwards;
 }
+
+/* Animações para Tooltip Radix UI */
+@keyframes fade-in-0 {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out-0 {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoom-out-95 {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-in {
+  animation-duration: 0.2s;
+  animation-fill-mode: both;
+}
+
+.animate-out {
+  animation-duration: 0.15s;
+  animation-fill-mode: both;
+}
+
+.fade-in-0 {
+  animation-name: fade-in-0;
+}
+
+.fade-out-0 {
+  animation-name: fade-out-0;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+.zoom-out-95 {
+  animation-name: zoom-out-95;
+}
+
+/* Slide animations for tooltip */
+[data-side="top"] {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+[data-side="bottom"] {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+[data-side="left"] {
+  --tw-enter-translate-x: 0.5rem;
+}
+
+[data-side="right"] {
+  --tw-enter-translate-x: -0.5rem;
+}

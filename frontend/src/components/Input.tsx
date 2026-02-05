@@ -38,15 +38,22 @@ export const Input: React.FC<InputProps> = ({
       )}
       <input
         className={classes}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${props.id}-error` : helpText && props.id ? `${props.id}-help` : undefined}
         {...props}
       />
-      {(error || helpText) && (
+      {error && (
         <p
-          className={`mt-1 text-sm ${
-            error ? 'text-error-600' : 'text-gray-500'
-          }`}
+          id={`${props.id}-error`}
+          className="mt-1 text-sm text-error-600"
+          role="alert"
         >
-          {error || helpText}
+          {error}
+        </p>
+      )}
+      {!error && helpText && (
+        <p id={`${props.id}-help`} className="mt-1 text-sm text-gray-500">
+          {helpText}
         </p>
       )}
     </div>

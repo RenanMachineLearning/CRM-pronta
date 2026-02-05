@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useToast } from '../components/Toast';
+import { LazyImage } from '../components/LazyImage';
 import { updateProfile, changePassword, uploadAvatar } from '../services/authService';
 import {
   CameraIcon,
@@ -157,10 +158,12 @@ export function ProfilePage() {
             <div className="relative inline-block mb-4">
               <div className="w-32 h-32 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
                 {user?.avatar ? (
-                  <img
+                  <LazyImage
                     src={user.avatar}
                     alt={user.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
+                    width="100%"
+                    height="100%"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white text-3xl font-bold">

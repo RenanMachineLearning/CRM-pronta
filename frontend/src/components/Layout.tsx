@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import SkipLink from './SkipLink';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,21 +24,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+    <>
+      {/* Skip Link para acessibilidade */}
+      <SkipLink />
 
-      {/* Conteúdo principal */}
-      <div className="flex flex-col flex-1 w-full overflow-hidden">
-        {/* Header */}
-        <Header sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+      <div className="flex h-screen bg-gray-50">
+        {/* Sidebar */}
+        <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto pt-2 pb-6 px-2 sm:px-4 md:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
+        {/* Conteúdo principal */}
+        <div className="flex flex-col flex-1 w-full overflow-hidden">
+          {/* Header */}
+          <Header sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+
+          {/* Main content */}
+          <main 
+            id="main-content" 
+            tabIndex={-1}
+            className="flex-1 overflow-y-auto pt-2 pb-6 px-2 sm:px-4 md:px-6 lg:px-8 focus:outline-none"
+          >
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
 
         {/* Rodapé opcional */}
         <footer className="bg-white border-t border-gray-200 py-4 px-4 sm:px-6 lg:px-8">
@@ -47,6 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </footer>
       </div>
     </div>
+    </>
   );
 };
 

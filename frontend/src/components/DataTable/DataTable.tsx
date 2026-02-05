@@ -1,14 +1,16 @@
 /**
  * DataTable
  * Componente principal que combina TableView e MobileCardView
+ * Usa React.memo para evitar re-renderizações desnecessárias
  */
 
+import { memo } from 'react';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { DataTableProps } from './types';
 import { TableView } from './TableView';
 import { MobileCardView } from './MobileCardView';
 
-export function DataTable<T>({
+function DataTableComponent<T>({
   data,
   columns,
   keyExtractor,
@@ -63,5 +65,8 @@ export function DataTable<T>({
     />
   );
 }
+
+// Memoização para evitar re-renderizações quando props não mudam
+export const DataTable = memo(DataTableComponent) as typeof DataTableComponent;
 
 export default DataTable;

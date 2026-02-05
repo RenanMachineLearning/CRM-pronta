@@ -12,6 +12,8 @@ import { MobileFilterDrawer } from './MobileFilterDrawer';
 import { ErrorMessage } from './ErrorMessage';
 import { SkeletonTable } from './Skeleton';
 import { EmptyState } from './EmptyState';
+import { Badge } from './Badge';
+import { Tooltip } from './Tooltip';
 import { Button } from './Button';
 import ExportDialog from './ExportDialog/ExportDialog';
 import { useSorting } from '../hooks/useSorting';
@@ -214,6 +216,25 @@ export function ContactList({
       ),
     },
     {
+      key: 'status',
+      title: 'Status',
+      priority: 'high',
+      sortable: true,
+      render: (contact) => {
+        const statusConfig = {
+          ACTIVE: { label: 'Ativo', variant: 'success' as const },
+          INACTIVE: { label: 'Inativo', variant: 'default' as const },
+          ARCHIVED: { label: 'Arquivado', variant: 'secondary' as const },
+        };
+        const config = statusConfig[contact.status] || { label: contact.status, variant: 'default' as const };
+        return (
+          <Badge variant={config.variant} size="sm">
+            {config.label}
+          </Badge>
+        );
+      },
+    },
+    {
       key: 'email',
       title: 'Email',
       priority: 'high',
@@ -389,26 +410,30 @@ export function ContactList({
         actions={(contact) => (
           <div className="flex items-center gap-2">
             {onEditContact && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditContact(contact.id);
-                }}
-                className="p-1 text-blue-600 hover:text-blue-800"
-              >
-                <PencilIcon className="w-4 h-4" />
-              </button>
+              <Tooltip content="Editar contato">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditContact(contact.id);
+                  }}
+                  className="p-1 text-blue-600 hover:text-blue-800"
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+              </Tooltip>
             )}
             {onDeleteContact && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteContact(contact.id);
-                }}
-                className="p-1 text-red-600 hover:text-red-800"
-              >
-                <TrashIcon className="w-4 h-4" />
-              </button>
+              <Tooltip content="Excluir contato">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteContact(contact.id);
+                  }}
+                  className="p-1 text-red-600 hover:text-red-800"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              </Tooltip>
             )}
           </div>
         )}
