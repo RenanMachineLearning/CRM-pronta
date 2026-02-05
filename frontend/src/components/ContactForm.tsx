@@ -10,11 +10,13 @@ import { EmailList } from './EmailList';
 import { PhoneList } from './PhoneList';
 import { TagSelector } from './TagSelector';
 import { CompanyLookup } from './CompanyLookup';
-import { Button } from './Button';
+import { FormSection } from './FormSection';
+import { FormActions } from './FormActions';
 import { ErrorMessage } from './ErrorMessage';
 import { SkeletonForm } from './Skeleton';
 import { getContactById } from '../services/contactService';
 import { listTags } from '../services/tagService';
+import { validators } from '../utils/validators';
 import type {
   Contact,
   ContactFormData,
@@ -98,19 +100,20 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
   const validate = (): boolean => {
     const newErrors: ContactFormErrors = {};
 
-    // Validar firstName/lastName (pelo menos um obrigatório - alinhado com backend linha 194)
-    if (!formData.firstName.trim() && !formData.lastName?.trim()) {
+    // Validar firstName/lastName (pelo menos um obrigatório)
+    const nameValidator = validators.required('Nome ou sobrenome é obrigatório');
+    const firstNameError = nameValidator(formData.firstName);
+    const lastNameError = nameValidator(formData.lastName);
+    if (firstNameError && lastNameError) {
       newErrors.firstName = 'Nome ou sobrenome é obrigatório';
     }
 
-    // Validar emails (formato e pelo menos um principal)
+    // Validar emails (formato)
+    const emailValidator = validators.email('Formato de email inválido');
     const emailErrors: string[] = [];
     formData.emails.forEach((email, index) => {
-      // Validar formato de email (regex alinhado com backend)
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.email.trim())) {
-        emailErrors[index] = 'Formato de email inválido';
-      }
+      const error = emailValidator(email.email);
+      if (error) emailErrors[index] = error;
     });
     if (emailErrors.length > 0) {
       newErrors.emails = emailErrors;
@@ -123,13 +126,12 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
       newErrors.emails.push('Pelo menos um email deve ser marcado como principal');
     }
 
-    // Validar telefones (formato - 10-15 dígitos após remover caracteres especiais)
+    // Validar telefones (formato)
+    const phoneValidator = validators.phone('Formato de telefone inválido (10-15 dígitos)');
     const phoneErrors: string[] = [];
     formData.phones.forEach((phone, index) => {
-      const digitsOnly = phone.phone.replace(/[\s\(\)\-\+]/g, '');
-      if (!/^\d{10,15}$/.test(digitsOnly)) {
-        phoneErrors[index] = 'Formato de telefone inválido (10-15 dígitos)';
-      }
+      const error = phoneValidator(phone.phone);
+      if (error) phoneErrors[index] = error;
     });
     if (phoneErrors.length > 0) {
       newErrors.phones = phoneErrors;
@@ -143,12 +145,10 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
     }
 
     // Validar tagIds (UUIDs válidos)
-    if (formData.tagIds.length > 0) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const invalidTagIds = formData.tagIds.filter((id) => !uuidRegex.test(id));
-      if (invalidTagIds.length > 0) {
-        newErrors.tagIds = 'Algumas tags têm IDs inválidos';
-      }
+    const uuidValidator = validators.uuid('ID inválido');
+    const invalidTagIds = formData.tagIds.filter((id) => uuidValidator(id));
+    if (invalidTagIds.length > 0) {
+      newErrors.tagIds = 'Algumas tags têm IDs inválidos';
     }
 
     setErrors(newErrors);
@@ -181,80 +181,88 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && <ErrorMessage message={error} />}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Seção: Informações Básicas */}
+      <FormSection title="Informações Básicas" description="Dados principais do contato">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Nome *"
+            value={formData.firstName}
+            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+            error={errors.firstName}
+            required
+            fullWidth
+          />
+          <Input
+            label="Sobrenome"
+            value={formData.lastName}
+            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+            error={errors.lastName}
+            fullWidth
+          />
+        </div>
+
         <Input
-          label="Nome *"
-          value={formData.firstName}
-          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-          error={errors.firstName}
-          required
+          label="Cargo"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           fullWidth
         />
-        <Input
-          label="Sobrenome"
-          value={formData.lastName}
-          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-          error={errors.lastName}
+
+        <Select
+          label="Status"
+          value={formData.status}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value as ContactStatus })}
+          options={[
+            { value: 'ACTIVE', label: 'Ativo' },
+            { value: 'INACTIVE', label: 'Inativo' },
+            { value: 'ARCHIVED', label: 'Arquivado' },
+          ]}
           fullWidth
         />
-      </div>
 
-      <Input
-        label="Cargo"
-        value={formData.title}
-        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+        <CompanyLookup
+          value={formData.companyId}
+          companyName={contact?.company?.name || null}
+          onChange={(companyId) => setFormData({ ...formData, companyId })}
+          error={errors.companyId}
+        />
+      </FormSection>
+
+      {/* Seção: Contato */}
+      <FormSection title="Informações de Contato" description="Emails e telefones">
+        <EmailList
+          emails={formData.emails}
+          onChange={(emails) => setFormData({ ...formData, emails })}
+          errors={errors.emails}
+        />
+
+        <PhoneList
+          phones={formData.phones}
+          onChange={(phones) => setFormData({ ...formData, phones })}
+          errors={errors.phones}
+        />
+      </FormSection>
+
+      {/* Seção: Tags */}
+      <FormSection title="Categorização" description="Tags para organização">
+        <TagSelector
+          tags={tags}
+          selectedTagIds={formData.tagIds}
+          onChange={(tagIds) => setFormData({ ...formData, tagIds })}
+          error={errors.tagIds}
+        />
+      </FormSection>
+
+      {/* Ações */}
+      <FormActions
+        onCancel={onCancel}
+        cancelLabel="Cancelar"
+        submitLabel={contactId ? 'Atualizar Contato' : 'Criar Contato'}
+        loading={loading}
       />
-
-      <Select
-        label="Status"
-        value={formData.status}
-        onChange={(e) => setFormData({ ...formData, status: e.target.value as ContactStatus })}
-        options={[
-          { value: 'ACTIVE', label: 'Ativo' },
-          { value: 'INACTIVE', label: 'Inativo' },
-          { value: 'ARCHIVED', label: 'Arquivado' },
-        ]}
-      />
-
-      <CompanyLookup
-        value={formData.companyId}
-        companyName={contact?.company?.name || null} // Passar nome da empresa no modo edição (vem de GET /api/contacts/:id)
-        onChange={(companyId) => setFormData({ ...formData, companyId })}
-        error={errors.companyId}
-      />
-
-      <EmailList
-        emails={formData.emails}
-        onChange={(emails) => setFormData({ ...formData, emails })}
-        errors={errors.emails}
-      />
-
-      <PhoneList
-        phones={formData.phones}
-        onChange={(phones) => setFormData({ ...formData, phones })}
-        errors={errors.phones}
-      />
-
-      <TagSelector
-        tags={tags}
-        selectedTagIds={formData.tagIds}
-        onChange={(tagIds) => setFormData({ ...formData, tagIds })}
-        error={errors.tagIds}
-      />
-
-      <div className="flex gap-2 justify-end">
-        {onCancel && (
-          <Button type="button" variant="secondary" onClick={onCancel}>
-            Cancelar
-          </Button>
-        )}
-        <Button type="submit" variant="primary" isLoading={loading} disabled={loading}>
-          {contactId ? 'Atualizar' : 'Criar'} Contato
-        </Button>
-      </div>
     </form>
   );
 }
