@@ -5,7 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useOpportunities } from '../hooks/useOpportunities';
-import { Loading } from './Loading';
+import { SkeletonTable } from './Skeleton';
+import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
@@ -193,7 +194,21 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
   };
 
   if (loading) {
-    return <Loading message="Carregando oportunidades..." />;
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-48 bg-gray-200 animate-pulse rounded" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <SkeletonTable rows={5} columns={6} />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -228,7 +243,12 @@ export function OpportunityList({ onOpportunityClick, onNewOpportunity, advanced
       </div>
 
       {/* Tabela de oportunidades */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

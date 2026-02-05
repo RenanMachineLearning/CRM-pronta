@@ -5,8 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { useContacts } from '../hooks/useContacts';
-import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
+import { SkeletonTable } from './Skeleton';
+import { LoadingSpinner } from './LoadingSpinner';
 import { Button } from './Button';
 import { SortableTableHeader } from './SortableTableHeader/SortableTableHeader';
 import { Pagination } from './Pagination/Pagination';
@@ -199,7 +200,22 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
 
   // Renderizar loading
   if (loading && contacts.length === 0) {
-    return <Loading message="Carregando contatos..." />;
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <SkeletonTable rows={5} columns={5} />
+        </div>
+      </div>
+    );
   }
 
   // Renderizar erro
@@ -249,7 +265,12 @@ export function ContactList({ onContactClick, onNewContact, advancedFilters = []
       />
 
       {/* Tabela de contatos */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white shadow overflow-hidden sm:rounded-md relative">
+        {loading && contacts.length > 0 && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

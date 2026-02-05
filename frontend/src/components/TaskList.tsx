@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react';
 import { useTasks } from '../hooks/useTasks';
 import { updateTask } from '../services/taskService';
-import { Loading } from './Loading';
+import { SkeletonTable } from './Skeleton';
+import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from './Button';
 import { Select } from './Select';
@@ -21,6 +22,7 @@ import type {
   TaskStatus,
   TaskType,
   TaskPriority,
+  TaskPaginationParams,
 } from '../types/task';
 
 export interface TaskListProps {
@@ -85,10 +87,10 @@ export function TaskList({
     setPagination: updatePagination,
   } = useTasks(
     initialFilters || filters,
-    initialPagination || {
+    (initialPagination || {
       ...toPaginationParams(),
       ...toSortParams(),
-    }
+    }) as TaskPaginationParams
   );
   
   // Usar tasks da prop se fornecido, senão usar do hook
@@ -111,7 +113,7 @@ export function TaskList({
       updatePagination({
         ...toPaginationParams(),
         ...toSortParams(),
-      });
+      } as TaskPaginationParams);
     }
   }, [paginationState.page, paginationState.limit, sorting.sortBy, sorting.sortOrder, updatePagination, toPaginationParams, toSortParams, tasksProp]);
 
@@ -135,14 +137,14 @@ export function TaskList({
       } else {
         delete newFilters[key];
       }
-      updateFilters(newFilters);
+      setFilters(newFilters);
       updatePage(1);
     }
   };
 
   const handleClearFilters = () => {
     if (!tasksProp) {
-      updateFilters({});
+      setFilters({});
       updatePage(1);
     }
   };
@@ -246,7 +248,23 @@ export function TaskList({
 
   // Renderizar loading
   if (showLoading && tasks.length === 0) {
-    return <Loading message="Carregando tarefas..." />;
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-48 bg-gray-200 animate-pulse rounded" />
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+            <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <SkeletonTable rows={5} columns={6} />
+        </div>
+      </div>
+    );
   }
 
   // Renderizar erro
@@ -343,7 +361,12 @@ export function TaskList({
       )}
 
       {/* Tabela de tarefas */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md overflow-x-auto">
+      <div className="bg-white shadow overflow-hidden sm:rounded-md overflow-x-auto relative">
+        {showLoading && tasks.length > 0 && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

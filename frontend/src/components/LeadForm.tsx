@@ -8,7 +8,7 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { TagSelector } from './TagSelector';
 import { Button } from './Button';
-import { Loading } from './Loading';
+import { SkeletonForm } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { getLeadById } from '../services/leadService';
 import { listTags } from '../services/tagService';
@@ -164,7 +164,7 @@ export function LeadForm({ leadId, onSubmit, onCancel }: LeadFormProps) {
   };
 
   if (loading && leadId) {
-    return <Loading message="Carregando lead..." />;
+    return <SkeletonForm fields={6} columns={2} />;
   }
 
   return (
@@ -247,7 +247,7 @@ export function LeadForm({ leadId, onSubmit, onCancel }: LeadFormProps) {
             Cancelar
           </Button>
         )}
-        <Button type="submit" variant="primary" disabled={loading}>
+        <Button type="submit" variant="primary" isLoading={loading} disabled={loading}>
           {leadId ? 'Atualizar' : 'Criar'} Lead
         </Button>
       </div>

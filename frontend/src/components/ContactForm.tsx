@@ -11,8 +11,8 @@ import { PhoneList } from './PhoneList';
 import { TagSelector } from './TagSelector';
 import { CompanyLookup } from './CompanyLookup';
 import { Button } from './Button';
-import { Loading } from './Loading';
 import { ErrorMessage } from './ErrorMessage';
+import { SkeletonForm } from './Skeleton';
 import { getContactById } from '../services/contactService';
 import { listTags } from '../services/tagService';
 import type {
@@ -177,7 +177,7 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
   };
 
   if (loading && contactId) {
-    return <Loading message="Carregando contato..." />;
+    return <SkeletonForm fields={8} columns={2} />;
   }
 
   return (
@@ -251,7 +251,7 @@ export function ContactForm({ contactId, onSubmit, onCancel }: ContactFormProps)
             Cancelar
           </Button>
         )}
-        <Button type="submit" variant="primary" disabled={loading}>
+        <Button type="submit" variant="primary" isLoading={loading} disabled={loading}>
           {contactId ? 'Atualizar' : 'Criar'} Contato
         </Button>
       </div>

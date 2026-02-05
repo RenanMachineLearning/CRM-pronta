@@ -8,7 +8,7 @@ import { NoteEditor } from './NoteEditor';
 import { Select } from './Select';
 import { Input } from './Input';
 import { Button } from './Button';
-import { Loading } from './Loading';
+import { SkeletonForm } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { getNoteById } from '../services/noteService';
 import type {
@@ -129,7 +129,7 @@ export function NoteForm({ noteId, relatedEntityType, relatedEntityId, onSubmit,
   };
 
   if (loading && noteId) {
-    return <Loading message="Carregando nota..." />;
+    return <SkeletonForm fields={6} columns={2} />;
   }
 
   return (
@@ -184,11 +184,11 @@ export function NoteForm({ noteId, relatedEntityType, relatedEntityId, onSubmit,
 
       <div className="flex gap-2 justify-end">
         {onCancel && (
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button type="button" variant="secondary" onClick={onCancel} isLoading={loading} disabled={loading}>
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" isLoading={loading} disabled={loading}>
           {loading ? 'Salvando...' : noteId ? 'Atualizar' : 'Criar'}
         </Button>
       </div>

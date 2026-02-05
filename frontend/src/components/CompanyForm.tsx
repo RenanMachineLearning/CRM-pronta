@@ -9,7 +9,7 @@ import { Select } from './Select';
 import { AddressList } from './AddressList';
 import { TagSelector } from './TagSelector';
 import { Button } from './Button';
-import { Loading } from './Loading';
+import { SkeletonForm } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { getCompanyById } from '../services/companyService';
 import { listTags } from '../services/tagService';
@@ -163,7 +163,7 @@ export function CompanyForm({ companyId, onSubmit, onCancel }: CompanyFormProps)
   };
 
   if (loading && companyId) {
-    return <Loading message="Carregando empresa..." />;
+    return <SkeletonForm fields={6} columns={2} />;
   }
 
   return (
@@ -236,7 +236,7 @@ export function CompanyForm({ companyId, onSubmit, onCancel }: CompanyFormProps)
             Cancelar
           </Button>
         )}
-        <Button type="submit" variant="primary" disabled={loading}>
+        <Button type="submit" variant="primary" isLoading={loading} disabled={loading}>
           {companyId ? 'Atualizar' : 'Criar'} Empresa
         </Button>
       </div>

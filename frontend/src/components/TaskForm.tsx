@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { Button } from './Button';
-import { Loading } from './Loading';
+import { SkeletonForm } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { UserLookup } from './UserLookup';
 import { ContactLookup } from './ContactLookup';
@@ -461,7 +461,7 @@ export function TaskForm({ taskId, relatedEntityType, relatedEntityId, onSubmit,
   };
 
   if (loadingTask && taskId) {
-    return <Loading message="Carregando tarefa..." />;
+    return <SkeletonForm fields={6} columns={2} />;
   }
 
   return (

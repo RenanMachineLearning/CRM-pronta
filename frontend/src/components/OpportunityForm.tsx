@@ -10,7 +10,7 @@ import { ContactLookup } from './ContactLookup';
 import { CompanyLookup } from './CompanyLookup';
 import { TagSelector } from './TagSelector';
 import { Button } from './Button';
-import { Loading } from './Loading';
+import { SkeletonForm } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { getOpportunityById } from '../services/opportunityService';
 import { getDefaultPipeline } from '../services/pipelineService';
@@ -245,7 +245,7 @@ export function OpportunityForm({ opportunityId, onSubmit, onCancel }: Opportuni
   };
 
   if (loading && opportunityId) {
-    return <Loading message="Carregando oportunidade..." />;
+    return <SkeletonForm fields={6} columns={2} />;
   }
 
   return (
