@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Bars3Icon, BellAlertIcon, UserCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  Bars3Icon, 
+  BellAlertIcon, 
+  XMarkIcon,
+  UserIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
+} from '@heroicons/react/24/outline';
 import GlobalSearchBar from './GlobalSearchBar/GlobalSearchBar';
 
 interface HeaderProps {
@@ -9,7 +17,25 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Obtém iniciais do nome
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
@@ -70,11 +96,72 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
           <div className="relative">
             <button
               type="button"
-              className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="flex items-center gap-3 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
             >
-              <span className="sr-only">Abrir menu do usuário</span>
-              <UserCircleIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
+              <span className="hidden md:block text-right">
+                <span className="block text-sm font-medium text-gray-900">{user?.name}</span>
+                <span className="block text-xs text-gray-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}</span>
+              </span>
+              
+              {/* Avatar */}
+              <div className="relative">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="h-9 w-9 rounded-full object-cover border-2 border-gray-200"
+                  />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-sm font-medium border-2 border-gray-200">
+                    {getInitials(user?.name || 'U')}
+                  </div>
+                )}
+              </div>
             </button>
+
+            {/* Dropdown do usuário */}
+            {userMenuOpen && (
+              <div 
+                className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50 py-1"
+                onMouseLeave={() => setUserMenuOpen(false)}
+              >
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm text-gray-900 font-medium">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                </div>
+                
+                <div className="py-1">
+                  <Link
+                    to="/profile"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <UserIcon className="mr-3 h-4 w-4 text-gray-400" />
+                    Meu Perfil
+                  </Link>
+                  
+                  <Link
+                    to="/profile"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400" />
+                    Configurações
+                  </Link>
+                </div>
+                
+                <div className="border-t border-gray-100 py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                  >
+                    <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4 text-red-500" />
+                    Sair
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
