@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500',
     secondary: 'bg-secondary-600 hover:bg-secondary-700 text-white focus:ring-secondary-500',
     danger: 'bg-error-600 hover:bg-error-700 text-white focus:ring-error-500',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 focus:ring-gray-500',
+    ghost: 'bg-transparent hover:bg-bg-page text-text-primary border border-border-default focus:ring-primary-500',
     link: 'bg-transparent hover:underline text-primary-600 focus:ring-primary-500'
   };
   

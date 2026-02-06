@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import PageLoading from './components/PageLoading';
 import './index.css';
@@ -40,8 +41,9 @@ const DesignSystemDemo = lazy(() => import('./components/DesignSystemDemo').then
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <BrowserRouter>
+      <ThemeProvider>
+        <ToastProvider>
+          <BrowserRouter>
           <Routes>
             {/* Rotas Públicas - Sem Layout */}
             <Route path="/login" element={
@@ -225,7 +227,8 @@ function App() {
           </Routes>
         </BrowserRouter>
       </ToastProvider>
-    </ErrorBoundary>
+    </ThemeProvider>
+  </ErrorBoundary>
   );
 }
 

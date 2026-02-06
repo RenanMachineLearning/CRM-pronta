@@ -23,7 +23,7 @@ Implementar interface web responsiva, tratamento de estados (loading, erro) e mo
   - [x] Paleta de cores primária ✅ (`primary-50` a `primary-900`)
   - [x] Paleta de cores secundária ✅ (Gray scale)
   - [x] Cores de estado (sucesso, erro, aviso, info) ✅ (`success`, `error`, `warning`, `info`)
-  - [ ] Modo claro/escuro (opcional na V1) ⏭️ **PENDENTE**
+  - [x] Modo claro/escuro (opcional na V1)
 
 - [x] Criar componentes base ✅ **TODOS IMPLEMENTADOS**
   - [x] `Button` (variantes: primary, secondary, danger, ghost, link)

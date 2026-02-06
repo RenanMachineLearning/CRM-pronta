@@ -1,9 +1,140 @@
 @import "tailwindcss";
 
+/* ============================================
+   SISTEMA DE TEMA - CSS VARIABLES
+   Suporte a tema claro/escuro profissional
+   ============================================ */
+
+:root {
+  /* Cores base - TEMA CLARO (padrão) */
+  
+  /* Backgrounds */
+  --bg-page: #f9fafb;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* Textos */
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
+  --text-disabled: #d1d5db;
+  
+  /* Bordas */
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-focus: #3b82f6;
+  
+  /* Primária (Brand) */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  
+  /* Estados semânticos */
+  --success-50: #f0fdf4;
+  --success-100: #dcfce7;
+  --success-500: #22c55e;
+  --success-600: #16a34a;
+  --success-700: #15803d;
+  
+  --error-50: #fef2f2;
+  --error-100: #fee2e2;
+  --error-500: #ef4444;
+  --error-600: #dc2626;
+  --error-700: #b91c1c;
+  
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  /* Transições */
+  --transition-theme: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* TEMA ESCURO */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-page: #111827;
+  --bg-surface: #1f2937;
+  --bg-surface-elevated: #374151;
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+  
+  /* Textos */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #111827;
+  --text-disabled: #4b5563;
+  
+  /* Bordas */
+  --border-default: #374151;
+  --border-subtle: #1f2937;
+  --border-focus: #60a5fa;
+  
+  /* Primária (Brand) - tons ajustados para contraste no escuro */
+  --primary-50: #1e3a8a;
+  --primary-100: #1e40af;
+  --primary-200: #1d4ed8;
+  --primary-300: #2563eb;
+  --primary-400: #3b82f6;
+  --primary-500: #60a5fa;
+  --primary-600: #93c5fd;
+  --primary-700: #bfdbfe;
+  --primary-800: #dbeafe;
+  --primary-900: #eff6ff;
+  
+  /* Estados semânticos - tons ajustados */
+  --success-50: #14532d;
+  --success-100: #166534;
+  --success-500: #4ade80;
+  --success-600: #86efac;
+  --success-700: #bbf7d0;
+  
+  --error-50: #7f1d1d;
+  --error-100: #991b1b;
+  --error-500: #f87171;
+  --error-600: #fca5a5;
+  --error-700: #fecaca;
+  
+  --warning-50: #78350f;
+  --warning-100: #92400e;
+  --warning-500: #fbbf24;
+  --warning-600: #fcd34d;
+  --warning-700: #fde68a;
+  
+  /* Sombras mais suaves no tema escuro */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================
+   ESTILOS BASE
+   ============================================ */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  transition: var(--transition-theme);
 }
 
 body {
@@ -12,11 +143,21 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  transition: var(--transition-theme);
+  min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
+  background-color: var(--bg-page);
+  transition: var(--transition-theme);
 }
+
+/* ============================================
+   ANIMAÇÕES - TOAST
+   ============================================ */
 
 /* Animação para Toast notifications */
 @keyframes slide-in-right {

@@ -33,19 +33,19 @@ export const Card: React.FC<CardProps> = ({
     lg: 'shadow-lg'
   };
 
-  const borderClass = border ? 'border border-gray-200' : '';
+  const borderClass = border ? 'border border-border-default' : '';
 
-  const classes = `bg-white rounded-lg ${paddingClasses[padding]} ${shadowClasses[shadow]} ${borderClass} ${className} transition-all duration-200`;
+  const classes = `bg-bg-surface rounded-lg ${paddingClasses[padding]} ${shadowClasses[shadow]} ${borderClass} ${className} transition-all duration-200`;
 
   return (
     <div className={classes}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && (
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            <h3 className="text-lg font-medium text-text-primary">{title}</h3>
           )}
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+            <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
           )}
         </div>
       )}

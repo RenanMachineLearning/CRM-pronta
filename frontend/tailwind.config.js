@@ -3,21 +3,66 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  // Dark mode usando data-theme attribute (mais flexível que class)
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+        /* Tokens semânticos para tema dinâmico */
+        bg: {
+          page: 'var(--bg-page)',
+          surface: 'var(--bg-surface)',
+          'surface-elevated': 'var(--bg-surface-elevated)',
+          overlay: 'var(--bg-overlay)',
         },
+        text: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
+          inverse: 'var(--text-inverse)',
+          disabled: 'var(--text-disabled)',
+        },
+        border: {
+          DEFAULT: 'var(--border-default)',
+          subtle: 'var(--border-subtle)',
+          focus: 'var(--border-focus)',
+        },
+        /* Cores primárias usando CSS variables */
+        primary: {
+          50: 'var(--primary-50)',
+          100: 'var(--primary-100)',
+          200: 'var(--primary-200)',
+          300: 'var(--primary-300)',
+          400: 'var(--primary-400)',
+          500: 'var(--primary-500)',
+          600: 'var(--primary-600)',
+          700: 'var(--primary-700)',
+          800: 'var(--primary-800)',
+          900: 'var(--primary-900)',
+        },
+        /* Estados semânticos */
+        success: {
+          50: 'var(--success-50)',
+          100: 'var(--success-100)',
+          500: 'var(--success-500)',
+          600: 'var(--success-600)',
+          700: 'var(--success-700)',
+        },
+        error: {
+          50: 'var(--error-50)',
+          100: 'var(--error-100)',
+          500: 'var(--error-500)',
+          600: 'var(--error-600)',
+          700: 'var(--error-700)',
+        },
+        warning: {
+          50: 'var(--warning-50)',
+          100: 'var(--warning-100)',
+          500: 'var(--warning-500)',
+          600: 'var(--warning-600)',
+          700: 'var(--warning-700)',
+        },
+        /* Secondary mantido como fallback */
         secondary: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -29,42 +74,6 @@ module.exports = {
           700: '#334155',
           800: '#1e293b',
           900: '#0f172a',
-        },
-        success: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-        },
-        error: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          200: '#fecaca',
-          300: '#fca5a5',
-          400: '#f87171',
-          500: '#ef4444',
-          600: '#dc2626',
-          700: '#b91c1c',
-          800: '#991b1b',
-          900: '#7f1d1d',
-        },
-        warning: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
         },
         info: {
           50: '#f0f9ff',
@@ -78,6 +87,11 @@ module.exports = {
           800: '#075985',
           900: '#0c4a6e',
         }
+      },
+      boxShadow: {
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
       },
       spacing: {
         '18': '4.5rem',
@@ -93,6 +107,9 @@ module.exports = {
         'lg': '1024px',
         'xl': '1280px',
         '2xl': '1536px',
+      },
+      transitionProperty: {
+        'theme': 'background-color, color, border-color, box-shadow',
       }
     },
   },
