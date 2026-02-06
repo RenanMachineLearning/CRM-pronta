@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SkeletonDashboard } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import {
   UsersIcon,
@@ -101,26 +101,26 @@ function StatCard({ title, value, icon: Icon, trend, trendLabel, color, linkTo }
   return (
     <Link
       to={linkTo}
-      className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
+      className="bg-bg-surface rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-sm font-medium text-text-secondary">{title}</p>
+          <p className="text-2xl font-bold text-text-primary mt-1">{value}</p>
           {trend !== undefined && (
-            <div className={`flex items-center mt-2 text-sm ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`flex items-center mt-2 text-sm ${trend >= 0 ? 'text-success-600' : 'text-error-600'}`}>
               {trend >= 0 ? (
                 <ArrowTrendingUpIcon className="w-4 h-4 mr-1" />
               ) : (
                 <ArrowTrendingDownIcon className="w-4 h-4 mr-1" />
               )}
               <span>{Math.abs(trend)}%</span>
-              {trendLabel && <span className="text-gray-500 ml-1">{trendLabel}</span>}
+              {trendLabel && <span className="text-text-tertiary ml-1">{trendLabel}</span>}
             </div>
           )}
         </div>
         <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+          <Icon className="w-6 h-6 text-text-inverse" />
         </div>
       </div>
     </Link>
@@ -139,11 +139,7 @@ export function DashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   return (
@@ -151,10 +147,10 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Dashboard
           </h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-text-secondary">
             Bem-vindo de volta, {user?.name?.split(' ')[0] || 'Usuário'}! Aqui está o resumo do seu CRM.
           </p>
         </div>

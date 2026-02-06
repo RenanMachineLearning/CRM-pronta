@@ -1,11 +1,14 @@
 import React from 'react';
 
+export type SkeletonEffect = 'pulse' | 'shimmer';
+
 export interface SkeletonProps {
   className?: string;
   width?: string | number;
   height?: string | number;
   circle?: boolean;
   animate?: boolean;
+  effect?: SkeletonEffect;
 }
 
 export const Skeleton: React.FC<SkeletonProps> = ({
@@ -14,18 +17,31 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height,
   circle = false,
   animate = true,
+  effect = 'pulse',
 }) => {
   const style: React.CSSProperties = {
     width: width,
     height: height,
   };
 
+  const getAnimationClasses = () => {
+    if (!animate) return '';
+    
+    switch (effect) {
+      case 'shimmer':
+        return 'skeleton-shimmer';
+      case 'pulse':
+      default:
+        return 'animate-pulse';
+    }
+  };
+
   return (
     <div
       className={`
-        bg-gray-200
+        bg-bg-page
         ${circle ? 'rounded-full' : 'rounded'}
-        ${animate ? 'animate-pulse' : ''}
+        ${getAnimationClasses()}
         ${className}
       `}
       style={style}

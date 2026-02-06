@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
 import { deleteNote } from '../services/noteService';
-import { Loading } from './Loading';
+import { SkeletonTable } from './Skeleton';
 import { ErrorMessage } from './ErrorMessage';
 import { EmptyState } from './EmptyState';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -373,7 +373,7 @@ export function NoteList({
 
   // Renderizar loading
   if (showLoading && notes.length === 0) {
-    return <Loading message="Carregando notas..." />;
+    return <SkeletonTable rows={5} columns={4} />;
   }
 
   // Renderizar erro
