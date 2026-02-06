@@ -110,7 +110,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           mockFilters,
-          expect.any(Object)
+          expect.any(Object),
+          []
         );
       });
     });
@@ -132,7 +133,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           undefined,
-          mockPagination
+          mockPagination,
+          []
         );
       });
     });
@@ -238,7 +240,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           newFilters,
-          expect.any(Object)
+          expect.any(Object),
+          []
         );
       });
     });
@@ -260,7 +263,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           { status: 'NEW' },
-          expect.objectContaining({ offset: 0 })
+          expect.objectContaining({ offset: 0 }),
+          []
         );
       });
     });
@@ -306,7 +310,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           expect.any(Object),
-          expect.objectContaining({ offset: 20 })
+          expect.objectContaining({ offset: 20 }),
+          []
         );
       });
     });
@@ -350,7 +355,8 @@ describe('useLeads', () => {
       await waitFor(() => {
         expect(listLeads).toHaveBeenCalledWith(
           filters,
-          expect.objectContaining({ offset: 20 })
+          expect.objectContaining({ offset: 20 }),
+          []
         );
       });
     });
@@ -395,7 +401,7 @@ describe('useLeads', () => {
       await result.current.refetch();
 
       await waitFor(() => {
-        expect(listLeads).toHaveBeenCalledWith(filters, pagination);
+        expect(listLeads).toHaveBeenCalledWith(filters, pagination, []);
       });
     });
   });

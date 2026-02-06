@@ -417,8 +417,9 @@ export function ContactList({
                     onEditContact(contact.id);
                   }}
                   className="p-1 text-blue-600 hover:text-blue-800"
+                  aria-label="Editar contato"
                 >
-                  <PencilIcon className="w-4 h-4" />
+                  <PencilIcon className="w-4 h-4" aria-hidden="true" />
                 </button>
               </Tooltip>
             )}
@@ -430,8 +431,9 @@ export function ContactList({
                     onDeleteContact(contact.id);
                   }}
                   className="p-1 text-red-600 hover:text-red-800"
+                  aria-label="Excluir contato"
                 >
-                  <TrashIcon className="w-4 h-4" />
+                  <TrashIcon className="w-4 h-4" aria-hidden="true" />
                 </button>
               </Tooltip>
             )}

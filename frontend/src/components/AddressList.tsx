@@ -62,9 +62,13 @@ export function AddressList({ addresses, onChange, errors }: AddressListProps) {
     onChange(updated);
   };
 
+  const labelId = 'address-list-label';
+
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Endereços</label>
+      <label id={labelId} className="block text-sm font-medium text-gray-700 mb-2">
+        Endereços
+      </label>
       
       {addresses.map((address, index) => (
         <div key={index} className="border rounded-md p-4 mb-2 bg-gray-50">

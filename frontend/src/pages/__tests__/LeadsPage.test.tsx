@@ -111,6 +111,7 @@ describe('LeadsPage', () => {
       refetch: mockRefetch,
       setFilters: mockSetFilters,
       setPagination: mockSetPagination,
+      setAdvancedFilters: vi.fn(),
     });
   });
 
@@ -167,7 +168,8 @@ describe('LeadsPage', () => {
           offset: 0,
           orderBy: 'createdAt',
           order: 'desc',
-        })
+        }),
+        expect.any(Array)
       );
     });
   });
@@ -348,6 +350,7 @@ describe('LeadsPage', () => {
         refetch: mockRefetch,
         setFilters: mockSetFilters,
         setPagination: mockSetPagination,
+        setAdvancedFilters: vi.fn(),
       });
 
       render(

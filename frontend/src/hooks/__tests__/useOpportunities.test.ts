@@ -106,7 +106,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           mockFilters,
-          expect.any(Object)
+          expect.any(Object),
+          []
         );
       });
     });
@@ -128,7 +129,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           undefined,
-          mockPagination
+          mockPagination,
+          []
         );
       });
     });
@@ -234,7 +236,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           newFilters,
-          expect.any(Object)
+          expect.any(Object),
+          []
         );
       });
     });
@@ -256,7 +259,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           { status: 'OPEN' },
-          expect.objectContaining({ offset: 0 })
+          expect.objectContaining({ offset: 0 }),
+          []
         );
       });
     });
@@ -302,7 +306,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           expect.any(Object),
-          expect.objectContaining({ offset: 20 })
+          expect.objectContaining({ offset: 20 }),
+          []
         );
       });
     });
@@ -346,7 +351,8 @@ describe('useOpportunities', () => {
       await waitFor(() => {
         expect(listOpportunities).toHaveBeenCalledWith(
           filters,
-          expect.objectContaining({ offset: 20 })
+          expect.objectContaining({ offset: 20 }),
+          []
         );
       });
     });
@@ -391,7 +397,7 @@ describe('useOpportunities', () => {
       await result.current.refetch();
 
       await waitFor(() => {
-        expect(listOpportunities).toHaveBeenCalledWith(filters, pagination);
+        expect(listOpportunities).toHaveBeenCalledWith(filters, pagination, []);
       });
     });
   });

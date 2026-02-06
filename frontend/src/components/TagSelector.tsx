@@ -21,10 +21,18 @@ export function TagSelector({ tags, selectedTagIds, onChange, error }: TagSelect
     }
   };
 
+  const labelId = 'tag-selector-label';
+
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-      <div className="flex flex-wrap gap-2">
+      <label id={labelId} className="block text-sm font-medium text-gray-700 mb-2">
+        Tags
+      </label>
+      <div 
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-labelledby={labelId}
+      >
         {tags.map((tag) => {
           const isSelected = selectedTagIds.includes(tag.id);
           return (
@@ -32,6 +40,7 @@ export function TagSelector({ tags, selectedTagIds, onChange, error }: TagSelect
               key={tag.id}
               type="button"
               onClick={() => handleToggle(tag.id)}
+              aria-pressed={isSelected}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                 isSelected
                   ? 'bg-blue-100 text-blue-800 border-2 border-blue-500'

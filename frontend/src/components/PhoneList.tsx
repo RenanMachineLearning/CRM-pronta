@@ -45,9 +45,15 @@ export function PhoneList({ phones, onChange, errors }: PhoneListProps) {
     onChange(updated);
   };
 
+  const labelId = 'phone-list-label';
+  const inputId = 'phone-list-input';
+  const typeId = 'phone-list-type';
+
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Telefones</label>
+      <label id={labelId} htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-2">
+        Telefones
+      </label>
       
       {phones.map((phone, index) => (
         <div key={index} className="flex gap-2 mb-2 items-end">
@@ -96,12 +102,15 @@ export function PhoneList({ phones, onChange, errors }: PhoneListProps) {
 
       <div className="flex gap-2">
         <Input
+          id={inputId}
           placeholder="(11) 99999-9999"
           value={newPhone.phone}
           onChange={(e) => setNewPhone({ ...newPhone, phone: e.target.value })}
           className="flex-1 mb-0"
+          aria-labelledby={labelId}
         />
         <Select
+          id={typeId}
           value={newPhone.type}
           options={[
             { value: 'WORK', label: 'Trabalho' },
@@ -111,6 +120,7 @@ export function PhoneList({ phones, onChange, errors }: PhoneListProps) {
           ]}
           onChange={(e) => setNewPhone({ ...newPhone, type: e.target.value as PhoneType })}
           className="w-32 mb-0"
+          aria-label="Tipo de telefone"
         />
         <Button type="button" variant="primary" size="sm" onClick={handleAdd}>
           Adicionar

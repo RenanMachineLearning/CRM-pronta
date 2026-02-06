@@ -45,9 +45,15 @@ export function EmailList({ emails, onChange, errors }: EmailListProps) {
     onChange(updated);
   };
 
+  const labelId = 'email-list-label';
+  const inputId = 'email-list-input';
+  const typeId = 'email-list-type';
+
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Emails</label>
+      <label id={labelId} htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-2">
+        Emails
+      </label>
       
       {emails.map((email, index) => (
         <div key={index} className="flex gap-2 mb-2 items-end">
@@ -95,12 +101,15 @@ export function EmailList({ emails, onChange, errors }: EmailListProps) {
 
       <div className="flex gap-2">
         <Input
+          id={inputId}
           placeholder="email@example.com"
           value={newEmail.email}
           onChange={(e) => setNewEmail({ ...newEmail, email: e.target.value })}
           className="flex-1 mb-0"
+          aria-labelledby={labelId}
         />
         <Select
+          id={typeId}
           value={newEmail.type}
           options={[
             { value: 'WORK', label: 'Trabalho' },
@@ -109,6 +118,7 @@ export function EmailList({ emails, onChange, errors }: EmailListProps) {
           ]}
           onChange={(e) => setNewEmail({ ...newEmail, type: e.target.value as EmailType })}
           className="w-32 mb-0"
+          aria-label="Tipo de email"
         />
         <Button type="button" variant="primary" size="sm" onClick={handleAdd}>
           Adicionar
