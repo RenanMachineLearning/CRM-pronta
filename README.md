@@ -71,10 +71,29 @@ Para instruções detalhadas, consulte [docs/SETUP.md](docs/SETUP.md).
 
 ## 📚 Documentação
 
-- **[Setup Local](docs/SETUP.md)** - Guia completo de configuração do ambiente
-- **[Roadmap V1](v1/fases_2/Roadmap-Funcionalidades-V1.md)** - Sequência de implementação (10 etapas)
-- **[Etapa 0](v1/fases_2/Etapa-00.md)** - Preparação de ambiente e infraestrutura
-- **[Decisões de Stack](v1/Decisao-Stack-V1.md)** - Tecnologias escolhidas e justificativas
+### 🎯 Para Usuários
+- **[Guia do Usuário](docs/GUIA-USUARIO.html)** 📖 - Guia visual completo (Storybook style)
+- **[Guia de Importação](docs/Guia-Importacao.md)** - Importe dados de planilhas
+- **[Guia de Exportação](docs/Guia-Exportacao.md)** - Exporte seus dados
+- **[Templates de Importação](docs/Templates-Importacao.md)** - Modelos de arquivos
+
+### 💻 Para Desenvolvedores
+- **[Setup Local](docs/SETUP.md)** - Configuração do ambiente
+- **[Componentes](docs/COMPONENTES.md)** - Biblioteca de componentes React
+- **[Sistema de Design](docs/DESIGN-SYSTEM.md)** - Cores, tipografia e tokens
+- **[Breakpoints](docs/BREAKPOINTS.md)** - Guia de responsividade
+- **[Acessibilidade](docs/ACESSIBILIDADE_CONTRASTE.md)** - Padrões WCAG
+
+### 🔌 APIs
+- **[API - Autenticação](docs/API-Autenticacao.md)**
+- **[API - ACL](docs/API-ACL.md)**
+- **[API - Contatos & Empresas](docs/API-Contatos-Empresas.md)**
+- **[API - Leads & Oportunidades](docs/API-Leads-Oportunidades.md)**
+- **[Ver todas as APIs](docs/README.md)**
+
+### 📋 Planejamento
+- **[Roadmap V1](v1/fases_2/Roadmap-Funcionalidades-V1.md)** - Sequência de 10 etapas
+- **[Índice Completo](docs/README.md)** - Todas as documentações
 
 ## 🔄 Roadmap de Implementação
 
