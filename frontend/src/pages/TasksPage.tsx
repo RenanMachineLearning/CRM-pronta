@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskList } from '../components/TaskList';
 import { Button } from '../components/Button';
+import { Breadcrumb } from '../components/Breadcrumb';
 import type { TaskStatus } from '../types/task';
 
 type StatusTab = 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -43,11 +44,12 @@ export function TasksPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Cabeçalho */}
+      <Breadcrumb className="mb-4" />
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Tarefas</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <h1 className="text-3xl font-bold text-text-primary">Tarefas</h1>
+            <p className="mt-2 text-sm text-text-secondary">
               Gerencie suas tarefas e atividades
             </p>
           </div>
@@ -59,17 +61,17 @@ export function TasksPage() {
 
       {/* Tabs de status */}
       <div className="mb-6">
-        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+        <div className="flex rounded-lg border border-border-default overflow-hidden">
           {statusTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                tab.id !== statusTabs[statusTabs.length - 1].id ? 'border-r border-gray-300' : ''
+                tab.id !== statusTabs[statusTabs.length - 1].id ? 'border-r border-border-default' : ''
               } ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
+                  : 'bg-bg-surface text-gray-700 hover:bg-gray-50'
               }`}
             >
               {tab.label}
@@ -79,7 +81,7 @@ export function TasksPage() {
       </div>
 
       {/* Lista de tarefas */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-bg-surface shadow rounded-lg p-6">
         <TaskList
           onTaskClick={handleTaskClick}
           onNewTask={handleNewTask}

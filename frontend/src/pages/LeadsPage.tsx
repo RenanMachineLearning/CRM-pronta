@@ -11,6 +11,7 @@ import { useLeads } from '../hooks/useLeads';
 import { getLeadById } from '../services/leadService';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
 import type { Lead, ConvertLeadResponse } from '../types/lead';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 export function LeadsPage() {
   const navigate = useNavigate();
@@ -110,9 +111,10 @@ export function LeadsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <Breadcrumb className="mb-4" />
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="text-3xl font-bold text-text-primary">Leads</h1>
+        <p className="mt-2 text-sm text-text-secondary">
           Gerencie seus leads e converta-os em contatos e oportunidades
         </p>
       </div>

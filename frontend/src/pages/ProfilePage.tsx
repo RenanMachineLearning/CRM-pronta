@@ -10,6 +10,7 @@ import { Input } from '../components/Input';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useToast } from '../components/Toast';
 import { LazyImage } from '../components/LazyImage';
+import { Breadcrumb } from '../components/Breadcrumb';
 import { updateProfile, changePassword, uploadAvatar } from '../services/authService';
 import {
   CameraIcon,
@@ -143,9 +144,10 @@ export function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
+      <Breadcrumb className="mb-4" />
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-2xl font-bold text-text-primary">Meu Perfil</h1>
+        <p className="mt-1 text-sm text-text-secondary">
           Gerencie suas informações pessoais e configurações de conta
         </p>
       </div>
@@ -153,10 +155,10 @@ export function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Coluna da Esquerda - Avatar e Info */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm p-6 text-center">
+          <div className="bg-bg-surface rounded-xl shadow-sm p-6 text-center">
             {/* Avatar */}
             <div className="relative inline-block mb-4">
-              <div className="w-32 h-32 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
+              <div className="w-32 h-32 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-bg-surface shadow-lg">
                 {user?.avatar ? (
                   <LazyImage
                     src={user.avatar}
@@ -194,14 +196,14 @@ export function ProfilePage() {
               />
             </div>
 
-            <h3 className="text-lg font-semibold text-gray-900">{user?.name}</h3>
-            <p className="text-sm text-gray-500">{user?.email}</p>
+            <h3 className="text-lg font-semibold text-text-primary">{user?.name}</h3>
+            <p className="text-sm text-text-secondary">{user?.email}</p>
             <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {user?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500">
+            <div className="mt-6 pt-6 border-t border-border-default">
+              <p className="text-xs text-text-secondary">
                 Membro desde {new Date(user?.createdAt || '').toLocaleDateString('pt-BR')}
               </p>
             </div>
@@ -211,12 +213,12 @@ export function ProfilePage() {
         {/* Coluna da Direita - Formulários */}
         <div className="lg:col-span-2 space-y-6">
           {/* Formulário de Perfil */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-bg-surface rounded-xl shadow-sm p-6">
             <div className="flex items-center mb-6">
               <div className="p-2 bg-blue-100 rounded-lg mr-3">
                 <UserIcon className="w-5 h-5 text-blue-600" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Informações Pessoais</h2>
+              <h2 className="text-lg font-semibold text-text-primary">Informações Pessoais</h2>
             </div>
 
             {profileError && (
@@ -227,7 +229,7 @@ export function ProfilePage() {
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">
                   Nome Completo
                 </label>
                 <div className="relative">
@@ -246,7 +248,7 @@ export function ProfilePage() {
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">
                   Email
                 </label>
                 <div className="relative">
@@ -278,12 +280,12 @@ export function ProfilePage() {
           </div>
 
           {/* Formulário de Alterar Senha */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-bg-surface rounded-xl shadow-sm p-6">
             <div className="flex items-center mb-6">
               <div className="p-2 bg-green-100 rounded-lg mr-3">
                 <LockClosedIcon className="w-5 h-5 text-green-600" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Alterar Senha</h2>
+              <h2 className="text-lg font-semibold text-text-primary">Alterar Senha</h2>
             </div>
 
             {passwordError && (
@@ -294,7 +296,7 @@ export function ProfilePage() {
 
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="currentPassword" className="block text-sm font-medium text-text-secondary mb-1">
                   Senha Atual
                 </label>
                 <div className="relative">
@@ -325,7 +327,7 @@ export function ProfilePage() {
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="newPassword" className="block text-sm font-medium text-text-secondary mb-1">
                   Nova Senha
                 </label>
                 <div className="relative">
@@ -356,7 +358,7 @@ export function ProfilePage() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-secondary mb-1">
                   Confirmar Nova Senha
                 </label>
                 <div className="relative">

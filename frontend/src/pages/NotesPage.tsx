@@ -5,6 +5,7 @@
 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NoteList } from '../components/NoteList';
+import { Breadcrumb } from '../components/Breadcrumb';
 import type { RelatedEntityType } from '../types/note';
 
 export function NotesPage() {
@@ -34,11 +35,12 @@ export function NotesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Cabeçalho */}
+      <Breadcrumb className="mb-4" />
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notas</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <h1 className="text-3xl font-bold text-text-primary">Notas</h1>
+            <p className="mt-2 text-sm text-text-secondary">
               Gerencie todas as suas notas e anotações
             </p>
           </div>
@@ -46,7 +48,7 @@ export function NotesPage() {
       </div>
 
       {/* Lista de notas */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-bg-surface shadow rounded-lg p-6">
         <NoteList
           onNoteClick={handleNoteClick}
           onNewNote={handleNewNote}

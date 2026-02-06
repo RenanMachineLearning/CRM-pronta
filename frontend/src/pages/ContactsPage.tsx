@@ -5,6 +5,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ContactList } from '../components/ContactList';
 import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
+import { Breadcrumb } from '../components/Breadcrumb';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
 
 export function ContactsPage() {
@@ -22,8 +23,9 @@ export function ContactsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Contatos</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <Breadcrumb className="mb-4" />
+        <h1 className="text-3xl font-bold text-text-primary">Contatos</h1>
+        <p className="mt-2 text-sm text-text-secondary">
           Gerencie seus contatos e empresas
         </p>
       </div>

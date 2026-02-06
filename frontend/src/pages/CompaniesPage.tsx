@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { CompanyList } from '../components/CompanyList';
 import { AdvancedFilters } from '../components/AdvancedFilters/AdvancedFilters';
 import { useFilterUrlSync } from '../hooks/useFilterUrlSync';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 export function CompaniesPage() {
   const navigate = useNavigate();
@@ -21,9 +22,10 @@ export function CompaniesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <Breadcrumb className="mb-4" />
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Empresas</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="text-3xl font-bold text-text-primary">Empresas</h1>
+        <p className="mt-2 text-sm text-text-secondary">
           Gerencie suas empresas e organizações
         </p>
       </div>
