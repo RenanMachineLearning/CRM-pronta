@@ -188,6 +188,8 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
                               checked={selectedFields.includes(field.id) || isRequired}
                               onChange={() => !isRequired && handleFieldToggle(field.id)}
                               disabled={isRequired}
+                              data-testid={`field-checkbox-${field.id}`}
+                              value={field.id}
                             />
                             <div className="ml-3 flex flex-col">
                               <span className={`text-sm font-medium ${isRequired ? 'text-blue-700' : 'text-gray-700'}`}>
