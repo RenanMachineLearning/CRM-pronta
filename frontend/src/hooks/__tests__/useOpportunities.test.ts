@@ -2,7 +2,7 @@
  * Testes para hook useOpportunities
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useOpportunities } from '../useOpportunities';
 import { listOpportunities } from '../../services/opportunityService';
@@ -300,16 +300,23 @@ describe('useOpportunities', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      const newPagination: OpportunityPaginationParams = { offset: 20 };
-      result.current.setPagination(newPagination);
+      // Limpar mocks
+      vi.mocked(listOpportunities).mockClear();
 
-      await waitFor(() => {
-        expect(listOpportunities).toHaveBeenCalledWith(
-          expect.any(Object),
-          expect.objectContaining({ offset: 20 }),
-          []
-        );
+      const newPagination: OpportunityPaginationParams = { offset: 20 };
+      
+      act(() => {
+        result.current.setPagination(newPagination);
       });
+
+      // Aguardar o próximo fetch ser chamado
+      await waitFor(() => {
+        expect(listOpportunities).toHaveBeenCalled();
+      });
+
+      // Verificar que foi chamado com offset 20
+      const lastCall = vi.mocked(listOpportunities).mock.calls[vi.mocked(listOpportunities).mock.calls.length - 1];
+      expect(lastCall[1]).toMatchObject({ offset: 20 });
     });
 
     it('deve fazer refetch automático quando paginação muda', async () => {

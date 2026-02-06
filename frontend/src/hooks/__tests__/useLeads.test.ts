@@ -2,7 +2,7 @@
  * Testes para hook useLeads
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLeads } from '../useLeads';
 import { listLeads } from '../../services/leadService';
@@ -304,16 +304,23 @@ describe('useLeads', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      const newPagination: LeadPaginationParams = { offset: 20 };
-      result.current.setPagination(newPagination);
+      // Limpar mocks
+      vi.mocked(listLeads).mockClear();
 
-      await waitFor(() => {
-        expect(listLeads).toHaveBeenCalledWith(
-          expect.any(Object),
-          expect.objectContaining({ offset: 20 }),
-          []
-        );
+      const newPagination: LeadPaginationParams = { offset: 20 };
+      
+      act(() => {
+        result.current.setPagination(newPagination);
       });
+
+      // Aguardar o próximo fetch ser chamado
+      await waitFor(() => {
+        expect(listLeads).toHaveBeenCalled();
+      });
+
+      // Verificar que foi chamado com offset 20
+      const lastCall = vi.mocked(listLeads).mock.calls[vi.mocked(listLeads).mock.calls.length - 1];
+      expect(lastCall[1]).toMatchObject({ offset: 20 });
     });
 
     it('deve fazer refetch automático quando paginação muda', async () => {

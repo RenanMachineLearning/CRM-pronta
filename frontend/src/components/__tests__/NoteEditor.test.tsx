@@ -5,7 +5,8 @@
  * Teste obrigatório 2: Preview de Markdown funciona
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { NoteEditor } from '../NoteEditor';

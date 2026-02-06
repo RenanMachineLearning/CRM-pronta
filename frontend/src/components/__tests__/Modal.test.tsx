@@ -2,7 +2,8 @@
  * Testes para componente Modal genérico
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { Modal } from '../Modal';

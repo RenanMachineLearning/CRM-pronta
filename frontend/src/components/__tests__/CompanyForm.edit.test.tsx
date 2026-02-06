@@ -2,7 +2,8 @@
  * Teste obrigatório 2 (edição): criar/editar empresa funciona
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CompanyForm } from '../CompanyForm';
 import { getCompanyById, updateCompany } from '../../services/companyService';

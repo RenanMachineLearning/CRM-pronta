@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { BrowserRouter } from 'react-router-dom';
 import Sidebar from './Sidebar';
 

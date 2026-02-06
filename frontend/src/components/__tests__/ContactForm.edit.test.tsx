@@ -2,7 +2,8 @@
  * Teste obrigatório 2: editar contato funciona
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContactForm } from '../ContactForm';
 import { getContactById, updateContact } from '../../services/contactService';

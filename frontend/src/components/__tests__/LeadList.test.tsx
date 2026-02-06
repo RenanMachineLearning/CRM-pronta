@@ -4,7 +4,8 @@
  * Teste obrigatório 2: filtros funcionam
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { LeadList } from '../LeadList';
@@ -13,6 +14,11 @@ import type { Lead, LeadStatus } from '../../types/lead';
 
 // Mock do hook
 vi.mock('../../hooks/useLeads');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 
 describe('LeadList', () => {
   const mockSetFilters = vi.fn();

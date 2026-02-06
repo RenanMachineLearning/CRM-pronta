@@ -3,7 +3,8 @@
  * Teste obrigatório: listagem de oportunidades funciona
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { OpportunityList } from '../OpportunityList';
@@ -12,6 +13,11 @@ import type { Opportunity, OpportunityStatus } from '../../types/opportunity';
 
 // Mock do hook
 vi.mock('../../hooks/useOpportunities');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 
 describe('OpportunityList', () => {
   const mockSetFilters = vi.fn();

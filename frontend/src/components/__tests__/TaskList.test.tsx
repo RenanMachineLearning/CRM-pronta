@@ -3,7 +3,8 @@
  * Testes obrigatórios: listagem funciona, filtros funcionam, concluir funciona
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskList } from '../TaskList';
 import { useTasks } from '../../hooks/useTasks';
@@ -11,6 +12,11 @@ import { updateTask } from '../../services/taskService';
 
 // Mock do hook
 vi.mock('../../hooks/useTasks');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 vi.mock('../../services/taskService');
 
 describe('TaskList', () => {

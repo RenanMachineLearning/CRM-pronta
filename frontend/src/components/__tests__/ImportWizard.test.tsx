@@ -3,7 +3,8 @@
  * Valida: wizard de importação funciona, indicador de passos, navegação.
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImportWizard } from '../ImportWizard';
 

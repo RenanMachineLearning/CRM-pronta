@@ -2,7 +2,8 @@
  * Teste obrigatório 3: validação de campos funciona
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContactForm } from '../ContactForm';
 

@@ -3,7 +3,8 @@
  * Testes obrigatórios: criar tarefa funciona, editar tarefa funciona
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskForm } from '../TaskForm';
 import { getTaskById } from '../../services/taskService';

@@ -3,7 +3,8 @@
  * Testes obrigatórios: criar funciona, editar funciona, listar funciona
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NoteList } from '../NoteList';
 import { useNotes } from '../../hooks/useNotes';
@@ -11,6 +12,11 @@ import { deleteNote } from '../../services/noteService';
 
 // Mock do hook e serviço
 vi.mock('../../hooks/useNotes');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 vi.mock('../../services/noteService');
 
 describe('NoteList', () => {

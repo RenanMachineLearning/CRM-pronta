@@ -2,7 +2,8 @@
  * Teste obrigatório 1: criar oportunidade funciona
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpportunityForm } from '../OpportunityForm';
 import { createOpportunity } from '../../services/opportunityService';

@@ -7,7 +7,8 @@
  * - Timeline está ordenada corretamente
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Timeline } from '../Timeline';
 import { useTimeline } from '../../hooks/useTimeline';

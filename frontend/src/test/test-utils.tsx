@@ -5,7 +5,7 @@
 
 import React, { ReactElement } from 'react';
 import { render as rtlRender, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 // Mock do matchMedia para testes
@@ -60,7 +60,7 @@ export function render(
 ) {
   const Wrapper = ({ children }: { children: React.ReactNode }) => {
     if (withRouter) {
-      return <BrowserRouter>{children}</BrowserRouter>;
+      return <MemoryRouter>{children}</MemoryRouter>;
     }
     return <>{children}</>;
   };

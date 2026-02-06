@@ -3,13 +3,19 @@
  * Teste obrigatório 2: paginação funciona
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContactList } from '../ContactList';
 import { useContacts } from '../../hooks/useContacts';
 
 // Mock do hook
 vi.mock('../../hooks/useContacts');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 
 describe('ContactList - Paginação', () => {
   beforeEach(() => {

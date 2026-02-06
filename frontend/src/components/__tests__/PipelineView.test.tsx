@@ -5,7 +5,8 @@
  * OBRIGATÓRIO 2: Teste que oportunidades aparecem nos estágios corretos (agrupamento por stageId funciona corretamente)
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PipelineView } from '../PipelineView';
 import { getDefaultPipeline, getPipelineById } from '../../services/pipelineService';

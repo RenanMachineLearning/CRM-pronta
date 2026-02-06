@@ -3,13 +3,19 @@
  * Teste obrigatório 1: listagem de empresas funciona
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/test-utils';;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CompanyList } from '../CompanyList';
 import { useCompanies } from '../../hooks/useCompanies';
 
 // Mock do hook
 vi.mock('../../hooks/useCompanies');
+
+// Mock do hook useSortPaginationUrlSync
+vi.mock('../../hooks/useSortPaginationUrlSync', () => ({
+  useSortPaginationUrlSync: vi.fn(() => {}),
+}));
 
 describe('CompanyList', () => {
   beforeEach(() => {
