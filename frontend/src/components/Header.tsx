@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-page focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
               aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
             >
               {isDark ? (
@@ -134,8 +134,8 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
               aria-haspopup="true"
             >
               <span className="hidden md:block text-right">
-                <span className="block text-sm font-medium text-gray-900">{user?.name}</span>
-                <span className="block text-xs text-gray-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}</span>
+                <span className="block text-sm font-medium text-text-primary">{user?.name}</span>
+                <span className="block text-xs text-text-secondary">{user?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}</span>
               </span>
               
               {/* Avatar */}
@@ -144,12 +144,12 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
                   <LazyImage
                     src={user.avatar}
                     alt={user.name}
-                    className="h-9 w-9 rounded-full object-cover border-2 border-gray-200"
+                    className="h-9 w-9 rounded-full object-cover border-2 border-border-default"
                     width={36}
                     height={36}
                   />
                 ) : (
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-sm font-medium border-2 border-gray-200">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 text-text-inverse flex items-center justify-center text-sm font-medium border-2 border-border-default">
                     {getInitials(user?.name || 'U')}
                   </div>
                 )}
@@ -159,39 +159,39 @@ export const Header: React.FC<HeaderProps> = ({ sidebarOpen, toggleSidebar }) =>
             {/* Dropdown do usuário */}
             {userMenuOpen && (
               <div 
-                className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50 py-1"
+                className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-bg-surface ring-1 ring-black ring-opacity-5 focus:outline-none z-50 py-1"
                 onMouseLeave={() => setUserMenuOpen(false)}
                 role="menu"
                 aria-label="Menu do usuário"
               >
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm text-gray-900 font-medium">{user?.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                <div className="px-4 py-3 border-b border-border-subtle">
+                  <p className="text-sm text-text-primary font-medium">{user?.name}</p>
+                  <p className="text-xs text-text-secondary truncate">{user?.email}</p>
                 </div>
-                
+
                 <div className="py-1">
                   <Link
                     to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
+                    className="flex items-center px-4 py-2 text-sm text-text-secondary hover:bg-bg-page hover:text-text-primary focus:outline-none focus:bg-bg-page"
                     onClick={() => setUserMenuOpen(false)}
                     role="menuitem"
                   >
-                    <UserIcon className="mr-3 h-4 w-4 text-gray-400" aria-hidden="true" />
+                    <UserIcon className="mr-3 h-4 w-4 text-text-tertiary" aria-hidden="true" />
                     Meu Perfil
                   </Link>
-                  
+
                   <Link
                     to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
+                    className="flex items-center px-4 py-2 text-sm text-text-secondary hover:bg-bg-page hover:text-text-primary focus:outline-none focus:bg-bg-page"
                     onClick={() => setUserMenuOpen(false)}
                     role="menuitem"
                   >
-                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400" aria-hidden="true" />
+                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-text-tertiary" aria-hidden="true" />
                     Configurações
                   </Link>
                 </div>
-                
-                <div className="border-t border-gray-100 py-1">
+
+                <div className="border-t border-border-subtle py-1">
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 focus:outline-none focus:bg-red-50"

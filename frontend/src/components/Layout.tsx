@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import Footer from './Footer';
 import SkipLink from './SkipLink';
 
 interface LayoutProps {
@@ -48,12 +49,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </main>
 
-        {/* Rodapé opcional */}
-        <footer className="bg-bg-surface border-t border-border-default py-4 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto text-center text-sm text-text-secondary">
-            © {new Date().getFullYear()} CRM SaaS - Todos os direitos reservados
-          </div>
-        </footer>
+        {/* Footer Profissional */}
+        <Footer />
       </div>
     </div>
     </>

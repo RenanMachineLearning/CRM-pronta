@@ -29,27 +29,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
       {/* Overlay para mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity md:hidden"
+          className="fixed inset-0 z-40 bg-bg-overlay transition-opacity md:hidden"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-bg-surface shadow-lg transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0`}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 md:hidden">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-border-default md:hidden">
           <div className="flex items-center">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <span className="ml-2 text-xl font-bold text-gray-900">CRM</span>
+            <span className="ml-2 text-xl font-bold text-text-primary">CRM</span>
           </div>
           <button
             type="button"
-            className="text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+            className="text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full p-1"
             onClick={toggleSidebar}
             aria-label="Fechar menu de navegação"
             aria-expanded={isOpen}
@@ -73,10 +73,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     isActive
-                      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-700 dark:bg-primary-900/30 dark:text-primary-400 dark:border-primary-500'
+                      : 'text-text-secondary hover:bg-bg-page hover:text-text-primary'
                   }`}
                   onClick={() => {
                     if (window.innerWidth < 768) {
@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                 >
                   <svg
                     className={`mr-3 h-5 w-5 ${
-                      isActive ? 'text-blue-700' : 'text-gray-500'
+                      isActive ? 'text-primary-700 dark:text-primary-400' : 'text-text-tertiary'
                     }`}
                     fill="none"
                     stroke="currentColor"
