@@ -33,7 +33,7 @@ async function mapSingleRowToEntity(
   mappings: FieldMapping[],
   entityType: string,
   tenantId: string,
-  userId?: string
+  _userId?: string
 ): Promise<Record<string, any>> {
   // Converter objeto para array de valores baseado nos mapeamentos
   const rowArray: any[] = [];
@@ -58,7 +58,7 @@ async function mapSingleRowToEntity(
   }
   
   // Chamar mapFieldsToEntity com array de uma linha
-  const mappedRows = await mapFieldsToEntity([rowArray], mappings, entityType, tenantId, userId);
+  const mappedRows = await mapFieldsToEntity([rowArray], mappings, entityType, tenantId);
   
   // Retornar apenas os dados mapeados da primeira (e única) linha
   return mappedRows[0]?.mappedData || {};

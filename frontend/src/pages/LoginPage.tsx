@@ -1,6 +1,13 @@
 /**
- * Página de Login
- * Design profissional com elementos visuais
+ * Página de Login - Design Moderno e Profissional
+ * 
+ * Melhorias implementadas:
+ * - Layout centralizado com card elegante
+ * - Contraste adequado nos inputs (texto escuro)
+ * - Fundo gradiente moderno
+ * - Glassmorphism no card
+ * - Ícones e elementos visuais aprimorados
+ * - Animações suaves
  */
 
 import { useState } from 'react';
@@ -9,7 +16,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { EyeIcon, EyeSlashIcon, EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { 
+  EyeIcon, 
+  EyeSlashIcon, 
+  EnvelopeIcon, 
+  LockClosedIcon,
+  ShieldCheckIcon,
+  UserGroupIcon,
+  ChartBarIcon
+} from '@heroicons/react/24/outline';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -44,188 +59,226 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Lado Esquerdo - Formulário */}
-      <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-white">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
-          {/* Logo */}
-          <div className="flex items-center mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <span className="ml-3 text-2xl font-bold text-gray-900">CRM SaaS</span>
-          </div>
-
-          {/* Título */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Bem-vindo de volta
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Entre com suas credenciais para acessar sua conta
-            </p>
-          </div>
-
-          {/* Erro */}
-          {error && (
-            <div className="mb-6">
-              <ErrorMessage message={error} />
-            </div>
-          )}
-
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  placeholder="seu@email.com"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Senha
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </div>
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                  Lembrar-me
-                </label>
-              </div>
-
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium text-blue-600 hover:text-blue-500"
-              >
-                Esqueceu a senha?
-              </Link>
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              isLoading={isLoading}
-              disabled={isLoading}
-            >
-              Entrar
-            </Button>
-          </form>
-
-          {/* Rodapé */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
-              Não tem uma conta?{' '}
-              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                Entre em contato
-              </Link>
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+      {/* Padrão de fundo decorativo */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)]" />
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-cyan-500 rounded-full mix-blend-overlay filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
-      {/* Lado Direito - Imagem/Decoração */}
-      <div className="hidden lg:block relative flex-1 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
-        {/* Padrão decorativo */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <circle cx="1" cy="1" r="1" fill="white" />
-              </pattern>
-            </defs>
-            <rect width="100" height="100" fill="url(#grid)" />
-          </svg>
-        </div>
+      {/* Container principal */}
+      <div className="relative z-10 w-full max-w-5xl flex flex-col lg:flex-row gap-8 items-center justify-center">
+        
+        {/* Lado Esquerdo - Informações (apenas desktop) */}
+        <div className="hidden lg:flex flex-col items-center lg:items-start text-white max-w-md space-y-8">
+          {/* Logo grande */}
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/50">
+              <ShieldCheckIcon className="w-9 h-9 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                CRM SaaS
+              </h1>
+              <p className="text-blue-200 text-sm">Gestão de Relacionamento</p>
+            </div>
+          </div>
 
-        {/* Conteúdo central */}
-        <div className="absolute inset-0 flex items-center justify-center px-12">
-          <div className="max-w-lg text-center text-white">
-            {/* Ícone grande */}
-            <div className="mb-8">
-              <div className="w-24 h-24 mx-auto bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+          {/* Features */}
+          <div className="space-y-6">
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center flex-shrink-0">
+                <UserGroupIcon className="w-6 h-6 text-blue-300" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-white">Gestão de Contatos</h3>
+                <p className="text-blue-200 text-sm leading-relaxed">
+                  Organize todos os seus contatos e empresas em um só lugar com facilidade.
+                </p>
               </div>
             </div>
 
-            <h3 className="text-3xl font-bold mb-4">
-              Gerencie seus relacionamentos
-            </h3>
-            <p className="text-lg text-blue-100">
-              Uma plataforma completa para gerenciar contatos, empresas, leads e oportunidades em um só lugar.
-            </p>
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center flex-shrink-0">
+                <ChartBarIcon className="w-6 h-6 text-blue-300" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-white">Pipeline de Vendas</h3>
+                <p className="text-blue-200 text-sm leading-relaxed">
+                  Acompanhe leads e oportunidades em um pipeline visual e intuitivo.
+                </p>
+              </div>
+            </div>
+          </div>
 
-            {/* Features */}
-            <div className="mt-12 grid grid-cols-3 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="text-2xl font-bold">10k+</div>
-                <div className="text-sm text-blue-200">Contatos</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="text-2xl font-bold">500+</div>
-                <div className="text-sm text-blue-200">Empresas</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="text-2xl font-bold">98%</div>
-                <div className="text-sm text-blue-200">Satisfação</div>
-              </div>
+          {/* Stats */}
+          <div className="flex space-x-8 pt-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">10k+</div>
+              <div className="text-blue-300 text-sm">Contatos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">500+</div>
+              <div className="text-blue-300 text-sm">Empresas</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">98%</div>
+              <div className="text-blue-300 text-sm">Satisfação</div>
             </div>
           </div>
         </div>
 
-        {/* Elementos decorativos */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '2s' }} />
+        {/* Card de Login */}
+        <div className="w-full max-w-md">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 lg:p-10 border border-white/20">
+            {/* Header do card */}
+            <div className="text-center mb-8">
+              {/* Ícone/Logo (mobile) */}
+              <div className="lg:hidden flex justify-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/30">
+                  <ShieldCheckIcon className="w-9 h-9 text-white" />
+                </div>
+              </div>
+
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                Bem-vindo de volta
+              </h2>
+              <p className="text-gray-500 text-sm lg:text-base">
+                Entre com suas credenciais para acessar sua conta
+              </p>
+            </div>
+
+            {/* Erro */}
+            {error && (
+              <div className="mb-6 animate-shake">
+                <ErrorMessage message={error} />
+              </div>
+            )}
+
+            {/* Formulário */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Campo Email */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
+                  Email
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <EnvelopeIcon className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    placeholder="seu@email.com"
+                    className="pl-12 pr-4 py-3 bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Campo Senha */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
+                  Senha
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <LockClosedIcon className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    placeholder="Digite sua senha"
+                    className="pl-12 pr-12 py-3 bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Opções */}
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center space-x-2 cursor-pointer group">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-gray-600 group-hover:text-gray-800 transition-colors">
+                    Lembrar-me
+                  </span>
+                </label>
+
+                <Link
+                  to="/forgot-password"
+                  className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+
+              {/* Botão de Login */}
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                isLoading={isLoading}
+                disabled={isLoading}
+                className="py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5 transition-all duration-200"
+              >
+                {isLoading ? 'Entrando...' : 'Entrar'}
+              </Button>
+            </form>
+
+            {/* Divisor */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">ou</span>
+              </div>
+            </div>
+
+            {/* Rodapé */}
+            <div className="text-center">
+              <p className="text-gray-600 text-sm">
+                Não tem uma conta?{' '}
+                <Link 
+                  to="/register" 
+                  className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Entre em contato
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* Texto de segurança */}
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center space-x-2 text-gray-400 text-xs">
+              <ShieldCheckIcon className="w-4 h-4" />
+              <span>Conexão segura e criptografada</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

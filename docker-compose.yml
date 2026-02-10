@@ -50,22 +50,19 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.dev
     container_name: crm-frontend
     environment:
       VITE_API_URL: http://localhost:5000
     ports:
-      - "5173:80"
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/dist
     depends_on:
       - backend
     networks:
       - crm-network
-    # Para desenvolvimento, usar Vite diretamente (sem nginx)
-    # Em produção, usar o Dockerfile que já tem nginx
     command: npm run dev
 
 networks:

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc && tailwindcss -i ./src/index.css -o ./dist/output.css && vite build",
+    "build": "tsc && vite build",
     "build:css": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

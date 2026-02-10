@@ -381,7 +381,7 @@ router.post('/:fileId/map', async (req: Request, res: Response) => {
 
     // Validar mapeamento
     const { isValid: mappingValid, errors: mappingErrors } = await import('../utils/fieldMapper').then(fm =>
-      fm.validateMapping(mappings, entityType, tenantId, userId)
+      fm.validateMapping(mappings, entityType, tenantId)
     );
 
     if (!mappingValid) {
@@ -399,7 +399,6 @@ router.post('/:fileId/map', async (req: Request, res: Response) => {
       mappings,
       entityType,
       tenantId,
-      userId,
       previewRowCount
     );
 
