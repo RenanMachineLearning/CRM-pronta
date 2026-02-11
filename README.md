@@ -67,6 +67,19 @@ CRM_pronta/
    - Backend API: http://localhost:5000
    - Health Check: http://localhost:5000/health
 
+5. **Faça login com as credenciais padrão**:
+   
+   Após iniciar os containers, um usuário administrador padrão é automaticamente criado:
+   
+   | Campo | Valor |
+   |-------|-------|
+   | **Tenant** | `demo` |
+   | **Email** | `admin@demo.com` |
+   | **Senha** | `Admin123!` |
+   | **Permissões** | Administrador (acesso total) |
+
+   > **Nota**: Este usuário é criado automaticamente pelo script `backend/scripts/create-admin-user.js`. Para criar usuários adicionais ou alterar a senha, consulte a documentação da API de autenticação.
+
 Para instruções detalhadas, consulte [docs/SETUP.md](docs/SETUP.md).
 
 ## 📚 Documentação

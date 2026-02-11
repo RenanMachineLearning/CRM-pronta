@@ -15,7 +15,7 @@ import {
 import type { ApiRequestConfig } from '../types/api';
 import type { AppError } from '../types/error';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 const TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG || 'demo';
 const DEFAULT_TIMEOUT = 30000; // 30 segundos
 

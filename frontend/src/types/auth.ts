@@ -11,6 +11,17 @@ export interface User {
   tenantId: string;
   createdAt: string;
   updatedAt: string;
+  status: string;
+  roles: Array<{
+    id: string;
+    name: string;
+    description?: string;
+  }>;
+  permissions: Array<{
+    entity: string;
+    action: string;
+    field?: string;
+  }>;
 }
 
 export interface LoginCredentials {
@@ -45,7 +56,6 @@ export interface ResetPasswordData {
 }
 
 export interface AuthResponse {
-  user: User;
   token: string;
 }
 

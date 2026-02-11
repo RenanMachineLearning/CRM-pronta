@@ -52,7 +52,9 @@ services:
       dockerfile: docker/Dockerfile.dev
     container_name: crm-frontend
     environment:
-      VITE_API_URL: http://localhost:5000
+      # Usa proxy do Vite para /api - não definir VITE_API_URL para usar o proxy
+      # VITE_API_URL: http://localhost:5000
+      NODE_ENV: development
     ports:
       - "5173:5173"
     volumes:

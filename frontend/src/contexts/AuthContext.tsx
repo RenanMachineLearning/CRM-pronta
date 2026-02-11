@@ -7,6 +7,25 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import type { User, LoginCredentials } from '../types/auth';
 import * as authService from '../services/authService';
 
+/**
+ * Decodifica token JWT e extrai payload
+ */
+function parseJwt(token: string): { tenantId?: string; sub?: string } | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -34,8 +53,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       if (token) {
         try {
+          // Garantir que tenantSlug está definido
+          if (!localStorage.getItem('tenantSlug')) {
+            localStorage.setItem('tenantSlug', 'demo');
+          }
           const userData = await authService.getCurrentUser();
-          setUser(userData);
+          // Adicionar tenantId aos dados do usuário
+          const tokenPayload = parseJwt(token);
+          const userWithTenantId = {
+            ...userData,
+            tenantId: tokenPayload?.tenantId || '',
+            role: userData.roles?.[0]?.name || '',
+          };
+          setUser(userWithTenantId);
         } catch (error) {
           // Token inválido ou expirado
           localStorage.removeItem('authToken');
@@ -54,8 +84,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authService.login(credentials);
       localStorage.setItem('authToken', response.token);
-      localStorage.setItem('tenantSlug', response.user.tenantId);
-      setUser(response.user);
+      
+      // Usar slug fixo 'demo' (o token contém tenantId, não o slug)
+      localStorage.setItem('tenantSlug', 'demo');
+      
+      // Buscar dados do usuário após login
+      const userData = await authService.getCurrentUser();
+      // Extrair tenantId do token e adicionar aos dados do usuário
+      const tokenPayload = parseJwt(response.token);
+      const userWithTenantId = {
+        ...userData,
+        tenantId: tokenPayload?.tenantId || '',
+        role: userData.roles?.[0]?.name || '',
+      };
+      setUser(userWithTenantId);
     } finally {
       setIsLoading(false);
     }
