@@ -77,7 +77,7 @@ async function createAdminUser() {
   } catch (error) {
     console.error("Erro ao criar usuário administrador:", error);
   } finally {
-    await prisma.();
+    await prisma.$disconnect();
   }
 }
 
